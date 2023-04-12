@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::inputs::Config;
 
-pub fn keygen(config: Config) -> Result<VerifyingKey, frost::Error> {
+pub fn keygen(config: Config) -> Result<Output, frost::Error> {
     let mut rng = thread_rng();
     let max_signers = config.max_signers;
     let min_signers = config.min_signers;
@@ -28,10 +28,18 @@ pub fn keygen(config: Config) -> Result<VerifyingKey, frost::Error> {
     let group_signature = frost::aggregate(&signing_package, &signature_shares[..], &pubkeys)?;
     let verify_signature = pubkeys.group_public.verify(message, &group_signature);
 
+    let output = Output {
+        group_public_key: pubkeys.group_public,
+    };
+
     match verify_signature {
-        Ok(_) => Ok(pubkeys.group_public),
+        Ok(_) => Ok(output),
         Err(_) => Err(frost::Error::InvalidSignature), // TODO: Use correct error
     }
+}
+
+pub struct Output {
+    pub group_public_key: VerifyingKey,
 }
 
 fn generate_nonces_and_commitments(

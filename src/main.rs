@@ -5,9 +5,7 @@ mod tests;
 
 use std::io;
 
-use frost::VerifyingKey;
-use frost_ed25519 as frost;
-use keygen::keygen;
+use keygen::{keygen, Output};
 
 use crate::inputs::{request_inputs, validate_inputs};
 
@@ -25,11 +23,11 @@ fn main() -> io::Result<()> {
     // Print outputs
     let keygen = keygen(config).unwrap();
 
-    print_values(&keygen);
+    print_values(keygen);
 
     Ok(())
 }
 
-fn print_values(group_public_key: &VerifyingKey) {
-    println!("Group public key: {:?}", &group_public_key.to_bytes());
+fn print_values(output: Output) {
+    println!("Group public key: {:?}", output.group_public_key.to_bytes());
 }
