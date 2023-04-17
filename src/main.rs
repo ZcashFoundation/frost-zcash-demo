@@ -27,10 +27,12 @@ fn main() -> io::Result<()> {
         Err(e) => println!("An error occurred: {e}"),
     }
 
-    // Print outputs
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
+    if out.is_ok() {
+        // Print outputs
+        let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
 
-    print_values(key_packages, pubkeys.group_public);
+        print_values(key_packages, pubkeys.group_public);
+    }
 
     Ok(())
 }
