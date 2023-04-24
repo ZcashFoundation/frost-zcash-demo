@@ -8,8 +8,8 @@ use std::io;
 
 use frost_ed25519 as frost;
 
-use frost::keys::KeyPackage;
-use frost::{Identifier, VerifyingKey};
+use frost::keys::{KeyPackage, PublicKeyPackage};
+use frost::Identifier;
 use rand::thread_rng;
 
 use crate::inputs::{request_inputs, validate_inputs};
@@ -31,14 +31,17 @@ fn main() -> io::Result<()> {
         // Print outputs
         let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
 
-        print_values(key_packages, pubkeys.group_public);
+        print_values(key_packages, pubkeys);
     }
 
     Ok(())
 }
 
-fn print_values(keys: HashMap<Identifier, KeyPackage>, group_public_key: VerifyingKey) {
-    println!("Group public key: {:x?}", group_public_key.to_bytes());
+fn print_values(keys: HashMap<Identifier, KeyPackage>, pubkeys: PublicKeyPackage) {
+    println!("Group public key: {:x?}", pubkeys.group_public.to_bytes());
+    // Need to be able to extract value for VerifiableSecretSharingCommitment that isn't currently accessible
+    // println!("Commitment: {:x?}", shares[0].commitment[0]);
+
     println!("---");
 
     for (k, v) in keys {
