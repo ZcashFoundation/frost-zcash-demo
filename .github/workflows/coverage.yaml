@@ -1,0 +1,47 @@
+name: Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    path:
+      - '**/*.rs'
+      - '**/*.txt'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'codecov.yml'
+      - '.github/workflows/coverage.yml'
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: full
+
+    steps:
+      - uses: actions/checkout@v3.5.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rs/toolchain@v1.0.7
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov cargo command
+        run: cargo install cargo-llvm-cov
+
+      - name: Run tests
+        run: cargo llvm-cov --lcov --no-report --ignore-filename-regex 'tests.rs'
+
+      - name: Generate coverage report
+        run: cargo llvm-cov report --lcov --ignore-filename-regex 'tests.rs' --output-path lcov.info
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v3.1.2
