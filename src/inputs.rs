@@ -26,13 +26,13 @@ pub fn request_inputs() -> Config {
     let mut min = "".to_string();
 
     println!("The minimum number of signers:");
-    io::stdin().read_line(&mut min);
+    io::stdin().read_line(&mut min).unwrap(); // TODO: handle errors
     let min_signers = min.trim().parse::<u16>().unwrap();
 
     let mut max = "".to_string();
 
     println!("The maximum number of signers:");
-    io::stdin().read_line(&mut max);
+    io::stdin().read_line(&mut max).unwrap(); // TODO: handle errors
     let max_signers = max.trim().parse::<u16>().unwrap();
 
     Config {
