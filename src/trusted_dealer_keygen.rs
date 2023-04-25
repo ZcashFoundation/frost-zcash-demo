@@ -13,11 +13,12 @@ pub fn trusted_dealer_keygen(
     let (shares, pubkeys) =
         frost::keys::keygen_with_dealer(config.max_signers, config.min_signers, rng).unwrap(); // TODO: handle error
 
-    let key_packages: HashMap<_, _> = shares
-        .into_iter()
-        .map(|share| Ok((share.identifier, frost::keys::KeyPackage::try_from(share)?)))
-        .collect::<Result<_, frost::Error>>()
-        .unwrap(); // TODO: handle error
+    let mut key_packages: HashMap<_, _> = HashMap::new();
+
+    for (k, v) in shares {
+        let key_package = frost::keys::KeyPackage::try_from(v).unwrap(); // TODO: handle error
+        key_packages.insert(k, key_package);
+    }
 
     (key_packages, pubkeys)
 }
