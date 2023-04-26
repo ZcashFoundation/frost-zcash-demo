@@ -23,17 +23,18 @@ pub fn validate_inputs(config: &Config) -> Result<Config, frost_ed25519::Error> 
 }
 
 pub fn request_inputs() -> Config {
-    let mut min = "".to_string();
+    println!("The minimum number of signers: (2 or more)");
 
-    println!("The minimum number of signers:");
-    io::stdin().read_line(&mut min).unwrap(); // TODO: handle errors
-    let min_signers = min.trim().parse::<u16>().unwrap();
+    let mut min = String::new();
+    io::stdin().read_line(&mut min).expect("invalid input");
 
-    let mut max = "".to_string();
+    let min_signers = min.trim().parse::<u16>().expect("Invalid input");
 
-    println!("The maximum number of signers:");
-    io::stdin().read_line(&mut max).unwrap(); // TODO: handle errors
-    let max_signers = max.trim().parse::<u16>().unwrap();
+    println!("The maximum number of signers: (must be greater than minimum number of signers)");
+
+    let mut max = String::new();
+    io::stdin().read_line(&mut max).expect("invalid input");
+    let max_signers = max.trim().parse::<u16>().expect("invalid input");
 
     Config {
         min_signers,

@@ -11,7 +11,8 @@ pub fn trusted_dealer_keygen(
     rng: &mut ThreadRng,
 ) -> (HashMap<Identifier, KeyPackage>, PublicKeyPackage) {
     let (shares, pubkeys) =
-        frost::keys::keygen_with_dealer(config.max_signers, config.min_signers, rng).unwrap(); // TODO: handle error
+        frost::keys::keygen_with_dealer(config.max_signers, config.min_signers, rng)
+            .expect("Error generating keys"); // TODO: handle error
 
     let mut key_packages: HashMap<_, _> = HashMap::new();
 

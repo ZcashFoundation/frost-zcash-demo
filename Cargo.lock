@@ -349,6 +349,7 @@ version = "0.1.0"
 dependencies = [
  "frost-ed25519",
  "hex",
+ "itertools",
  "rand",
  "thiserror",
 ]
