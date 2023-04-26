@@ -34,7 +34,7 @@ fn check_output() {
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(&key_packages[&signer_1].group_public.to_bytes())
+            hex::encode(key_packages[&signer_1].group_public.to_bytes())
         )
     );
 
@@ -43,14 +43,14 @@ fn check_output() {
         test_logger.0[2],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(&key_packages[&signer_1].secret_share.to_bytes())
+            hex::encode(key_packages[&signer_1].secret_share.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: \"{}\"",
-            hex::encode(&key_packages[&signer_1].public.to_bytes())
+            hex::encode(key_packages[&signer_1].public.to_bytes())
         )
     );
 
@@ -59,14 +59,14 @@ fn check_output() {
         test_logger.0[5],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(&key_packages[&signer_2].secret_share.to_bytes())
+            hex::encode(key_packages[&signer_2].secret_share.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[6],
         format!(
             "Public key: \"{}\"",
-            hex::encode(&key_packages[&signer_2].public.to_bytes())
+            hex::encode(key_packages[&signer_2].public.to_bytes())
         )
     );
 
@@ -75,14 +75,14 @@ fn check_output() {
         test_logger.0[8],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(&key_packages[&signer_3].secret_share.to_bytes())
+            hex::encode(key_packages[&signer_3].secret_share.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[9],
         format!(
             "Public key: \"{}\"",
-            hex::encode(&key_packages[&signer_3].public.to_bytes())
+            hex::encode(key_packages[&signer_3].public.to_bytes())
         )
     );
 }
