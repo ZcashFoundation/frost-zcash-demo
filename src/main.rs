@@ -5,7 +5,7 @@ mod trusted_dealer_keygen;
 
 use std::io;
 
-use output::{print_values, ConsoleLogger};
+use output::{print_values, Logger};
 use rand::thread_rng;
 mod output;
 
@@ -26,4 +26,13 @@ fn main() -> io::Result<()> {
     print_values(&key_packages, pubkeys, &mut console_logger);
 
     Ok(())
+}
+
+#[derive(Default)]
+pub struct ConsoleLogger;
+
+impl Logger for ConsoleLogger {
+    fn log(&mut self, value: String) {
+        println!("{}", value);
+    }
 }

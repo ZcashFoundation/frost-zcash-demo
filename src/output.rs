@@ -10,15 +10,6 @@ pub trait Logger {
     fn log(&mut self, value: String);
 }
 
-#[derive(Default)]
-pub struct ConsoleLogger;
-
-impl Logger for ConsoleLogger {
-    fn log(&mut self, value: String) {
-        println!("{}", value);
-    }
-}
-
 pub fn print_values(
     keys: &HashMap<Identifier, KeyPackage>,
     pubkeys: PublicKeyPackage,
