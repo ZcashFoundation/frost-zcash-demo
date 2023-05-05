@@ -13,7 +13,18 @@ use crate::inputs::{request_inputs, validate_inputs};
 use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 
 fn main() -> io::Result<()> {
-    let config = request_inputs();
+    let mut reader = Box::new(io::stdin().lock());
+    let config = request_inputs(&mut reader);
+    match config {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(exitcode::DATAERR)
+        }
+    }
+
+    let config = config.unwrap();
+
     let mut rng = thread_rng();
 
     let valid = validate_inputs(&config);
