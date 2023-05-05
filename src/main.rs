@@ -16,10 +16,26 @@ fn main() -> io::Result<()> {
     let config = request_inputs();
     let mut rng = thread_rng();
 
-    validate_inputs(&config).expect("An error occurred");
+    let valid = validate_inputs(&config);
+    match valid {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(exitcode::DATAERR)
+        }
+    }
 
     // Print outputs
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
+    let out = trusted_dealer_keygen(config, &mut rng);
+    match out {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1)
+        }
+    }
+
+    let (key_packages, pubkeys) = out.unwrap();
 
     let mut console_logger = ConsoleLogger::default();
 

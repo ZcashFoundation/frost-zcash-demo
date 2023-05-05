@@ -9,7 +9,7 @@ fn check_valid_input_for_signers() {
 
     let expected = validate_inputs(&config);
 
-    assert_eq!(expected, Ok(config));
+    assert_eq!(expected, Ok(()));
 }
 
 #[test]

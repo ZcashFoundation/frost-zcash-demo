@@ -12,7 +12,7 @@ fn check_keygen() {
         min_signers: 2,
         max_signers: 3,
     };
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
+    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng).unwrap();
     let (nonces, commitments) =
         signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
     let message = "message to sign".as_bytes();

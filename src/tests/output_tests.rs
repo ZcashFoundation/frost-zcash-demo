@@ -22,7 +22,7 @@ fn check_output() {
         min_signers: 2,
         max_signers: 3,
     };
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng);
+    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng).unwrap();
 
     print_values(&key_packages, pubkeys, &mut test_logger);
 
