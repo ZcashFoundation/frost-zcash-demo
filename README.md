@@ -79,7 +79,7 @@ The dealer should use a secure broadcast channel to ensure each participant has 
 The trusted dealer MUST delete the secret_key (used during calculation) and secret_share upon completion.
 Use of this method for key generation requires a mutually authenticated secure channel between the dealer and participants to send secret key shares, wherein the channel provides confidentiality and integrity. Mutually authenticated TLS is one possible deployment option.
 
-NOTE: A signer is a participant that signs and sends the signature to receive the final group signature. A dealer is a participant but not a signer.
+NOTE: A signer is a participant that generates a signing share which is aggregated with the signing shares of other signers to obtain the final group signature.
 
 ## Developer information
 
