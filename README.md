@@ -75,7 +75,7 @@ To generate a key package the participant requires:
 
 The commitment is used to verify the signer's secret share and to generate the group commitment.
 
-The dealer can use a secure broadcast channel to ensure each participant has a consistent view of this commitment OR each participant must [verify the commitments](https://github.com/ZcashFoundation/frost/blob/4055cb9439df2814800c678c8da1760a0f86dc10/frost-core/src/frost/keys.rs#L297). 
+The dealer should use a secure broadcast channel to ensure each participant has a consistent view of this commitment and each participant must [verify the commitments](https://github.com/ZcashFoundation/frost/blob/4055cb9439df2814800c678c8da1760a0f86dc10/frost-core/src/frost/keys.rs#L297). 
 The trusted dealer MUST delete the secret_key (used during calculation) and secret_share upon completion.
 Use of this method for key generation requires a mutually authenticated secure channel between the dealer and participants to send secret key shares, wherein the channel provides confidentiality and integrity. Mutually authenticated TLS is one possible deployment option.
 
