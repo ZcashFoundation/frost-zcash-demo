@@ -15,12 +15,9 @@ use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 fn main() -> io::Result<()> {
     let mut reader = Box::new(io::stdin().lock());
     let config = request_inputs(&mut reader);
-    match config {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            std::process::exit(exitcode::DATAERR)
-        }
+    if let Err(e) = config {
+        eprintln!("Error: {}", e);
+        std::process::exit(exitcode::DATAERR)
     }
 
     let config = config.unwrap();
@@ -28,22 +25,16 @@ fn main() -> io::Result<()> {
     let mut rng = thread_rng();
 
     let valid = validate_inputs(&config);
-    match valid {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            std::process::exit(exitcode::DATAERR)
-        }
+    if let Err(e) = valid {
+        eprintln!("Error: {}", e);
+        std::process::exit(exitcode::DATAERR)
     }
 
     // Print outputs
     let out = trusted_dealer_keygen(config, &mut rng);
-    match out {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            std::process::exit(1)
-        }
+    if let Err(e) = out {
+        eprintln!("Error: {}", e);
+        std::process::exit(1)
     }
 
     let (key_packages, pubkeys) = out.unwrap();
