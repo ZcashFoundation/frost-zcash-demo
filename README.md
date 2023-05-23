@@ -1,4 +1,4 @@
-# Frost Trusted Dealer Demo
+# FROST Trusted Dealer Demo
 
 A CLI demo for running trusted dealer key generation with the Zcash Foundation's Rust implementation of [Two-Round Threshold Schnorr Signatures with FROST](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/). The trusted dealer is trusted to:
 1. generate good randomness
