@@ -1,0 +1,15 @@
+[tasks.fmt]
+script = "cargo fmt"
+
+[tasks.clippy-full]
+script = "cargo clippy --all-features --all-targets -- -D warnings"
+
+[tasks.all]
+dependencies = [
+    "test",
+    "fmt",
+    "clippy-full"
+]
+
+[tasks.cov]
+script = "cargo llvm-cov --ignore-filename-regex 'tests.rs'"
