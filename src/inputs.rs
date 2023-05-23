@@ -1,4 +1,5 @@
-use std::io;
+use frost_ed25519::Error;
+use std::io::BufRead;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Config {
@@ -6,38 +7,44 @@ pub struct Config {
     pub max_signers: u16,
 }
 
-pub fn validate_inputs(config: &Config) -> Result<Config, frost_ed25519::Error> {
+pub fn validate_inputs(config: &Config) -> Result<(), Error> {
     if config.min_signers < 2 {
-        return Err(frost_ed25519::Error::InvalidMinSigners);
+        return Err(Error::InvalidMinSigners);
     }
 
     if config.max_signers < 2 {
-        return Err(frost_ed25519::Error::InvalidMaxSigners);
+        return Err(Error::InvalidMaxSigners);
     }
 
     if config.min_signers > config.max_signers {
-        return Err(frost_ed25519::Error::InvalidMinSigners);
+        return Err(Error::InvalidMinSigners);
     }
 
-    Ok(*config)
+    Ok(())
 }
 
-pub fn request_inputs() -> Config {
+pub fn request_inputs(input: &mut impl BufRead) -> Result<Config, Error> {
     println!("The minimum number of signers: (2 or more)");
 
     let mut min = String::new();
-    io::stdin().read_line(&mut min).expect("invalid input");
+    input.read_line(&mut min).unwrap();
 
-    let min_signers = min.trim().parse::<u16>().expect("Invalid input");
+    let min_signers = min
+        .trim()
+        .parse::<u16>()
+        .map_err(|_| Error::InvalidMinSigners)?;
 
-    println!("The maximum number of signers: (must be greater than minimum number of signers)");
+    println!("The maximum number of signers: ");
 
     let mut max = String::new();
-    io::stdin().read_line(&mut max).expect("invalid input");
-    let max_signers = max.trim().parse::<u16>().expect("invalid input");
+    input.read_line(&mut max).unwrap();
+    let max_signers = max
+        .trim()
+        .parse::<u16>()
+        .map_err(|_| Error::InvalidMaxSigners)?;
 
-    Config {
+    Ok(Config {
         min_signers,
         max_signers,
-    }
+    })
 }

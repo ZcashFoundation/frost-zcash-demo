@@ -1,5 +1,5 @@
 use frost::keys::{KeyPackage, PublicKeyPackage};
-use frost::Identifier;
+use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use rand::rngs::ThreadRng;
 use std::collections::HashMap;
@@ -9,17 +9,16 @@ use crate::inputs::Config;
 pub fn trusted_dealer_keygen(
     config: Config,
     rng: &mut ThreadRng,
-) -> (HashMap<Identifier, KeyPackage>, PublicKeyPackage) {
+) -> Result<(HashMap<Identifier, KeyPackage>, PublicKeyPackage), Error> {
     let (shares, pubkeys) =
-        frost::keys::keygen_with_dealer(config.max_signers, config.min_signers, rng)
-            .expect("Error generating keys"); // TODO: handle error
+        frost::keys::keygen_with_dealer(config.max_signers, config.min_signers, rng)?;
 
     let mut key_packages: HashMap<_, _> = HashMap::new();
 
     for (k, v) in shares {
-        let key_package = frost::keys::KeyPackage::try_from(v).unwrap(); // TODO: handle error
+        let key_package = frost::keys::KeyPackage::try_from(v)?;
         key_packages.insert(k, key_package);
     }
 
-    (key_packages, pubkeys)
+    Ok((key_packages, pubkeys))
 }

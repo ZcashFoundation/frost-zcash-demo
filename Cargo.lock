@@ -291,6 +291,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "exitcode"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -347,6 +353,7 @@ dependencies = [
 name = "frost-trusted-dealer-demo"
 version = "0.1.0"
 dependencies = [
+ "exitcode",
  "frost-ed25519",
  "hex",
  "itertools",
