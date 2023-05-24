@@ -319,9 +319,9 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "frost-core"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05b1dfe39cf39c73c9d2b5f3cac4c482984028ccf5235f455b8c984d977c71a0"
+checksum = "e2329106b2265939420de478389a83ffd63a76ec86b306c6d78ea345a5efced3"
 dependencies = [
  "byteorder",
  "criterion",
@@ -339,9 +339,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ed25519"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c190b586c268a320b683a6b57aa4b1a73176d85ecd69b0dbcb2e2786a034c8d3"
+checksum = "b749ea831d8e9205f6c8d912d5656c5d320b0bb1489b4b6fdd715941a1e8dd1a"
 dependencies = [
  "curve25519-dalek",
  "frost-core",
