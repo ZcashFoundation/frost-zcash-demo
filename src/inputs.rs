@@ -7,6 +7,11 @@ pub struct Config {
     pub max_signers: u16,
 }
 
+pub struct _SecretConfig {
+    pub signers: Config,
+    pub secret: Vec<u8>,
+}
+
 pub fn validate_inputs(config: &Config) -> Result<(), Error> {
     if config.min_signers < 2 {
         return Err(Error::InvalidMinSigners);

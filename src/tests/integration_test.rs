@@ -1,12 +1,13 @@
-use crate::inputs::Config;
+use crate::inputs::{Config, _SecretConfig};
 use frost_ed25519 as frost;
 use rand::thread_rng;
 
+use crate::trusted_dealer_keygen::_split;
 use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 mod signature_gen;
 
 #[test]
-fn check_keygen() {
+fn check_keygen_with_dealer() {
     let mut rng = thread_rng();
     let config = Config {
         min_signers: 2,
@@ -25,4 +26,18 @@ fn check_keygen() {
     let verify_signature = pubkeys.group_public.verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
+}
+
+#[test]
+fn check_keygen_with_dealer_with_secret() {
+    let mut rng = thread_rng();
+    let config = Config {
+        min_signers: 2,
+        max_signers: 3,
+    };
+    let secret_config = _SecretConfig {
+        signers: config,
+        secret: b"byte".to_vec(), // Todo
+    };
+    _split(secret_config, &mut rng);
 }
