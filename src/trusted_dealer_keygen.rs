@@ -4,10 +4,10 @@ use frost_ed25519 as frost;
 use rand::rngs::ThreadRng;
 use std::collections::HashMap;
 
-use crate::inputs::{Config, _SecretConfig};
+use crate::inputs::Config;
 
 pub fn trusted_dealer_keygen(
-    config: Config,
+    config: &Config,
     rng: &mut ThreadRng,
 ) -> Result<(HashMap<Identifier, KeyPackage>, PublicKeyPackage), Error> {
     let (shares, pubkeys) =
@@ -23,4 +23,4 @@ pub fn trusted_dealer_keygen(
     Ok((key_packages, pubkeys))
 }
 
-pub fn _split(_config: _SecretConfig, _rng: &mut ThreadRng) {}
+pub fn _split_secret(_config: Config, _rng: &mut ThreadRng) {}

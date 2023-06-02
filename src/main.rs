@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
     }
 
     // Print outputs
-    let out = trusted_dealer_keygen(config, &mut rng);
+    let out = trusted_dealer_keygen(&config, &mut rng);
     if let Err(e) = out {
         eprintln!("Error: {}", e);
         std::process::exit(1)

@@ -1,8 +1,8 @@
-use crate::inputs::{Config, _SecretConfig};
+use crate::inputs::Config;
 use frost_ed25519 as frost;
 use rand::thread_rng;
 
-use crate::trusted_dealer_keygen::_split;
+use crate::trusted_dealer_keygen::_split_secret;
 use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 mod signature_gen;
 
@@ -12,8 +12,9 @@ fn check_keygen_with_dealer() {
     let config = Config {
         min_signers: 2,
         max_signers: 3,
+        secret: Vec::new(),
     };
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng).unwrap();
+    let (key_packages, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
     let (nonces, commitments) =
         signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
     let message = "message to sign".as_bytes();
@@ -31,13 +32,10 @@ fn check_keygen_with_dealer() {
 #[test]
 fn check_keygen_with_dealer_with_secret() {
     let mut rng = thread_rng();
-    let config = Config {
+    let secret_config = Config {
         min_signers: 2,
         max_signers: 3,
+        secret: b"byte".to_vec(),
     };
-    let secret_config = _SecretConfig {
-        signers: config,
-        secret: b"byte".to_vec(), // Todo
-    };
-    _split(secret_config, &mut rng);
+    _split_secret(secret_config, &mut rng);
 }

@@ -4,7 +4,7 @@ use rand::thread_rng;
 
 use crate::inputs::Config;
 use crate::output::{print_values, Logger};
-use crate::trusted_dealer_keygen;
+use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 
 struct TestLogger(Vec<String>);
 
@@ -21,8 +21,9 @@ fn check_output() {
     let config = Config {
         min_signers: 2,
         max_signers: 3,
+        secret: Vec::new(),
     };
-    let (key_packages, pubkeys) = trusted_dealer_keygen(config, &mut rng).unwrap();
+    let (key_packages, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
 
     print_values(&key_packages, pubkeys, &mut test_logger);
 
