@@ -32,18 +32,18 @@ fn main() -> io::Result<()> {
     }
 
     let keygen = if config.secret.is_empty() {
-        trusted_dealer_keygen(&config, &mut rng).unwrap()
+        trusted_dealer_keygen(&config, &mut rng)
     } else {
         split_secret(&config, &mut rng)
     };
 
     // Print outputs
-    // if let Err(e) = keygen {
-    //     eprintln!("Error: {}", e);
-    //     std::process::exit(1)
-    // }
+    if let Err(e) = keygen {
+        eprintln!("Error: {}", e);
+        std::process::exit(1)
+    }
 
-    let (key_packages, pubkeys) = keygen;
+    let (key_packages, pubkeys) = keygen.unwrap();
 
     let mut console_logger = ConsoleLogger::default();
 

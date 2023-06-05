@@ -41,7 +41,7 @@ fn check_keygen_with_dealer_with_secret() {
         max_signers: 3,
         secret,
     };
-    let (key_packages, pubkeys) = split_secret(&secret_config, &mut rng);
+    let (key_packages, pubkeys) = split_secret(&secret_config, &mut rng).unwrap();
     let (nonces, commitments) = signature_gen::generate_nonces_and_commitments(
         secret_config.min_signers,
         &key_packages,

@@ -101,7 +101,7 @@ fn check_output_with_secret() {
         max_signers: 3,
         secret,
     };
-    let (key_packages, pubkeys) = split_secret(&config, &mut rng);
+    let (key_packages, pubkeys) = split_secret(&config, &mut rng).unwrap();
 
     print_values(&key_packages, pubkeys, &mut test_logger);
 

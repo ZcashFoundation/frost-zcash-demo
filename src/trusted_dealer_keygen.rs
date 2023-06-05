@@ -26,17 +26,17 @@ pub fn trusted_dealer_keygen(
 pub fn split_secret(
     config: &Config,
     rng: &mut ThreadRng,
-) -> (HashMap<Identifier, KeyPackage>, PublicKeyPackage) {
+) -> Result<(HashMap<Identifier, KeyPackage>, PublicKeyPackage), Error> {
     let sec = config.secret.clone();
     let again = sec.try_into().unwrap();
-    let secret_key = SigningKey::from_bytes(again).unwrap();
+    let secret_key = SigningKey::from_bytes(again)?;
     let (shares, pubkeys) =
-        frost::keys::split(&secret_key, config.max_signers, config.min_signers, rng).unwrap();
+        frost::keys::split(&secret_key, config.max_signers, config.min_signers, rng)?;
     let mut key_packages: HashMap<_, _> = HashMap::new();
 
     for (k, v) in shares {
-        let key_package = frost::keys::KeyPackage::try_from(v).unwrap();
+        let key_package = frost::keys::KeyPackage::try_from(v)?;
         key_packages.insert(k, key_package);
     }
-    (key_packages, pubkeys)
+    Ok((key_packages, pubkeys))
 }
