@@ -1,10 +1,12 @@
-use frost_ed25519::Error;
+use frost::Error;
+use frost_ed25519 as frost;
 use std::io::BufRead;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub min_signers: u16,
     pub max_signers: u16,
+    pub secret: Vec<u8>, // todo
 }
 
 pub fn validate_inputs(config: &Config) -> Result<(), Error> {
@@ -43,8 +45,17 @@ pub fn request_inputs(input: &mut impl BufRead) -> Result<Config, Error> {
         .parse::<u16>()
         .map_err(|_| Error::InvalidMaxSigners)?;
 
-    Ok(Config {
+    println!("Secret key (press enter to randomly generate a fresh one): ");
+
+    let mut secret_input = String::new();
+    input.read_line(&mut secret_input).unwrap();
+    let secret = hex::decode(secret_input.trim()).map_err(|_| Error::MalformedSigningKey)?;
+
+    let config = Config {
         min_signers,
         max_signers,
-    })
+        secret,
+    };
+
+    Ok(config)
 }

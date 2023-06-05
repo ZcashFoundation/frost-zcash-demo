@@ -7,6 +7,7 @@ use std::io;
 
 use output::{print_values, Logger};
 use rand::thread_rng;
+use trusted_dealer_keygen::split_secret;
 mod output;
 
 use crate::inputs::{request_inputs, validate_inputs};
@@ -30,14 +31,19 @@ fn main() -> io::Result<()> {
         std::process::exit(exitcode::DATAERR)
     }
 
+    let keygen = if config.secret.is_empty() {
+        trusted_dealer_keygen(&config, &mut rng)
+    } else {
+        split_secret(&config, &mut rng)
+    };
+
     // Print outputs
-    let out = trusted_dealer_keygen(config, &mut rng);
-    if let Err(e) = out {
+    if let Err(e) = keygen {
         eprintln!("Error: {}", e);
         std::process::exit(1)
     }
 
-    let (key_packages, pubkeys) = out.unwrap();
+    let (key_packages, pubkeys) = keygen.unwrap();
 
     let mut console_logger = ConsoleLogger::default();
 
