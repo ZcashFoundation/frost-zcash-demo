@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use frost_ed25519 as frost;
 
-use frost::keys::{KeyPackage, PublicKeyPackage};
+use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Identifier;
 use itertools::Itertools;
 
@@ -11,8 +11,8 @@ pub trait Logger {
 }
 
 pub fn print_values(
-    keys: &HashMap<Identifier, KeyPackage>,
-    pubkeys: PublicKeyPackage,
+    keys: &HashMap<Identifier, SecretShare>,
+    pubkeys: &PublicKeyPackage,
     logger: &mut dyn Logger,
 ) {
     logger.log(format!(
@@ -28,11 +28,11 @@ pub fn print_values(
         logger.log(format!("Participant {:?}", k));
         logger.log(format!(
             "Secret share: {:?}",
-            hex::encode(v.secret_share.to_bytes())
+            hex::encode(v.value.to_bytes())
         ));
         logger.log(format!(
             "Public key: {:?}",
-            hex::encode(v.public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[k].to_bytes())
         ));
         println!("---")
     }

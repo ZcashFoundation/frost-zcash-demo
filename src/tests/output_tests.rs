@@ -23,9 +23,9 @@ fn check_output_without_secret() {
         max_signers: 3,
         secret: Vec::new(),
     };
-    let (key_packages, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
+    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
 
-    print_values(&key_packages, pubkeys, &mut test_logger);
+    print_values(&shares, &pubkeys, &mut test_logger);
 
     let signer_1 = Identifier::try_from(1).unwrap();
     let signer_2 = Identifier::try_from(2).unwrap();
@@ -35,7 +35,7 @@ fn check_output_without_secret() {
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(key_packages[&signer_1].group_public.to_bytes())
+            hex::encode(pubkeys.group_public.to_bytes())
         )
     );
 
@@ -44,14 +44,14 @@ fn check_output_without_secret() {
         test_logger.0[2],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_1].secret_share.to_bytes())
+            hex::encode(shares[&signer_1].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_1].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_1].to_bytes())
         )
     );
 
@@ -60,14 +60,14 @@ fn check_output_without_secret() {
         test_logger.0[5],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_2].secret_share.to_bytes())
+            hex::encode(shares[&signer_2].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[6],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_2].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_2].to_bytes())
         )
     );
 
@@ -76,14 +76,14 @@ fn check_output_without_secret() {
         test_logger.0[8],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_3].secret_share.to_bytes())
+            hex::encode(shares[&signer_3].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[9],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_3].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_3].to_bytes())
         )
     );
 }
@@ -101,9 +101,9 @@ fn check_output_with_secret() {
         max_signers: 3,
         secret,
     };
-    let (key_packages, pubkeys) = split_secret(&config, &mut rng).unwrap();
+    let (shares, pubkeys) = split_secret(&config, &mut rng).unwrap();
 
-    print_values(&key_packages, pubkeys, &mut test_logger);
+    print_values(&shares, &pubkeys, &mut test_logger);
 
     let signer_1 = Identifier::try_from(1).unwrap();
     let signer_2 = Identifier::try_from(2).unwrap();
@@ -113,7 +113,7 @@ fn check_output_with_secret() {
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(key_packages[&signer_1].group_public.to_bytes())
+            hex::encode(pubkeys.group_public.to_bytes())
         )
     );
 
@@ -122,14 +122,14 @@ fn check_output_with_secret() {
         test_logger.0[2],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_1].secret_share.to_bytes())
+            hex::encode(shares[&signer_1].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_1].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_1].to_bytes())
         )
     );
 
@@ -138,14 +138,14 @@ fn check_output_with_secret() {
         test_logger.0[5],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_2].secret_share.to_bytes())
+            hex::encode(shares[&signer_2].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[6],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_2].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_2].to_bytes())
         )
     );
 
@@ -154,14 +154,14 @@ fn check_output_with_secret() {
         test_logger.0[8],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(key_packages[&signer_3].secret_share.to_bytes())
+            hex::encode(shares[&signer_3].value.to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[9],
         format!(
             "Public key: \"{}\"",
-            hex::encode(key_packages[&signer_3].public.to_bytes())
+            hex::encode(pubkeys.signer_pubkeys[&signer_3].to_bytes())
         )
     );
 }

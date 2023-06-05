@@ -43,11 +43,11 @@ fn main() -> io::Result<()> {
         std::process::exit(1)
     }
 
-    let (key_packages, pubkeys) = keygen.unwrap();
+    let (shares, pubkeys) = keygen.unwrap();
 
     let mut console_logger = ConsoleLogger::default();
 
-    print_values(&key_packages, pubkeys, &mut console_logger);
+    print_values(&shares, &pubkeys, &mut console_logger);
 
     Ok(())
 }
