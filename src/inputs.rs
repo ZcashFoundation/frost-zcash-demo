@@ -45,7 +45,7 @@ pub fn request_inputs(input: &mut impl BufRead) -> Result<Config, Error> {
         .parse::<u16>()
         .map_err(|_| Error::InvalidMaxSigners)?;
 
-    println!("Secret key (if you don't have one then press enter): ");
+    println!("Secret key (press enter to randomly generate a fresh one): ");
 
     let mut secret_input = String::new();
     input.read_line(&mut secret_input).unwrap();
