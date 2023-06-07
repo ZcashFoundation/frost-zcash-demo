@@ -92,7 +92,7 @@ fn return_error_if_invalid_max_signers_input() {
 }
 
 #[test]
-fn return_error_if_secret_is_invalid() {
+fn return_malformed_signing_key_error_if_secret_is_invalid() {
     let mut secret_input = "4\n6\nasecret\n".as_bytes();
     let expected = request_inputs(&mut secret_input);
 

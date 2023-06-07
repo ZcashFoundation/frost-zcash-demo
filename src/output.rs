@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
-use frost_ed25519 as frost;
-
 use frost::keys::{PublicKeyPackage, SecretShare, VerifiableSecretSharingCommitment};
 use frost::Identifier;
-
+use frost_ed25519 as frost;
 use itertools::Itertools;
+use std::collections::HashMap;
 
 pub trait Logger {
     fn log(&mut self, value: String);
@@ -54,13 +51,10 @@ pub fn print_values(
 
 #[cfg(test)]
 mod tests {
-    use hex::FromHex;
-
-    use frost_ed25519 as frost;
-
-    use frost::keys::VerifiableSecretSharingCommitment;
-
     use crate::output::encode_commitment;
+    use frost::keys::VerifiableSecretSharingCommitment;
+    use frost_ed25519 as frost;
+    use hex::FromHex;
 
     #[test]
     fn check_encode_commitment() {
