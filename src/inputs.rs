@@ -6,10 +6,10 @@ use std::io::BufRead;
 pub struct Config {
     pub min_signers: u16,
     pub max_signers: u16,
-    pub secret: Vec<u8>, // todo
+    pub secret: Vec<u8>,
 }
 
-pub fn validate_inputs(config: &Config) -> Result<(), Error> {
+fn validate_inputs(config: &Config) -> Result<(), Error> {
     if config.min_signers < 2 {
         return Err(Error::InvalidMinSigners);
     }
@@ -56,6 +56,8 @@ pub fn request_inputs(input: &mut impl BufRead) -> Result<Config, Error> {
         max_signers,
         secret,
     };
+
+    validate_inputs(&config)?;
 
     Ok(config)
 }

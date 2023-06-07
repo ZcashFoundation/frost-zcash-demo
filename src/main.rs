@@ -10,7 +10,7 @@ use rand::thread_rng;
 use trusted_dealer_keygen::split_secret;
 mod output;
 
-use crate::inputs::{request_inputs, validate_inputs};
+use crate::inputs::request_inputs;
 use crate::trusted_dealer_keygen::trusted_dealer_keygen;
 
 fn main() -> io::Result<()> {
@@ -24,12 +24,6 @@ fn main() -> io::Result<()> {
     let config = config.unwrap();
 
     let mut rng = thread_rng();
-
-    let valid = validate_inputs(&config);
-    if let Err(e) = valid {
-        eprintln!("Error: {}", e);
-        std::process::exit(exitcode::DATAERR)
-    }
 
     let keygen = if config.secret.is_empty() {
         trusted_dealer_keygen(&config, &mut rng)
