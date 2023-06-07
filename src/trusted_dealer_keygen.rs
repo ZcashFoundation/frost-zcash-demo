@@ -24,7 +24,13 @@ pub fn split_secret(
     config: &Config,
     rng: &mut ThreadRng,
 ) -> Result<(HashMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
-    let secret_key = SigningKey::from_bytes(config.secret.clone().try_into().unwrap())?;
+    let secret_key = SigningKey::from_bytes(
+        config
+            .secret
+            .clone()
+            .try_into()
+            .map_err(|_| Error::MalformedSigningKey)?,
+    )?;
     let (shares, pubkeys) =
         frost::keys::split(&secret_key, config.max_signers, config.min_signers, rng)?;
 

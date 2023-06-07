@@ -70,9 +70,9 @@ mod tests {
 
         let expected = hex::encode("3") + coeff_comm_1 + coeff_comm_2 + coeff_comm_3;
 
-        let decoded_1 = <[u8; 32]>::from_hex(coeff_comm_1).expect("Decoding failed");
-        let decoded_2 = <[u8; 32]>::from_hex(coeff_comm_2).expect("Decoding failed");
-        let decoded_3 = <[u8; 32]>::from_hex(coeff_comm_3).expect("Decoding failed");
+        let decoded_1 = <[u8; 32]>::from_hex(coeff_comm_1).unwrap();
+        let decoded_2 = <[u8; 32]>::from_hex(coeff_comm_2).unwrap();
+        let decoded_3 = <[u8; 32]>::from_hex(coeff_comm_3).unwrap();
 
         let vss_commitment =
             VerifiableSecretSharingCommitment::deserialize(vec![decoded_1, decoded_2, decoded_3])
