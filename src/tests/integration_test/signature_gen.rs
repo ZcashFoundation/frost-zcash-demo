@@ -1,10 +1,22 @@
-use frost::keys::KeyPackage;
+use frost::keys::{KeyPackage, SecretShare};
 use frost::round1::{SigningCommitments, SigningNonces};
 use frost::round2::SignatureShare;
 use frost::{Identifier, SigningPackage};
 use frost_ed25519 as frost;
 use rand::rngs::ThreadRng;
 use std::collections::HashMap;
+
+pub fn generate_key_packages(
+    shares: HashMap<Identifier, SecretShare>,
+) -> HashMap<Identifier, KeyPackage> {
+    let mut key_packages: HashMap<_, _> = HashMap::new();
+
+    for (k, v) in shares {
+        let key_package = frost::keys::KeyPackage::try_from(v).unwrap();
+        key_packages.insert(k, key_package);
+    }
+    key_packages
+}
 
 pub fn generate_nonces_and_commitments(
     min_signers: u16,

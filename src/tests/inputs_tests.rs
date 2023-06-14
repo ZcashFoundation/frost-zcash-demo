@@ -1,4 +1,6 @@
-use crate::inputs::{request_inputs, validate_inputs, Config};
+use crate::inputs::{request_inputs, Config};
+use frost::Error;
+use frost_ed25519 as frost;
 
 #[test]
 fn check_valid_input_for_signers() {
@@ -8,48 +10,34 @@ fn check_valid_input_for_signers() {
         secret: Vec::new(),
     };
 
-    let expected = validate_inputs(&config);
+    let mut valid_input = "2\n3\n\n".as_bytes();
+    let expected = request_inputs(&mut valid_input);
 
-    assert_eq!(expected, Ok(()));
+    assert_eq!(expected, Ok(config));
 }
 
 #[test]
 fn return_error_if_min_participant_greater_than_max_participant() {
-    let config = Config {
-        min_signers: 4,
-        max_signers: 3,
-        secret: Vec::new(),
-    };
+    let mut invalid_input = "4\n3\n\n".as_bytes();
+    let expected = request_inputs(&mut invalid_input);
 
-    let expected = validate_inputs(&config);
-
-    assert_eq!(expected, Err(frost_ed25519::Error::InvalidMinSigners));
+    assert_eq!(expected, Err(Error::InvalidMinSigners));
 }
 
 #[test]
 fn return_error_if_min_participant_is_less_than_2() {
-    let config = Config {
-        min_signers: 1,
-        max_signers: 3,
-        secret: Vec::new(),
-    };
+    let mut invalid_input = "1\n3\n\n".as_bytes();
+    let expected = request_inputs(&mut invalid_input);
 
-    let expected = validate_inputs(&config);
-
-    assert_eq!(expected, Err(frost_ed25519::Error::InvalidMinSigners));
+    assert_eq!(expected, Err(Error::InvalidMinSigners));
 }
 
 #[test]
 fn return_error_if_max_participant_is_less_than_2() {
-    let config = Config {
-        min_signers: 2,
-        max_signers: 1,
-        secret: Vec::new(),
-    };
+    let mut invalid_input = "2\n1\n\n".as_bytes();
+    let expected = request_inputs(&mut invalid_input);
 
-    let expected = validate_inputs(&config);
-
-    assert_eq!(expected, Err(frost_ed25519::Error::InvalidMaxSigners));
+    assert_eq!(expected, Err(Error::InvalidMaxSigners));
 }
 
 // Testing inclusion of secret input
@@ -78,7 +66,7 @@ fn return_error_if_invalid_min_signers_input() {
     let mut invalid_input = "hello\n6\n\n".as_bytes();
     let expected = request_inputs(&mut invalid_input);
 
-    assert_eq!(expected, Err(frost_ed25519::Error::InvalidMinSigners))
+    assert_eq!(expected, Err(Error::InvalidMinSigners))
 }
 
 #[test]
@@ -86,13 +74,13 @@ fn return_error_if_invalid_max_signers_input() {
     let mut invalid_input = "4\nworld\n\n".as_bytes();
     let expected = request_inputs(&mut invalid_input);
 
-    assert_eq!(expected, Err(frost_ed25519::Error::InvalidMaxSigners))
+    assert_eq!(expected, Err(Error::InvalidMaxSigners))
 }
 
 #[test]
-fn return_error_if_secret_is_invalid() {
+fn return_malformed_signing_key_error_if_secret_is_invalid() {
     let mut secret_input = "4\n6\nasecret\n".as_bytes();
     let expected = request_inputs(&mut secret_input);
 
-    assert_eq!(expected, Err(frost_ed25519::Error::MalformedSigningKey))
+    assert_eq!(expected, Err(Error::MalformedSigningKey))
 }
