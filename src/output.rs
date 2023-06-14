@@ -10,9 +10,9 @@ pub trait Logger {
 
 fn encode_commitment(vss_commitment: VerifiableSecretSharingCommitment) -> String {
     let serialized = vss_commitment.serialize();
-    let num = serialized.len().to_string();
+    let num = serialized.len();
 
-    let mut out = hex::encode(num);
+    let mut out = hex::encode([num as u8]);
     for cc in serialized {
         out = out + &hex::encode(cc)
     }
@@ -62,7 +62,7 @@ mod tests {
         let coeff_comm_2 = "6bc2053a2bedc6a071c74495965c960a6d2655720edba2a5aa68b8e160c9f55d";
         let coeff_comm_3 = "eb73cfae619afa59984754e5f3e93ba2357164ce113b09e542365d8313d6f091";
 
-        let expected = hex::encode("3") + coeff_comm_1 + coeff_comm_2 + coeff_comm_3;
+        let expected = "03".to_string() + coeff_comm_1 + coeff_comm_2 + coeff_comm_3;
 
         let decoded_1 = <[u8; 32]>::from_hex(coeff_comm_1).unwrap();
         let decoded_2 = <[u8; 32]>::from_hex(coeff_comm_2).unwrap();

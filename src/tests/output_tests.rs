@@ -15,10 +15,12 @@ impl Logger for TestLogger {
 }
 
 fn encode_commitment_helper(commitment: Vec<[u8; 32]>) -> String {
-    let coeff_comm_1 = hex::encode(commitment[0]);
-    let coeff_comm_2 = hex::encode(commitment[1]);
-
-    hex::encode("2") + &coeff_comm_1 + &coeff_comm_2
+    let len_test = commitment.len() as u8;
+    let mut out = hex::encode([len_test]);
+    for c in commitment {
+        out = out + &hex::encode(c)
+    }
+    out
 }
 
 #[test]
@@ -211,6 +213,104 @@ fn check_output_with_secret() {
         format!(
             "Commitment: {}",
             encode_commitment_helper(shares[&signer_3].commitment.serialize())
+        )
+    );
+}
+
+#[test]
+fn check_output_with_large_num_of_signers() {
+    let mut test_logger = TestLogger(Vec::new());
+    let mut rng = thread_rng();
+    let config = Config {
+        min_signers: 10,
+        max_signers: 20,
+        secret: Vec::new(),
+    };
+    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
+
+    print_values(&shares, &pubkeys, &mut test_logger);
+
+    let signer_10 = Identifier::try_from(10).unwrap();
+
+    assert_eq!(
+        test_logger.0[0],
+        format!(
+            "Group public key: \"{}\"",
+            hex::encode(pubkeys.group_public.to_bytes())
+        )
+    );
+
+    assert_eq!(test_logger.0[37], format!("Participant {:?}", signer_10));
+    assert_eq!(
+        test_logger.0[38],
+        format!(
+            "Secret share: \"{}\"",
+            hex::encode(shares[&signer_10].value.to_bytes())
+        )
+    );
+    assert_eq!(
+        test_logger.0[39],
+        format!(
+            "Public key: \"{}\"",
+            hex::encode(pubkeys.signer_pubkeys[&signer_10].to_bytes())
+        )
+    );
+    assert_eq!(
+        test_logger.0[40],
+        format!(
+            "Commitment: {}",
+            encode_commitment_helper(shares[&signer_10].commitment.serialize())
+        )
+    );
+}
+
+#[test]
+fn check_output_with_secret_with_large_num_of_signers() {
+    let mut test_logger = TestLogger(Vec::new());
+    let mut rng = thread_rng();
+    let secret: Vec<u8> = vec![
+        123, 28, 51, 211, 245, 41, 29, 133, 222, 102, 72, 51, 190, 177, 173, 70, 159, 127, 182, 2,
+        90, 14, 199, 139, 58, 121, 12, 110, 19, 169, 131, 4,
+    ];
+    let config = Config {
+        min_signers: 10,
+        max_signers: 20,
+        secret,
+    };
+    let (shares, pubkeys) = split_secret(&config, &mut rng).unwrap();
+
+    print_values(&shares, &pubkeys, &mut test_logger);
+
+    let signer_10 = Identifier::try_from(10).unwrap();
+
+    assert_eq!(
+        test_logger.0[0],
+        format!(
+            "Group public key: \"{}\"",
+            hex::encode(pubkeys.group_public.to_bytes())
+        )
+    );
+
+    assert_eq!(test_logger.0[37], format!("Participant {:?}", signer_10));
+    assert_eq!(
+        test_logger.0[38],
+        format!(
+            "Secret share: \"{}\"",
+            hex::encode(shares[&signer_10].value.to_bytes())
+        )
+    );
+    assert_eq!(
+        test_logger.0[39],
+        format!(
+            "Public key: \"{}\"",
+            hex::encode(pubkeys.signer_pubkeys[&signer_10].to_bytes())
+        )
+    );
+    assert_eq!(
+        test_logger.0[40],
+        format!(
+            "Commitment: {}",
+            encode_commitment_helper(shares[&signer_10].commitment.serialize())
         )
     );
 }
