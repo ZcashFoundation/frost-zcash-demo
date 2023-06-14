@@ -1,5 +1,5 @@
 [package]
-name = "participant"
+name = "trusted-dealer"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 frost-ed25519 = "0.4.0"
+thiserror = "1.0"
+rand = "0.8"
+hex = "0.4"
+itertools = "0.10.5"
+exitcode = "1.1.2"
