@@ -8,7 +8,7 @@ pub trait Logger {
     fn log(&mut self, value: String);
 }
 
-fn encode_commitment(vss_commitment: VerifiableSecretSharingCommitment) -> String {
+fn encode_commitment(vss_commitment: &VerifiableSecretSharingCommitment) -> String {
     let serialized = vss_commitment.serialize();
     let num = serialized.len();
 
@@ -41,10 +41,7 @@ pub fn print_values(
             "Public key: {:?}",
             hex::encode(pubkeys.signer_pubkeys[k].to_bytes())
         ));
-        logger.log(format!(
-            "Commitment: {}",
-            encode_commitment(v.commitment.clone())
-        ));
+        logger.log(format!("Commitment: {}", encode_commitment(&v.commitment)));
         println!("---")
     }
 }
@@ -71,7 +68,7 @@ mod tests {
         let vss_commitment =
             VerifiableSecretSharingCommitment::deserialize(vec![decoded_1, decoded_2, decoded_3])
                 .unwrap();
-        let commitment = encode_commitment(vss_commitment);
+        let commitment = encode_commitment(&vss_commitment);
         assert!(commitment == expected)
     }
 }
