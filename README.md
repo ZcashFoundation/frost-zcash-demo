@@ -1,9 +1,6 @@
-# FROST Trusted Dealer Demo
+# Zcash Foundation FROST Demos
 
-A CLI demo for running trusted dealer key generation with the Zcash Foundation's Rust implementation of [Two-Round Threshold Schnorr Signatures with FROST](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/). The trusted dealer is trusted to:
-1. generate good randomness
-2. delete secret values after distributing shares to each participant
-3. keep secret values confidential.
+TODO
 
 This will be part of a set of demos and a proof of concept application that uses the FROST libraries and reference implementation. The purpose of these demos is to:
 
@@ -23,7 +20,7 @@ signing operations while employing a novel technique to protect against forgery 
 
 ## Status ⚠
 
-The Trusted Dealer demo is a WIP.
+TODO
 
 ## Usage
 
@@ -36,52 +33,9 @@ To run:
 2. Run `cargo install`
 3. Run `cargo run`
 
-On startup, the Trusted Dealer demo will prompt for:
-
-1. Minimum number of signers (>= 2) i.e. The threshold number of signers for the secret sharing scheme.
-
-2. Maximum number of signers i.e. the number of shares to generate
-
-```
-> cargo run
-   Finished dev [unoptimized + debuginfo] target(s) in 0.05s
-   Running 'target/debug/frost-trusted-dealer-demo
-The minimum number of signers: (2 or more)
-2
-The maximum number of signers: (must be greater than minimum number of signers)
-5
-```
-
-The dealer CLI will then use that data to generate:
-
-1. The group public key
-2. A commitment to the secret
-3. Each signer's public key
-4. Each signer's secret share
-5. An identifier for each signer
-
-In a "real world" scenario, the secret share should be delivered securely to each participant. For the purposes of the Trusted Dealer demo only, the above data will be output to the terminal. 
-
-In the next round, all signers will receive the data but only the individual signers will receive their personal secret share. 
-
-## Using the output
-
-To generate a key package the participant requires:
-
-* The signer's identifier
-* The signer's secret share
-* The signer's public key
-* The public signing key that represents the entire group
-
-The commitment is used to verify the signer's secret share and to generate the group commitment.
-
-The dealer should use a secure broadcast channel to ensure each participant has a consistent view of this commitment and each participant must [verify the commitments](https://github.com/ZcashFoundation/frost/blob/4055cb9439df2814800c678c8da1760a0f86dc10/frost-core/src/frost/keys.rs#L297). 
-The trusted dealer MUST delete the secret_key (used during calculation) and secret_share upon completion.
-Use of this method for key generation requires a mutually authenticated secure channel between the dealer and participants to send secret key shares, wherein the channel provides confidentiality and integrity. Mutually authenticated TLS is one possible deployment option.
-
-NOTE: A signer is a participant that generates a signing share which is aggregated with the signing shares of other signers to obtain the final group signature.
-
 ## Developer information
+
+TODO
 
 ### Pre-commit checks
 
