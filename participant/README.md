@@ -1,4 +1,4 @@
-# Zcash Foundation FROST Demos
+# FROST Participant Demo
 
 TODO
 
@@ -20,7 +20,7 @@ signing operations while employing a novel technique to protect against forgery 
 
 ## Status ⚠
 
-TODO
+The Participant Demo is a WIP
 
 ## Usage
 
@@ -32,6 +32,12 @@ To run:
 1. Clone the repo. Run `git clone https://github.com/ZcashFoundation/frost-zcash-demo.git`
 2. Run `cargo install`
 3. Run `cargo run`
+
+TODO
+
+## Using the output
+
+TODO
 
 ## Developer information
 
