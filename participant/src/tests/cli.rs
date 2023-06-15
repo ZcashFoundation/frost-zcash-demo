@@ -18,5 +18,6 @@ fn check_cli() {
     assert_eq!(
         test_logger.0[0],
         format!("Your identifier (this should be an integer between 1 and 65535):")
-    )
+    );
+    assert_eq!(test_logger.0[1], format!("Your public key:"))
 }

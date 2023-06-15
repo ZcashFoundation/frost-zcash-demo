@@ -23,6 +23,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
         .parse::<u16>()
         .map_err(|_| Error::MalformedIdentifier)?;
 
+    logger.log("Your public key:".to_string());
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
     })
