@@ -18,7 +18,10 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut identifier_input).unwrap();
 
-    let identifier = identifier_input.trim().parse::<u16>().unwrap();
+    let identifier = identifier_input
+        .trim()
+        .parse::<u16>()
+        .map_err(|_| Error::MalformedIdentifier)?;
 
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
@@ -59,6 +62,16 @@ mod tests {
         let mut test_logger = TestLogger(Vec::new());
 
         let mut invalid_input = "0\n".as_bytes();
+        let expected = request_inputs(&mut invalid_input, &mut test_logger);
+
+        assert!(expected.is_err());
+    }
+
+    #[test]
+    fn check_non_u16_input_for_identifier() {
+        let mut test_logger = TestLogger(Vec::new());
+
+        let mut invalid_input = "-1\n".as_bytes();
         let expected = request_inputs(&mut invalid_input, &mut test_logger);
 
         assert!(expected.is_err());
