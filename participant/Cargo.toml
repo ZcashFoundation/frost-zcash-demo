@@ -1,17 +1,9 @@
 [package]
-<<<<<<< HEAD
 name = "participant"
-=======
-name = "frost-participant-demo"
->>>>>>> 76f75d8 (Add Participant project (#12))
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-<<<<<<< HEAD
 frost-ed25519 = "0.4.0"
-=======
-frost-ed25519 = "0.3.0"
->>>>>>> 76f75d8 (Add Participant project (#12))
