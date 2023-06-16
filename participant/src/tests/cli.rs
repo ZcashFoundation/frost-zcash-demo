@@ -15,5 +15,8 @@ fn check_cli() {
     let mut test_logger = TestLogger(Vec::new());
     cli(&mut reader, &mut test_logger);
 
-    assert_eq!(test_logger.0[0], format!("Your identifier:"))
+    assert_eq!(
+        test_logger.0[0],
+        format!("Your identifier (this should be an integer between 1 and 65535):")
+    )
 }

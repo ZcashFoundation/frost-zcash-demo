@@ -12,7 +12,7 @@ pub trait Logger {
 }
 
 pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Result<Config, Error> {
-    logger.log("Your identifier:".to_string());
+    logger.log("Your identifier (this should be an integer between 1 and 65535):".to_string());
 
     let mut identifier_input = String::new();
 
