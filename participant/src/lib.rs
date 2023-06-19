@@ -31,7 +31,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut public_key_input).unwrap();
 
-    let public_key = <[u8; 32]>::from_hex(public_key_input.trim()).unwrap();
+    let public_key =
+        <[u8; 32]>::from_hex(public_key_input.trim()).map_err(|_| Error::MalformedVerifyingKey)?;
 
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
@@ -41,7 +42,7 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use frost::Identifier;
+    use frost::{Error, Identifier};
     use frost_ed25519 as frost;
     use hex::FromHex;
 
@@ -96,5 +97,16 @@ mod tests {
         let expected = request_inputs(&mut invalid_input, &mut test_logger);
 
         assert!(expected.is_err());
+    }
+
+    #[test]
+    fn check_invalid_length_public_key() {
+        let mut test_logger = TestLogger(Vec::new());
+
+        let mut invalid_input = "1\n123456\n".as_bytes();
+        let expected = request_inputs(&mut invalid_input, &mut test_logger);
+
+        assert!(expected.is_err());
+        assert!(expected == Err(Error::MalformedVerifyingKey))
     }
 }
