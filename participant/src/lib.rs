@@ -34,6 +34,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     let public_key =
         <[u8; 32]>::from_hex(public_key_input.trim()).map_err(|_| Error::MalformedVerifyingKey)?;
 
+    logger.log("The group public key:".to_string());
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
