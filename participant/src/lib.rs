@@ -1,4 +1,4 @@
-use frost::{Error, Identifier};
+use frost::{Error, Identifier, VerifyingKey};
 use frost_ed25519 as frost;
 use hex::FromHex;
 use std::io::BufRead;
@@ -7,7 +7,7 @@ use std::io::BufRead;
 pub struct Config {
     pub identifier: Identifier,
     pub public_key: [u8; 32],
-    pub group_public_key: [u8; 32],
+    pub group_public_key: VerifyingKey,
 }
 
 pub trait Logger {
@@ -41,7 +41,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut group_public_key_input).unwrap();
 
-    let group_public_key = <[u8; 32]>::from_hex(group_public_key_input.trim()).unwrap();
+    let group_public_key = VerifyingKey::from_hex(group_public_key_input.trim())
+        .map_err(|_| Error::MalformedVerifyingKey)?; // TODO: Frost library needs to be updated with correct Error type
 
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
