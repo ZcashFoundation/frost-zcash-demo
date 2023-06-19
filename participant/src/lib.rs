@@ -7,6 +7,7 @@ use std::io::BufRead;
 pub struct Config {
     pub identifier: Identifier,
     pub public_key: [u8; 32],
+    pub group_public_key: [u8; 32],
 }
 
 pub trait Logger {
@@ -36,8 +37,15 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     logger.log("The group public key:".to_string());
 
+    let mut group_public_key_input = String::new();
+
+    input.read_line(&mut group_public_key_input).unwrap();
+
+    let group_public_key = <[u8; 32]>::from_hex(group_public_key_input.trim()).unwrap();
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
+        group_public_key,
     })
 }
