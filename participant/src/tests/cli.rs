@@ -13,8 +13,10 @@ impl Logger for TestLogger {
 fn check_cli() {
     let identifier = "1";
     let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let input = format!("{}\n{}\n", identifier, pub_key);
-    let mut reader = input.as_bytes();
+    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
+    let input = format!("{}\n{}\n{}\n", identifier, pub_key, group_pub_key);
+    let mut reader =
+    input.as_bytes();
     let mut test_logger = TestLogger(Vec::new());
     cli(&mut reader, &mut test_logger);
 
