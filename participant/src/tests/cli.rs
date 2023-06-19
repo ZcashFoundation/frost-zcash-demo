@@ -11,7 +11,8 @@ impl Logger for TestLogger {
 
 #[test]
 fn check_cli() {
-    let mut reader = "1\n".as_bytes();
+    let mut reader =
+        "1\n929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509\n".as_bytes();
     let mut test_logger = TestLogger(Vec::new());
     cli(&mut reader, &mut test_logger);
 
