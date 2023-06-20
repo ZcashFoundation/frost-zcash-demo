@@ -110,3 +110,23 @@ fn check_invalid_length_group_public_key() {
     assert!(expected.is_err());
     assert!(expected == Err(Error::MalformedVerifyingKey))
 }
+
+#[test]
+fn check_invalid_length_signing_share() {
+    let mut test_logger = TestLogger(Vec::new());
+
+    let identifier = "1";
+    let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
+    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
+    let signing_share = "123456";
+    let input = format!(
+        "{}\n{}\n{}\n{}\n",
+        identifier, pub_key, group_pub_key, signing_share
+    );
+    let mut invalid_input = input.as_bytes();
+
+    let expected = request_inputs(&mut invalid_input, &mut test_logger);
+
+    assert!(expected.is_err());
+    assert!(expected == Err(Error::MalformedSigningKey))
+}

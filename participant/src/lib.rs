@@ -51,7 +51,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut signing_share_input).unwrap();
 
-    let signing_share = <[u8; 32]>::from_hex(signing_share_input.trim()).unwrap();
+    let signing_share =
+        <[u8; 32]>::from_hex(signing_share_input.trim()).map_err(|_| Error::MalformedSigningKey)?;
 
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
