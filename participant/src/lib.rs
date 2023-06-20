@@ -3,12 +3,14 @@ use frost_ed25519 as frost;
 use hex::FromHex;
 use std::io::BufRead;
 
+// TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
 pub struct Config {
     pub identifier: Identifier,
     pub public_key: [u8; 32],
     pub group_public_key: VerifyingKey,
     pub signing_share: [u8; 32],
+    pub vss_commitment: Vec<u8>,
 }
 
 pub trait Logger {
@@ -58,10 +60,19 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     logger.log("Your verifiable secret sharing commitment:".to_string());
 
+    let mut vss_commitment_input = String::new();
+
+    input.read_line(&mut vss_commitment_input).unwrap();
+
+    let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap(); // TODO: Handle error
+
+    // TODO: validate and decode vss_commitment
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
         group_public_key,
         signing_share,
+        vss_commitment,
     })
 }
