@@ -64,7 +64,7 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut vss_commitment_input).unwrap();
 
-    let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap(); // TODO: Handle error
+    let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap(); // TODO: Handle error. Which error is best to use?
 
     // TODO: validate and decode vss_commitment
 

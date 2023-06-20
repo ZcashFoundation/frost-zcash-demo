@@ -123,3 +123,18 @@ fn check_invalid_length_signing_share() {
     assert!(expected.is_err());
     assert!(expected == Err(Error::MalformedSigningKey))
 }
+
+#[test]
+#[should_panic]
+fn check_invalid_length_vss_commitment() {
+    let mut test_logger = TestLogger(Vec::new());
+
+    let invalid_vss_commitment = "1234567";
+    let input = format!(
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, PUBLIC_KEY, GROUP_PUBLIC_KEY, SIGNING_SHARE, invalid_vss_commitment
+    );
+    let mut invalid_input = input.as_bytes();
+
+    let _expected = request_inputs(&mut invalid_input, &mut test_logger);
+}
