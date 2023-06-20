@@ -44,6 +44,8 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     let group_public_key = VerifyingKey::from_hex(group_public_key_input.trim())
         .map_err(|_| Error::MalformedVerifyingKey)?; // TODO: Frost library needs to be updated with correct Error type
 
+    logger.log("Your secret share:".to_string());
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
