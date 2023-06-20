@@ -54,6 +54,10 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     let signing_share =
         <[u8; 32]>::from_hex(signing_share_input.trim()).map_err(|_| Error::MalformedSigningKey)?;
 
+    // TODO: Is extra validation needed here for public_key and signing_share or will that be resolved when used in generating key_packages etc.? Need to check
+
+    logger.log("Your verifiable secret sharing commitment:".to_string());
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
