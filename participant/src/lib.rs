@@ -8,6 +8,7 @@ pub struct Config {
     pub identifier: Identifier,
     pub public_key: [u8; 32],
     pub group_public_key: VerifyingKey,
+    pub signing_share: [u8; 32],
 }
 
 pub trait Logger {
@@ -46,9 +47,16 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     logger.log("Your secret share:".to_string());
 
+    let mut signing_share_input = String::new();
+
+    input.read_line(&mut signing_share_input).unwrap();
+
+    let signing_share = <[u8; 32]>::from_hex(signing_share_input.trim()).unwrap();
+
     Ok(Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
         group_public_key,
+        signing_share,
     })
 }
