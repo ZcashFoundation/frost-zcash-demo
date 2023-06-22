@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "participant",
-    "trusted-dealer"
+    "trusted-dealer",
+    "dkg"
 ]
