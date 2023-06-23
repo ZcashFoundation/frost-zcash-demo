@@ -26,22 +26,25 @@ pub fn print_values(
 ) {
     logger.log(format!(
         "Group public key: {:x?}",
-        hex::encode(pubkeys.group_public.to_bytes())
+        hex::encode(pubkeys.group_public().to_bytes())
     ));
 
     println!("---");
 
     for (k, v) in keys.iter().sorted_by_key(|x| x.0) {
-        logger.log(format!("Participant {:?}", k));
+        logger.log(format!(
+            "Participant: {:?}",
+            hex::encode(Identifier::serialize(k))
+        ));
         logger.log(format!(
             "Secret share: {:?}",
-            hex::encode(v.value.to_bytes())
+            hex::encode(v.value().to_bytes())
         ));
         logger.log(format!(
             "Public key: {:?}",
-            hex::encode(pubkeys.signer_pubkeys[k].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[k].to_bytes())
         ));
-        logger.log(format!("Commitment: {}", encode_commitment(&v.commitment)));
+        logger.log(format!("Commitment: {}", encode_commitment(v.commitment())));
         println!("---")
     }
 }

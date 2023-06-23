@@ -40,80 +40,93 @@ fn check_output_without_secret() {
     let signer_2 = Identifier::try_from(2).unwrap();
     let signer_3 = Identifier::try_from(3).unwrap();
 
+    let signer_1_id = "0100000000000000000000000000000000000000000000000000000000000000";
+    let signer_2_id = "0200000000000000000000000000000000000000000000000000000000000000";
+    let signer_3_id = "0300000000000000000000000000000000000000000000000000000000000000";
+
     assert_eq!(
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(pubkeys.group_public.to_bytes())
+            hex::encode(pubkeys.group_public().to_bytes())
         )
     );
 
-    assert_eq!(test_logger.0[1], format!("Participant {:?}", signer_1));
+    assert_eq!(
+        test_logger.0[1],
+        format!("Participant: \"{}\"", signer_1_id)
+    );
     assert_eq!(
         test_logger.0[2],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_1].value.to_bytes())
+            hex::encode(shares[&signer_1].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_1].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_1].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[4],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_1].commitment.serialize())
+            encode_commitment_helper(shares[&signer_1].commitment().serialize())
         )
     );
 
-    assert_eq!(test_logger.0[5], format!("Participant {:?}", signer_2));
+    assert_eq!(
+        test_logger.0[5],
+        format!("Participant: \"{}\"", signer_2_id)
+    );
     assert_eq!(
         test_logger.0[6],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_2].value.to_bytes())
+            hex::encode(shares[&signer_2].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[7],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_2].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_2].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[8],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_2].commitment.serialize())
+            encode_commitment_helper(shares[&signer_2].commitment().serialize())
         )
     );
 
-    assert_eq!(test_logger.0[9], format!("Participant {:?}", signer_3));
+    assert_eq!(
+        test_logger.0[9],
+        format!("Participant: \"{}\"", signer_3_id)
+    );
     assert_eq!(
         test_logger.0[10],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_3].value.to_bytes())
+            hex::encode(shares[&signer_3].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[11],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_3].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_3].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[12],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_3].commitment.serialize())
+            encode_commitment_helper(shares[&signer_3].commitment().serialize())
         )
     );
 }
@@ -139,80 +152,93 @@ fn check_output_with_secret() {
     let signer_2 = Identifier::try_from(2).unwrap();
     let signer_3 = Identifier::try_from(3).unwrap();
 
+    let signer_1_id = "0100000000000000000000000000000000000000000000000000000000000000";
+    let signer_2_id = "0200000000000000000000000000000000000000000000000000000000000000";
+    let signer_3_id = "0300000000000000000000000000000000000000000000000000000000000000";
+
     assert_eq!(
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(pubkeys.group_public.to_bytes())
+            hex::encode(pubkeys.group_public().to_bytes())
         )
     );
 
-    assert_eq!(test_logger.0[1], format!("Participant {:?}", signer_1));
+    assert_eq!(
+        test_logger.0[1],
+        format!("Participant: \"{}\"", signer_1_id)
+    );
     assert_eq!(
         test_logger.0[2],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_1].value.to_bytes())
+            hex::encode(shares[&signer_1].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_1].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_1].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[4],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_1].commitment.serialize())
+            encode_commitment_helper(shares[&signer_1].commitment().serialize())
         )
     );
 
-    assert_eq!(test_logger.0[5], format!("Participant {:?}", signer_2));
+    assert_eq!(
+        test_logger.0[5],
+        format!("Participant: \"{}\"", signer_2_id)
+    );
     assert_eq!(
         test_logger.0[6],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_2].value.to_bytes())
+            hex::encode(shares[&signer_2].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[7],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_2].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_2].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[8],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_2].commitment.serialize())
+            encode_commitment_helper(shares[&signer_2].commitment().serialize())
         )
     );
 
-    assert_eq!(test_logger.0[9], format!("Participant {:?}", signer_3));
+    assert_eq!(
+        test_logger.0[9],
+        format!("Participant: \"{}\"", signer_3_id)
+    );
     assert_eq!(
         test_logger.0[10],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_3].value.to_bytes())
+            hex::encode(shares[&signer_3].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[11],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_3].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_3].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[12],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_3].commitment.serialize())
+            encode_commitment_helper(shares[&signer_3].commitment().serialize())
         )
     );
 }
@@ -231,35 +257,39 @@ fn check_output_with_large_num_of_signers() {
     print_values(&shares, &pubkeys, &mut test_logger);
 
     let signer_10 = Identifier::try_from(10).unwrap();
+    let signer_10_id = "0a00000000000000000000000000000000000000000000000000000000000000";
 
     assert_eq!(
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(pubkeys.group_public.to_bytes())
+            hex::encode(pubkeys.group_public().to_bytes())
         )
     );
 
-    assert_eq!(test_logger.0[37], format!("Participant {:?}", signer_10));
+    assert_eq!(
+        test_logger.0[37],
+        format!("Participant: \"{}\"", signer_10_id)
+    );
     assert_eq!(
         test_logger.0[38],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_10].value.to_bytes())
+            hex::encode(shares[&signer_10].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[39],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_10].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_10].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[40],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_10].commitment.serialize())
+            encode_commitment_helper(shares[&signer_10].commitment().serialize())
         )
     );
 }
@@ -282,35 +312,39 @@ fn check_output_with_secret_with_large_num_of_signers() {
     print_values(&shares, &pubkeys, &mut test_logger);
 
     let signer_10 = Identifier::try_from(10).unwrap();
+    let signer_10_id = "0a00000000000000000000000000000000000000000000000000000000000000";
 
     assert_eq!(
         test_logger.0[0],
         format!(
             "Group public key: \"{}\"",
-            hex::encode(pubkeys.group_public.to_bytes())
+            hex::encode(pubkeys.group_public().to_bytes())
         )
     );
 
-    assert_eq!(test_logger.0[37], format!("Participant {:?}", signer_10));
+    assert_eq!(
+        test_logger.0[37],
+        format!("Participant: \"{}\"", signer_10_id)
+    );
     assert_eq!(
         test_logger.0[38],
         format!(
             "Secret share: \"{}\"",
-            hex::encode(shares[&signer_10].value.to_bytes())
+            hex::encode(shares[&signer_10].value().to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[39],
         format!(
             "Public key: \"{}\"",
-            hex::encode(pubkeys.signer_pubkeys[&signer_10].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_10].to_bytes())
         )
     );
     assert_eq!(
         test_logger.0[40],
         format!(
             "Commitment: {}",
-            encode_commitment_helper(shares[&signer_10].commitment.serialize())
+            encode_commitment_helper(shares[&signer_10].commitment().serialize())
         )
     );
 }
