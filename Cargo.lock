@@ -254,6 +254,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f400d0750c0c069e8493f2256cb4da6f604b6d2eeb69a0ca8863acde352f8400"
 
 [[package]]
+name = "derive-getters"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2c35ab6e03642397cdda1dd58abbc05d418aef8e36297f336d5aba060fe8df"
+dependencies = [
+ "proc-macro2 1.0.60",
+ "quote 1.0.28",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -319,13 +330,14 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "frost-core"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2fe2b22eee8914aaf54ab74c7bc6cf71e539c40d92a746cf5c65b619acb02dc"
+checksum = "0611ff62c410c38100fba5debc0f7caaf54fe6219e0c631d4fd698587757aa23"
 dependencies = [
  "byteorder",
  "criterion",
  "debugless-unwrap",
+ "derive-getters",
  "digest",
  "hex",
  "itertools",
@@ -340,9 +352,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ed25519"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f56348765eef8f99de247aba00c1599ba980ca372aa2e4c26c4e9d11e6e4b2"
+checksum = "53e6ab361daf95ca692647e63377ced9b97017e4f4d475485d008dbc15519eab"
 dependencies = [
  "curve25519-dalek",
  "frost-core",
