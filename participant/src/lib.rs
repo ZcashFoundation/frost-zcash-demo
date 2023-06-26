@@ -86,13 +86,15 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     })
 }
 
-pub fn generate_key_package(config: Config) -> KeyPackage {
+pub fn generate_key_package(config: Config) -> Result<KeyPackage, Error> {
     let secret_share = SecretShare::new(
         config.identifier,
         config.signing_share,
         decode_vss_commitment(config.vss_commitment).unwrap(),
     );
-    KeyPackage::try_from(secret_share).unwrap()
+    let key_package = KeyPackage::try_from(secret_share)?;
+
+    Ok(key_package)
 }
 
 fn decode_vss_commitment(
@@ -107,12 +109,12 @@ fn decode_vss_commitment(
 
     for i in 0..n {
         let commitment_value = hex::encode(&coeff_commitments_data[(i * l)..((i * l) + l)]);
-        println!("comm value: {}", commitment_value);
-        let serialized = <[u8; 32]>::from_hex(commitment_value).unwrap();
+        let serialized =
+            <[u8; 32]>::from_hex(commitment_value).map_err(|_| Error::InvalidCoefficients)?; // TODO: Is this the right error? Need to add test
         coeff_commitments.push(serialized)
     }
 
-    let out = VerifiableSecretSharingCommitment::deserialize(coeff_commitments).unwrap();
+    let out = VerifiableSecretSharingCommitment::deserialize(coeff_commitments)?; //TODO: test for this error
     Ok(out)
 }
 

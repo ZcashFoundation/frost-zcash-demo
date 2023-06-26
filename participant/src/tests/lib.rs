@@ -161,7 +161,27 @@ fn check_key_package_generation() {
         config.public_key,
         config.group_public_key,
     );
-    let key_package = generate_key_package(config);
+    let key_package = generate_key_package(config).unwrap();
 
     assert!(expected == key_package)
+}
+
+#[test]
+fn check_key_package_generation_fails_with_invalid_secret_share() {
+    let incorrect_signing_share =
+        "afc0ba51fd450297725f9efe714400d51a1180a273177b5dd8ad3b8cba41560d";
+    let config = Config {
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(
+            <[u8; 32]>::from_hex(incorrect_signing_share).unwrap(),
+        )
+        .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
+    };
+
+    let key_package = generate_key_package(config);
+
+    assert!(key_package.is_err());
 }
