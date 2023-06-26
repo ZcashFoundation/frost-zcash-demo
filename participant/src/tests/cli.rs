@@ -12,10 +12,10 @@ impl Logger for TestLogger {
 #[test]
 fn check_cli() {
     let identifier = "1";
-    let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    let signing_share = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d"; // SigningShare
-    let vss_commitment = "0353e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bdcad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4";
+    let pub_key = "470f53fb724502bf5b851471e9f8317616fcc7be9405ccff3347c232a3052ce7";
+    let group_pub_key = "42ae1baa1bce5a38c130e60aade154ec8775076e729881aba66dabd0c0ac6332";
+    let signing_share = "1edfa2ebd280cba9a72f0bc027d21c30078c11f92e0c908addb958062c1ac900";
+    let vss_commitment = "0342ae1baa1bce5a38c130e60aade154ec8775076e729881aba66dabd0c0ac6332393a813a6b47782f0fbe653593cbb7b0e0e13f01b54b801144545cb774c0fe5683d8bee3cd63b10523ccace10044869c56bce8a6061950f9aebd7f2e36249571";
 
     let input = format!(
         "{}\n{}\n{}\n{}\n{}\n",
@@ -35,5 +35,9 @@ fn check_cli() {
     assert_eq!(
         test_logger.0[4],
         format!("Your verifiable secret sharing commitment:")
+    );
+    assert_eq!(
+        test_logger.0[5],
+        format!("Key Package succesfully created.")
     )
 }

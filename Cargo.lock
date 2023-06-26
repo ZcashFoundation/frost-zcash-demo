@@ -330,27 +330,6 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "frost-core"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2fe2b22eee8914aaf54ab74c7bc6cf71e539c40d92a746cf5c65b619acb02dc"
-dependencies = [
- "byteorder",
- "criterion",
- "debugless-unwrap",
- "digest",
- "hex",
- "itertools",
- "proptest",
- "proptest-derive",
- "rand_core",
- "serde_json",
- "thiserror",
- "visibility",
- "zeroize",
-]
-
-[[package]]
-name = "frost-core"
 version = "0.5.0"
 dependencies = [
  "byteorder",
@@ -371,22 +350,10 @@ dependencies = [
 
 [[package]]
 name = "frost-ed25519"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f56348765eef8f99de247aba00c1599ba980ca372aa2e4c26c4e9d11e6e4b2"
-dependencies = [
- "curve25519-dalek",
- "frost-core 0.4.0",
- "rand_core",
- "sha2",
-]
-
-[[package]]
-name = "frost-ed25519"
 version = "0.5.0"
 dependencies = [
  "curve25519-dalek",
- "frost-core 0.5.0",
+ "frost-core",
  "rand_core",
  "sha2",
 ]
@@ -589,7 +556,7 @@ dependencies = [
 name = "participant"
 version = "0.1.0"
 dependencies = [
- "frost-ed25519 0.4.0",
+ "frost-ed25519",
  "hex",
 ]
 
@@ -974,7 +941,7 @@ name = "trusted-dealer"
 version = "0.1.0"
 dependencies = [
  "exitcode",
- "frost-ed25519 0.5.0",
+ "frost-ed25519",
  "hex",
  "itertools",
  "rand",

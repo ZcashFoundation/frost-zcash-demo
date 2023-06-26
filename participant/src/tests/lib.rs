@@ -1,9 +1,12 @@
-use frost::VerifyingKey;
+use frost::{
+    keys::{KeyPackage, SigningShare, VerifyingShare},
+    VerifyingKey,
+};
 #[cfg(test)]
 use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::{request_inputs, Config};
+use participant::{generate_key_package, request_inputs, Config};
 
 use crate::Logger;
 
@@ -15,19 +18,20 @@ impl Logger for TestLogger {
     }
 }
 
-const IDENTIFIER: u16 = 1;
-const PUBLIC_KEY: &str = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-const GROUP_PUBLIC_KEY: &str = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-const SIGNING_SHARE: &str = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d";
-const VSS_COMMITMENT : &str = "0353e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bdcad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4";
+const IDENTIFIER: &str = "1";
+const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
+const GROUP_PUBLIC_KEY: &str = "087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e";
+const SIGNING_SHARE: &str = "ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104";
+const VSS_COMMITMENT : &str = "03087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e926d5910e146dccb9148ca39dc7607f4f7123ff1c0ffaf109add1d165c568bf2291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc";
 
 #[test]
 fn check_valid_inputs() {
     let config = Config {
-        identifier: Identifier::try_from(IDENTIFIER).unwrap(),
-        public_key: <[u8; 32]>::from_hex(PUBLIC_KEY).unwrap(),
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
         group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
-        signing_share: <[u8; 32]>::from_hex(SIGNING_SHARE).unwrap(),
+        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+            .unwrap(),
         vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
 
@@ -124,6 +128,7 @@ fn check_invalid_length_signing_share() {
     assert!(expected == Err(Error::MalformedSigningKey))
 }
 
+// TODO: Handle this error differently
 #[test]
 #[should_panic]
 fn check_invalid_length_vss_commitment() {
@@ -137,4 +142,26 @@ fn check_invalid_length_vss_commitment() {
     let mut invalid_input = input.as_bytes();
 
     let _expected = request_inputs(&mut invalid_input, &mut test_logger);
+}
+
+#[test]
+fn check_key_package_generation() {
+    let config = Config {
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+            .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
+    };
+
+    let expected = KeyPackage::new(
+        config.identifier,
+        config.signing_share,
+        config.public_key,
+        config.group_public_key,
+    );
+    let key_package = generate_key_package(config);
+
+    assert!(expected == key_package)
 }
