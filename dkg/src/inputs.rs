@@ -2,7 +2,11 @@ use frost::{
     keys::dkg::{round1, round2},
     Error, Identifier,
 };
+
 use frost_ed25519 as frost;
+
+use eyre::eyre;
+
 use std::io::{BufRead, Write};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -39,21 +43,21 @@ pub fn request_inputs(
     writeln!(logger, "The minimum number of signers: (2 or more)")?;
 
     let mut min = String::new();
-    input.read_line(&mut min).unwrap();
+    input.read_line(&mut min)?;
 
     let min_signers = min
         .trim()
         .parse::<u16>()
-        .map_err(|_| Error::InvalidMinSigners)?;
+        .map_err(|_| eyre!("Invalid minimum number of signers"))?;
 
     writeln!(logger, "The maximum number of signers: ")?;
 
     let mut max = String::new();
-    input.read_line(&mut max).unwrap();
+    input.read_line(&mut max)?;
     let max_signers = max
         .trim()
         .parse::<u16>()
-        .map_err(|_| Error::InvalidMaxSigners)?;
+        .map_err(|_| eyre!("Invalid maximum number of signers"))?;
 
     writeln!(
         logger,
@@ -62,12 +66,12 @@ pub fn request_inputs(
 
     let mut identifier_input = String::new();
 
-    input.read_line(&mut identifier_input).unwrap();
+    input.read_line(&mut identifier_input)?;
 
     let u16_identifier = identifier_input
         .trim()
         .parse::<u16>()
-        .map_err(|_| Error::MalformedIdentifier)?;
+        .map_err(|_| eyre!("Invalid identifier"))?;
     let identifier = u16_identifier.try_into()?;
 
     let config = Config {
@@ -81,6 +85,15 @@ pub fn request_inputs(
     Ok(config)
 }
 
+pub fn read_identifier(input: &mut impl BufRead) -> Result<Identifier, Box<dyn std::error::Error>> {
+    let mut identifier_input = String::new();
+    input.read_line(&mut identifier_input)?;
+    let bytes = hex::decode(identifier_input.trim())?;
+    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
+    let identifier = Identifier::deserialize(&serialization)?;
+    Ok(identifier)
+}
+
 pub fn read_round1_package(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
@@ -88,20 +101,14 @@ pub fn read_round1_package(
     writeln!(logger, "The sender's identifier (hex string):")?;
 
     let mut identifier_input = String::new();
-    input.read_line(&mut identifier_input).unwrap();
-    let identifier = Identifier::deserialize(
-        &hex::decode(identifier_input.trim())
-            .unwrap()
-            .try_into()
-            .unwrap(),
-    )
-    .unwrap();
+    input.read_line(&mut identifier_input)?;
+    let identifier = read_identifier(input)?;
 
     writeln!(logger, "Their JSON-encoded Round 1 Package:")?;
 
     let mut package_input = String::new();
-    input.read_line(&mut package_input).unwrap();
-    let round1_package = serde_json::from_str(&package_input).unwrap();
+    input.read_line(&mut package_input)?;
+    let round1_package = serde_json::from_str(&package_input)?;
 
     Ok((identifier, round1_package))
 }
@@ -112,21 +119,13 @@ pub fn read_round2_package(
 ) -> Result<(Identifier, round2::Package), Box<dyn std::error::Error>> {
     writeln!(logger, "The sender's identifier (hex string):")?;
 
-    let mut identifier_input = String::new();
-    input.read_line(&mut identifier_input).unwrap();
-    let identifier = Identifier::deserialize(
-        &hex::decode(identifier_input.trim())
-            .unwrap()
-            .try_into()
-            .unwrap(),
-    )
-    .unwrap();
+    let identifier = read_identifier(input)?;
 
     writeln!(logger, "Their JSON-encoded Round 1 Package:")?;
 
     let mut package_input = String::new();
-    input.read_line(&mut package_input).unwrap();
-    let round2_package = serde_json::from_str(&package_input).unwrap();
+    input.read_line(&mut package_input)?;
+    let round2_package = serde_json::from_str(&package_input)?;
 
     Ok((identifier, round2_package))
 }

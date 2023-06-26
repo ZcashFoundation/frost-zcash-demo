@@ -1,7 +1,5 @@
 mod cli;
 mod inputs;
-mod output;
-mod trusted_dealer_keygen;
 
 #[cfg(test)]
 mod tests;

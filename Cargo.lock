@@ -285,7 +285,8 @@ name = "dkg"
 version = "0.1.0"
 dependencies = [
  "exitcode",
- "frost-ed25519 0.4.0 (git+https://github.com/ZcashFoundation/frost.git?rev=30462edbfc74ef6ac988e2a967722602dfb86c21)",
+ "eyre",
+ "frost-ed25519 0.5.0",
  "hex",
  "itertools",
  "rand",
@@ -325,6 +326,16 @@ name = "exitcode"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de853764b47027c2e862a995c34978ffa63c1501f2e15f987ba11bd4f9bba193"
+
+[[package]]
+name = "eyre"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c2b6b5a29c02cdc822728b7d7b8ae1bab3e3b05d44522770ddd49722eeac7eb"
+dependencies = [
+ "indenter",
+ "once_cell",
+]
 
 [[package]]
 name = "fastrand"
@@ -370,8 +381,9 @@ dependencies = [
 
 [[package]]
 name = "frost-core"
-version = "0.4.0"
-source = "git+https://github.com/ZcashFoundation/frost.git?rev=30462edbfc74ef6ac988e2a967722602dfb86c21#30462edbfc74ef6ac988e2a967722602dfb86c21"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0611ff62c410c38100fba5debc0f7caaf54fe6219e0c631d4fd698587757aa23"
 dependencies = [
  "byteorder",
  "criterion",
@@ -398,18 +410,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24f56348765eef8f99de247aba00c1599ba980ca372aa2e4c26c4e9d11e6e4b2"
 dependencies = [
  "curve25519-dalek",
- "frost-core 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frost-core 0.4.0",
  "rand_core",
  "sha2",
 ]
 
 [[package]]
 name = "frost-ed25519"
-version = "0.4.0"
-source = "git+https://github.com/ZcashFoundation/frost.git?rev=30462edbfc74ef6ac988e2a967722602dfb86c21#30462edbfc74ef6ac988e2a967722602dfb86c21"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53e6ab361daf95ca692647e63377ced9b97017e4f4d475485d008dbc15519eab"
 dependencies = [
  "curve25519-dalek",
- "frost-core 0.4.0 (git+https://github.com/ZcashFoundation/frost.git?rev=30462edbfc74ef6ac988e2a967722602dfb86c21)",
+ "frost-core 0.5.0",
  "rand_core",
  "sha2",
 ]
@@ -464,6 +477,12 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "indenter"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
 
 [[package]]
 name = "instant"
@@ -612,7 +631,7 @@ dependencies = [
 name = "participant"
 version = "0.1.0"
 dependencies = [
- "frost-ed25519 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frost-ed25519 0.4.0",
  "hex",
 ]
 
@@ -1007,7 +1026,7 @@ name = "trusted-dealer"
 version = "0.1.0"
 dependencies = [
  "exitcode",
- "frost-ed25519 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frost-ed25519 0.4.0",
  "hex",
  "itertools",
  "rand",

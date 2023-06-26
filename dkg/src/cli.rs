@@ -27,8 +27,8 @@ pub fn cli(
     writeln!(
         logger,
         "Round 1 Package to send to all other participants (your identifier: {}):\n\n{}\n",
-        serde_json::to_string(&config.identifier).unwrap(),
-        serde_json::to_string(&package).unwrap()
+        serde_json::to_string(&config.identifier)?,
+        serde_json::to_string(&package)?
     )?;
 
     writeln!(logger, "=== ROUND 1: RECEIVE PACKAGES ===\n")?;
@@ -55,9 +55,9 @@ pub fn cli(
         writeln!(
             logger,
             "Round 2 Package to send to participant {} (your identifier: {}):\n\n{}\n",
-            serde_json::to_string(package.receiver_identifier()).unwrap(),
-            serde_json::to_string(&config.identifier).unwrap(),
-            serde_json::to_string(&package).unwrap()
+            serde_json::to_string(package.receiver_identifier())?,
+            serde_json::to_string(&config.identifier)?,
+            serde_json::to_string(&package)?
         )?;
     }
 
@@ -87,12 +87,12 @@ pub fn cli(
     writeln!(
         logger,
         "Participant key package:\n\n{}\n",
-        serde_json::to_string(&key_package).unwrap(),
+        serde_json::to_string(&key_package)?,
     )?;
     writeln!(
         logger,
         "Partcipant public key package:\n\n{}\n",
-        serde_json::to_string(&public_key_package).unwrap(),
+        serde_json::to_string(&public_key_package)?,
     )?;
 
     Ok(())

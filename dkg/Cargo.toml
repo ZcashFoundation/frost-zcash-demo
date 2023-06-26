@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# frost-ed25519 = "0.4.0"
-frost-ed25519 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "30462edbfc74ef6ac988e2a967722602dfb86c21", features = ["serde"] }
+eyre = "0.6.8"
+frost-ed25519 = { version = "0.5.0", features = ["serde"] }
 hex = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"
