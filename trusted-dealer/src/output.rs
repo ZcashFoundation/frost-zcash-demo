@@ -19,29 +19,32 @@ fn encode_commitment(vss_commitment: &VerifiableSecretSharingCommitment) -> Stri
     out
 }
 
+fn get_identifier_value(i: Identifier) -> String {
+    let s = i.serialize();
+    let le_bytes: [u8; 2] = [s[0], s[1]];
+    u16::from_le_bytes(le_bytes).to_string()
+}
+
 pub fn print_values(
     keys: &HashMap<Identifier, SecretShare>,
     pubkeys: &PublicKeyPackage,
     logger: &mut dyn Logger,
 ) {
     logger.log(format!(
-        "Group public key: {:x?}",
+        "Group public key: {}",
         hex::encode(pubkeys.group_public().to_bytes())
     ));
 
     println!("---");
 
     for (k, v) in keys.iter().sorted_by_key(|x| x.0) {
+        logger.log(format!("Participant: {}", get_identifier_value(*k)));
         logger.log(format!(
-            "Participant: {:?}",
-            hex::encode(Identifier::serialize(k))
-        ));
-        logger.log(format!(
-            "Secret share: {:?}",
+            "Secret share: {}",
             hex::encode(v.value().to_bytes())
         ));
         logger.log(format!(
-            "Public key: {:?}",
+            "Public key: {}",
             hex::encode(pubkeys.signer_pubkeys()[k].to_bytes())
         ));
         logger.log(format!("Commitment: {}", encode_commitment(v.commitment())));
@@ -51,8 +54,8 @@ pub fn print_values(
 
 #[cfg(test)]
 mod tests {
-    use crate::output::encode_commitment;
-    use frost::keys::VerifiableSecretSharingCommitment;
+    use crate::output::{encode_commitment, get_identifier_value};
+    use frost::{keys::VerifiableSecretSharingCommitment, Identifier};
     use frost_ed25519 as frost;
     use hex::FromHex;
 
@@ -73,5 +76,18 @@ mod tests {
                 .unwrap();
         let commitment = encode_commitment(&vss_commitment);
         assert!(commitment == expected)
+    }
+
+    #[test]
+    fn check_get_identifier_value() {
+        let min = "1";
+        let identifier_min = Identifier::try_from(1).unwrap();
+
+        assert!(get_identifier_value(identifier_min) == min);
+
+        let max = "65535";
+        let identifier_max = Identifier::try_from(65535).unwrap();
+
+        assert!(get_identifier_value(identifier_max) == max);
     }
 }
