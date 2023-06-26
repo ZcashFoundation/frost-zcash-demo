@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-frost-ed25519 = { path = "../../frost/frost-ed25519/" }
+frost-ed25519 = "0.5.0"
 hex = "0.4"
