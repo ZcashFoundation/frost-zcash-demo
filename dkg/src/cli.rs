@@ -91,7 +91,7 @@ pub fn cli(
     )?;
     writeln!(
         logger,
-        "Partcipant public key package:\n\n{}\n",
+        "Participant public key package:\n\n{}\n",
         serde_json::to_string(&public_key_package)?,
     )?;
 

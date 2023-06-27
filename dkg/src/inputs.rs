@@ -48,7 +48,7 @@ pub fn request_inputs(
     let min_signers = min
         .trim()
         .parse::<u16>()
-        .map_err(|_| eyre!("Invalid minimum number of signers"))?;
+        .map_err(|_| Error::InvalidMinSigners)?;
 
     writeln!(logger, "The maximum number of signers: ")?;
 
@@ -57,7 +57,7 @@ pub fn request_inputs(
     let max_signers = max
         .trim()
         .parse::<u16>()
-        .map_err(|_| eyre!("Invalid maximum number of signers"))?;
+        .map_err(|_| Error::InvalidMaxSigners)?;
 
     writeln!(
         logger,
@@ -100,8 +100,6 @@ pub fn read_round1_package(
 ) -> Result<(Identifier, round1::Package), Box<dyn std::error::Error>> {
     writeln!(logger, "The sender's identifier (hex string):")?;
 
-    let mut identifier_input = String::new();
-    input.read_line(&mut identifier_input)?;
     let identifier = read_identifier(input)?;
 
     writeln!(logger, "Their JSON-encoded Round 1 Package:")?;
@@ -121,7 +119,7 @@ pub fn read_round2_package(
 
     let identifier = read_identifier(input)?;
 
-    writeln!(logger, "Their JSON-encoded Round 1 Package:")?;
+    writeln!(logger, "Their JSON-encoded Round 2 Package:")?;
 
     let mut package_input = String::new();
     input.read_line(&mut package_input)?;
