@@ -21,12 +21,12 @@ fn check_keygen_with_dealer() {
         signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
     let message = "message to sign".as_bytes();
     let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message.to_vec());
+    let signing_package = frost::SigningPackage::new(comms, message);
     let signature_shares =
         signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
     let group_signature =
         frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public.verify(message, &group_signature);
+    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -45,12 +45,12 @@ fn check_keygen_with_dealer_with_large_num_of_signers() {
         signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
     let message = "message to sign".as_bytes();
     let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message.to_vec());
+    let signing_package = frost::SigningPackage::new(comms, message);
     let signature_shares =
         signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
     let group_signature =
         frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public.verify(message, &group_signature);
+    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -76,12 +76,12 @@ fn check_keygen_with_dealer_with_secret() {
     );
     let message = "message to sign".as_bytes();
     let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message.to_vec());
+    let signing_package = frost::SigningPackage::new(comms, message);
     let signature_shares =
         signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
     let group_signature =
         frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public.verify(message, &group_signature);
+    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -107,12 +107,12 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
     );
     let message = "message to sign".as_bytes();
     let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message.to_vec());
+    let signing_package = frost::SigningPackage::new(comms, message);
     let signature_shares =
         signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
     let group_signature =
         frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public.verify(message, &group_signature);
+    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
