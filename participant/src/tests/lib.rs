@@ -1,9 +1,12 @@
-use frost::VerifyingKey;
+use frost::{
+    keys::{KeyPackage, SigningShare, VerifyingShare},
+    VerifyingKey,
+};
 #[cfg(test)]
 use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::{request_inputs, Config};
+use participant::{generate_key_package, request_inputs, Config};
 
 use crate::Logger;
 
@@ -15,25 +18,28 @@ impl Logger for TestLogger {
     }
 }
 
+const IDENTIFIER: &str = "1";
+const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
+const GROUP_PUBLIC_KEY: &str = "087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e";
+const SIGNING_SHARE: &str = "ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104";
+const VSS_COMMITMENT : &str = "03087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e926d5910e146dccb9148ca39dc7607f4f7123ff1c0ffaf109add1d165c568bf2291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc";
+
 #[test]
 fn check_valid_inputs() {
-    let public_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let identifier = 1;
-    let group_public_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    let signing_share = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d";
-
     let config = Config {
-        identifier: Identifier::try_from(identifier).unwrap(),
-        public_key: <[u8; 32]>::from_hex(public_key).unwrap(),
-        group_public_key: VerifyingKey::from_hex(group_public_key).unwrap(),
-        signing_share: <[u8; 32]>::from_hex(signing_share).unwrap(),
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+            .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
 
     let mut test_logger = TestLogger(Vec::new());
 
     let input = format!(
-        "{}\n{}\n{}\n{}\n",
-        identifier, public_key, group_public_key, signing_share
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, PUBLIC_KEY, GROUP_PUBLIC_KEY, SIGNING_SHARE, VSS_COMMITMENT
     );
     let mut valid_input = input.as_bytes();
 
@@ -46,13 +52,10 @@ fn check_valid_inputs() {
 fn check_0_input_for_identifier() {
     let mut test_logger = TestLogger(Vec::new());
 
-    let identifier = "0";
-    let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    let signing_share = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d";
+    let invalid_identifier = "0";
     let input = format!(
-        "{}\n{}\n{}\n{}\n",
-        identifier, pub_key, group_pub_key, signing_share
+        "{}\n{}\n{}\n{}\n{}\n",
+        invalid_identifier, PUBLIC_KEY, GROUP_PUBLIC_KEY, SIGNING_SHARE, VSS_COMMITMENT
     );
     let mut invalid_input = input.as_bytes();
 
@@ -65,7 +68,10 @@ fn check_0_input_for_identifier() {
 fn check_non_u16_input_for_identifier() {
     let mut test_logger = TestLogger(Vec::new());
 
-    let mut invalid_input = "-1\n".as_bytes();
+    let invalid_identifier = "-1";
+    let input = format!("{}\n", invalid_identifier);
+    let mut invalid_input = input.as_bytes();
+
     let expected = request_inputs(&mut invalid_input, &mut test_logger);
 
     assert!(expected.is_err());
@@ -75,13 +81,10 @@ fn check_non_u16_input_for_identifier() {
 fn check_invalid_length_public_key() {
     let mut test_logger = TestLogger(Vec::new());
 
-    let identifier = "1";
-    let pub_key = "123456";
-    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    let signing_share = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d";
+    let invalid_public_key = "123456";
     let input = format!(
-        "{}\n{}\n{}\n{}\n",
-        identifier, pub_key, group_pub_key, signing_share
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, invalid_public_key, GROUP_PUBLIC_KEY, SIGNING_SHARE, VSS_COMMITMENT
     );
     let mut invalid_input = input.as_bytes();
 
@@ -95,13 +98,10 @@ fn check_invalid_length_public_key() {
 fn check_invalid_length_group_public_key() {
     let mut test_logger = TestLogger(Vec::new());
 
-    let identifier = "1";
-    let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let group_pub_key = "123456";
-    let signing_share = "a91e66e012e4364ac9aaa405fcafd370402d9859f7b6685c07eed76bf409e80d";
+    let invalid_group_pub_key = "123456";
     let input = format!(
-        "{}\n{}\n{}\n{}\n",
-        identifier, pub_key, group_pub_key, signing_share
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, PUBLIC_KEY, invalid_group_pub_key, SIGNING_SHARE, VSS_COMMITMENT
     );
     let mut invalid_input = input.as_bytes();
 
@@ -115,13 +115,10 @@ fn check_invalid_length_group_public_key() {
 fn check_invalid_length_signing_share() {
     let mut test_logger = TestLogger(Vec::new());
 
-    let identifier = "1";
-    let pub_key = "929dcc590407aae7d388761cddb0c0db6f5627aea8e217f4a033f2ec83d93509";
-    let group_pub_key = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    let signing_share = "123456";
+    let invalid_signing_share = "123456";
     let input = format!(
-        "{}\n{}\n{}\n{}\n",
-        identifier, pub_key, group_pub_key, signing_share
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, PUBLIC_KEY, GROUP_PUBLIC_KEY, invalid_signing_share, VSS_COMMITMENT
     );
     let mut invalid_input = input.as_bytes();
 
@@ -129,4 +126,62 @@ fn check_invalid_length_signing_share() {
 
     assert!(expected.is_err());
     assert!(expected == Err(Error::MalformedSigningKey))
+}
+
+// TODO: Handle this error differently
+#[test]
+#[should_panic]
+fn check_invalid_length_vss_commitment() {
+    let mut test_logger = TestLogger(Vec::new());
+
+    let invalid_vss_commitment = "1234567";
+    let input = format!(
+        "{}\n{}\n{}\n{}\n{}\n",
+        IDENTIFIER, PUBLIC_KEY, GROUP_PUBLIC_KEY, SIGNING_SHARE, invalid_vss_commitment
+    );
+    let mut invalid_input = input.as_bytes();
+
+    let _expected = request_inputs(&mut invalid_input, &mut test_logger);
+}
+
+#[test]
+fn check_key_package_generation() {
+    let config = Config {
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+            .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
+    };
+
+    let expected = KeyPackage::new(
+        config.identifier,
+        config.signing_share,
+        config.public_key,
+        config.group_public_key,
+    );
+    let key_package = generate_key_package(config).unwrap();
+
+    assert!(expected == key_package)
+}
+
+#[test]
+fn check_key_package_generation_fails_with_invalid_secret_share() {
+    let incorrect_signing_share =
+        "afc0ba51fd450297725f9efe714400d51a1180a273177b5dd8ad3b8cba41560d";
+    let config = Config {
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(
+            <[u8; 32]>::from_hex(incorrect_signing_share).unwrap(),
+        )
+        .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
+    };
+
+    let key_package = generate_key_package(config);
+
+    assert!(key_package.is_err());
 }
