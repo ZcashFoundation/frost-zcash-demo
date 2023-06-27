@@ -70,7 +70,7 @@ fn check_output_without_secret() {
     assert_eq!(
         test_logger.0[4],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_1].commitment().serialize())
         )
     );
@@ -93,7 +93,7 @@ fn check_output_without_secret() {
     assert_eq!(
         test_logger.0[8],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_2].commitment().serialize())
         )
     );
@@ -116,7 +116,7 @@ fn check_output_without_secret() {
     assert_eq!(
         test_logger.0[12],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_3].commitment().serialize())
         )
     );
@@ -173,7 +173,7 @@ fn check_output_with_secret() {
     assert_eq!(
         test_logger.0[4],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_1].commitment().serialize())
         )
     );
@@ -196,7 +196,7 @@ fn check_output_with_secret() {
     assert_eq!(
         test_logger.0[8],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_2].commitment().serialize())
         )
     );
@@ -219,7 +219,7 @@ fn check_output_with_secret() {
     assert_eq!(
         test_logger.0[12],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_3].commitment().serialize())
         )
     );
@@ -267,7 +267,7 @@ fn check_output_with_large_num_of_signers() {
     assert_eq!(
         test_logger.0[40],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_10].commitment().serialize())
         )
     );
@@ -319,7 +319,7 @@ fn check_output_with_secret_with_large_num_of_signers() {
     assert_eq!(
         test_logger.0[40],
         format!(
-            "Commitment: {}",
+            "Your verifiable secret sharing commitment: {}",
             encode_commitment_helper(shares[&signer_10].commitment().serialize())
         )
     );

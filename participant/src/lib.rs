@@ -41,18 +41,22 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut public_key_input).unwrap();
 
+    // A specific VerifyingShare error does not currently exist in Frost so `MalformedVerifyingKey`
+    // has been used. This should either be added to Frost or the error handling here can be reconsidered
     let public_key = VerifyingShare::from_bytes(
         <[u8; 32]>::from_hex(public_key_input.trim()).map_err(|_| Error::MalformedVerifyingKey)?,
-    )
-    .unwrap(); // TODO: Frost library needs to be updated with correct Error type
+    )?; //TODO: test error
 
     logger.log("The group public key:".to_string());
     let mut group_public_key_input = String::new();
 
     input.read_line(&mut group_public_key_input).unwrap();
 
-    let group_public_key = VerifyingKey::from_hex(group_public_key_input.trim())
-        .map_err(|_| Error::MalformedVerifyingKey)?; // TODO: Frost library needs to be updated with correct Error type
+    let group_public_key = VerifyingKey::from_bytes(
+        <[u8; 32]>::from_hex(group_public_key_input.trim())
+            .map_err(|_| Error::MalformedVerifyingKey)?,
+    )
+    .map_err(|_| Error::MalformedVerifyingKey)?; // TODO: Add test for correct error to be returned on failing deserialisation
 
     logger.log("Your secret share:".to_string());
 
@@ -60,20 +64,17 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     input.read_line(&mut signing_share_input).unwrap();
 
+    // A specific SigningShare error does not currently exist in Frost so `MalformedSigningKey`
+    // has been used. This should either be added to Frost or the error handling here can be reconsidered
     let signing_share = SigningShare::from_bytes(
         <[u8; 32]>::from_hex(signing_share_input.trim()).map_err(|_| Error::MalformedSigningKey)?,
-    )
-    .unwrap(); // TODO: Need the correct error from frost
-
-    // TODO: Is extra validation needed here for public_key and signing_share or will that be resolved when used in generating key_packages etc.? Need to check
+    )?; //TODO: test error
 
     logger.log("Your verifiable secret sharing commitment:".to_string());
 
     let mut vss_commitment_input = String::new();
 
     input.read_line(&mut vss_commitment_input).unwrap();
-
-    // TODO: validate and decode vss_commitment
 
     let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap();
 

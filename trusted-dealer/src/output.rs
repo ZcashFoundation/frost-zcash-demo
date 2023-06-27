@@ -47,7 +47,10 @@ pub fn print_values(
             "Public key: {}",
             hex::encode(pubkeys.signer_pubkeys()[k].to_bytes())
         ));
-        logger.log(format!("Commitment: {}", encode_commitment(v.commitment())));
+        logger.log(format!(
+            "Your verifiable secret sharing commitment: {}",
+            encode_commitment(v.commitment())
+        ));
         println!("---")
     }
 }
