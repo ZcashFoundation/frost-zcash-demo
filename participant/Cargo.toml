@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 frost-ed25519 = "0.5.0"
 hex = "0.4"
+rand = "0.8"
