@@ -2,6 +2,7 @@ use frost::{
     keys::{
         KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
     },
+    round1::{SigningCommitments, SigningNonces},
     Error, Identifier, VerifyingKey,
 };
 use frost_ed25519 as frost;
@@ -87,11 +88,11 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     })
 }
 
-pub fn generate_key_package(config: Config) -> Result<KeyPackage, Error> {
+pub fn generate_key_package(config: &Config) -> Result<KeyPackage, Error> {
     let secret_share = SecretShare::new(
         config.identifier,
         config.signing_share,
-        decode_vss_commitment(config.vss_commitment).unwrap(),
+        decode_vss_commitment(&config.vss_commitment).unwrap(),
     );
     let key_package = KeyPackage::try_from(secret_share)?;
 
@@ -99,7 +100,7 @@ pub fn generate_key_package(config: Config) -> Result<KeyPackage, Error> {
 }
 
 fn decode_vss_commitment(
-    vss_commitment: Vec<u8>,
+    vss_commitment: &Vec<u8>,
 ) -> Result<VerifiableSecretSharingCommitment, Error> {
     let coeff_commitments_data = vss_commitment[1..vss_commitment.len()].to_vec();
 
@@ -117,6 +118,33 @@ fn decode_vss_commitment(
 
     let out = VerifiableSecretSharingCommitment::deserialize(coeff_commitments)?; //TODO: test for this error
     Ok(out)
+}
+
+pub fn print_values(
+    nonces: SigningNonces,
+    commitments: SigningCommitments,
+    logger: &mut dyn Logger,
+) {
+    logger.log("=== Round 1 ===".to_string());
+    logger.log(format!(
+        "Hiding nonce: {}",
+        hex::encode(nonces.hiding().to_bytes())
+    ));
+
+    logger.log(format!(
+        "Binding nonce: {}",
+        hex::encode(nonces.binding().to_bytes())
+    ));
+
+    logger.log(format!(
+        "Hiding commitment: {}",
+        hex::encode(commitments.hiding().to_bytes())
+    ));
+
+    logger.log(format!(
+        "Binding commitment: {}",
+        hex::encode(commitments.binding().to_bytes())
+    ));
 }
 
 #[cfg(test)]
@@ -147,7 +175,7 @@ mod tests {
         ])
         .unwrap();
 
-        let actual = decode_vss_commitment(vss_commitment_input).unwrap();
+        let actual = decode_vss_commitment(&vss_commitment_input).unwrap();
 
         assert!(expected == actual);
     }

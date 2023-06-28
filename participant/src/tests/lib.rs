@@ -161,7 +161,7 @@ fn check_key_package_generation() {
         config.public_key,
         config.group_public_key,
     );
-    let key_package = generate_key_package(config).unwrap();
+    let key_package = generate_key_package(&config).unwrap();
 
     assert!(expected == key_package)
 }
@@ -181,7 +181,7 @@ fn check_key_package_generation_fails_with_invalid_secret_share() {
         vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
 
-    let key_package = generate_key_package(config);
+    let key_package = generate_key_package(&config);
 
     assert!(key_package.is_err());
 }
