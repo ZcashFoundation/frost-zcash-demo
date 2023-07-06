@@ -2,16 +2,16 @@ use frost::{
     keys::{
         KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
     },
-    round1::{SigningCommitments, SigningNonces},
+    round1::{NonceCommitment, SigningCommitments, SigningNonces},
     Error, Identifier, VerifyingKey,
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
-use std::io::BufRead;
+use std::{collections::HashMap, io::BufRead};
 
 // TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
-pub struct Config {
+pub struct Round1Config {
     pub identifier: Identifier,
     pub public_key: VerifyingShare,
     pub group_public_key: VerifyingKey,
@@ -19,12 +19,21 @@ pub struct Config {
     pub vss_commitment: Vec<u8>,
 }
 
+// #[derive(Debug)]
+pub struct Round2Config {
+    pub message: Vec<u8>,
+    pub signer_commitments: HashMap<Identifier, SigningCommitments>,
+}
+
 pub trait Logger {
     fn log(&mut self, value: String);
 }
 
 // TODO: refactor to generate config
-pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Result<Config, Error> {
+pub fn request_inputs(
+    input: &mut impl BufRead,
+    logger: &mut dyn Logger,
+) -> Result<Round1Config, Error> {
     logger.log("Your identifier (this should be an integer between 1 and 65535):".to_string());
 
     let mut identifier_input = String::new();
@@ -79,7 +88,7 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
 
     let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap();
 
-    Ok(Config {
+    Ok(Round1Config {
         identifier: Identifier::try_from(identifier)?,
         public_key,
         group_public_key,
@@ -88,7 +97,7 @@ pub fn request_inputs(input: &mut impl BufRead, logger: &mut dyn Logger) -> Resu
     })
 }
 
-pub fn generate_key_package(config: &Config) -> Result<KeyPackage, Error> {
+pub fn generate_key_package(config: &Round1Config) -> Result<KeyPackage, Error> {
     let secret_share = SecretShare::new(
         config.identifier,
         config.signing_share,
@@ -146,6 +155,78 @@ pub fn print_values(
         "Binding commitment: {}",
         hex::encode(commitments.binding().to_bytes())
     ));
+    logger.log("=== Round 1 Completed ===".to_string());
+    logger.log("Please send your Hiding and Binding Commitments to the coordinator".to_string());
+}
+
+// TODO: refactor to generate config
+// TODO: handle errors
+pub fn round_2_request_inputs(
+    signing_commitments: SigningCommitments,
+    my_identifier: Identifier,
+    input: &mut impl BufRead,
+    logger: &mut dyn Logger,
+) -> Result<Round2Config, Error> {
+    logger.log("=== Round 2 ===".to_string());
+
+    logger.log("Number of signers:".to_string());
+
+    let mut signers_input = String::new();
+
+    input.read_line(&mut signers_input).unwrap();
+
+    let signers = signers_input.trim().parse::<u16>().unwrap();
+
+    logger.log("You will receive a message from the coordinator, please enter here:".to_string());
+
+    let mut message_input = String::new();
+
+    input.read_line(&mut message_input).unwrap();
+
+    let message = hex::decode(message_input.trim()).unwrap();
+
+    let mut commitments = HashMap::new();
+    commitments.insert(my_identifier, signing_commitments);
+
+    for i in 2..=signers {
+        logger.log("Identifier:".to_string());
+
+        let mut identifier_input = String::new();
+
+        input.read_line(&mut identifier_input).unwrap();
+
+
+        let id_value = identifier_input.trim().parse::<u16>().unwrap();
+        let identifier = Identifier::try_from(id_value).unwrap();
+
+        logger.log(format!("Hiding commitment {}:", i));
+        let mut hiding_commitment_input = String::new();
+
+        input.read_line(&mut hiding_commitment_input).unwrap();
+        let hiding_commitment = NonceCommitment::from_bytes(
+            <[u8; 32]>::from_hex(hiding_commitment_input.trim()).unwrap(),
+        )
+        .unwrap();
+
+        logger.log(format!("Binding commitment {}:", i));
+        let mut binding_commitment_input = String::new();
+
+        input.read_line(&mut binding_commitment_input).unwrap();
+        let binding_commitment = NonceCommitment::from_bytes(
+            <[u8; 32]>::from_hex(binding_commitment_input.trim()).unwrap(),
+        )
+        .unwrap();
+
+        let signer_commitments =
+            SigningCommitments::new(identifier, hiding_commitment, binding_commitment); // TODO: Add test for correct error to be returned on failing deserialisation
+
+        commitments.insert(identifier, signer_commitments);
+    }
+
+    Ok(Round2Config {
+        message,
+        signer_commitments: commitments,
+    })
 }
 
 #[cfg(test)]
