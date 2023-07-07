@@ -1,9 +1,8 @@
 use frost::round1;
 use frost_ed25519 as frost;
-use participant::{
-    generate_key_package, generate_signature, print_values, request_inputs, round_2_request_inputs,
-    Logger,
-};
+use participant::round1::{generate_key_package, print_values, request_inputs};
+use participant::round2::{generate_signature, round_2_request_inputs};
+use participant::Logger;
 use rand::thread_rng;
 use std::io::BufRead;
 
