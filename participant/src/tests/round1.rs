@@ -131,7 +131,6 @@ fn check_invalid_length_signing_share() {
 
 // TODO: Handle this error differently
 #[test]
-#[should_panic]
 fn check_invalid_length_vss_commitment() {
     let mut test_logger = TestLogger(Vec::new());
 
@@ -142,7 +141,8 @@ fn check_invalid_length_vss_commitment() {
     );
     let mut invalid_input = input.as_bytes();
 
-    let _expected = request_inputs(&mut invalid_input, &mut test_logger);
+    let expected = request_inputs(&mut invalid_input, &mut test_logger);
+    assert!(expected.is_err())
 }
 
 #[test]

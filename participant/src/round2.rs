@@ -57,7 +57,8 @@ pub fn round_2_request_inputs(
 
         input.read_line(&mut hiding_commitment_input).unwrap();
         let hiding_commitment = NonceCommitment::from_bytes(
-            <[u8; 32]>::from_hex(hiding_commitment_input.trim()).unwrap())?;
+            <[u8; 32]>::from_hex(hiding_commitment_input.trim()).unwrap(),
+        )?;
 
         logger.log(format!("Binding commitment {}:", i));
         let mut binding_commitment_input = String::new();
@@ -65,8 +66,7 @@ pub fn round_2_request_inputs(
         input.read_line(&mut binding_commitment_input).unwrap();
         let binding_commitment = NonceCommitment::from_bytes(
             <[u8; 32]>::from_hex(binding_commitment_input.trim()).unwrap(),
-        )
-        ?;
+        )?;
 
         let signer_commitments =
             SigningCommitments::new(identifier, hiding_commitment, binding_commitment); // TODO: Add test for correct error to be returned on failing deserialisation

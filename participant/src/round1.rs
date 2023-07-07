@@ -4,7 +4,7 @@ use frost::{
         KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
     },
     round1::{SigningCommitments, SigningNonces},
-    Error, Identifier, VerifyingKey, GroupError,
+    Error, GroupError, Identifier, VerifyingKey,
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
@@ -81,7 +81,8 @@ pub fn request_inputs(
 
     input.read_line(&mut vss_commitment_input).unwrap();
 
-    let vss_commitment = hex::decode(vss_commitment_input.trim()).map_err(|_| GroupError::MalformedElement)?;
+    let vss_commitment =
+        hex::decode(vss_commitment_input.trim()).map_err(|_| GroupError::MalformedElement)?;
 
     Ok(Round1Config {
         identifier: Identifier::try_from(identifier)?,
