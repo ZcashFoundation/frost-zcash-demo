@@ -4,7 +4,7 @@ use frost::{
         KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
     },
     round1::{SigningCommitments, SigningNonces},
-    Error, Identifier, VerifyingKey,
+    Error, Identifier, VerifyingKey, GroupError,
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
@@ -81,7 +81,7 @@ pub fn request_inputs(
 
     input.read_line(&mut vss_commitment_input).unwrap();
 
-    let vss_commitment = hex::decode(vss_commitment_input.trim()).unwrap();
+    let vss_commitment = hex::decode(vss_commitment_input.trim()).map_err(|_| GroupError::MalformedElement)?;
 
     Ok(Round1Config {
         identifier: Identifier::try_from(identifier)?,
@@ -96,7 +96,7 @@ pub fn generate_key_package(config: &Round1Config) -> Result<KeyPackage, Error> 
     let secret_share = SecretShare::new(
         config.identifier,
         config.signing_share,
-        decode_vss_commitment(&config.vss_commitment).unwrap(),
+        decode_vss_commitment(&config.vss_commitment)?,
     );
     let key_package = KeyPackage::try_from(secret_share)?;
 
