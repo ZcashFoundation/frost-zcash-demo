@@ -3,11 +3,12 @@ use frost::{
         KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
     },
     round1::{NonceCommitment, SigningCommitments, SigningNonces},
-    Error, Identifier, VerifyingKey,
+    round2::{self, SignatureShare},
+    Error, Identifier, SigningPackage, VerifyingKey,
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
-use std::{collections::HashMap, io::BufRead};
+use std::io::BufRead;
 
 // TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
@@ -22,7 +23,7 @@ pub struct Round1Config {
 // #[derive(Debug)]
 pub struct Round2Config {
     pub message: Vec<u8>,
-    pub signer_commitments: HashMap<Identifier, SigningCommitments>,
+    pub signer_commitments: Vec<SigningCommitments>,
 }
 
 pub trait Logger {
@@ -131,7 +132,7 @@ fn decode_vss_commitment(
 
 // The nonces are printed out here for demo purposes only. The hiding and binding nonces are SECRET and not to be shared.
 pub fn print_values(
-    nonces: SigningNonces,
+    nonces: &SigningNonces,
     commitments: SigningCommitments,
     logger: &mut dyn Logger,
 ) {
@@ -163,7 +164,6 @@ pub fn print_values(
 // TODO: handle errors
 pub fn round_2_request_inputs(
     signing_commitments: SigningCommitments,
-    my_identifier: Identifier,
     input: &mut impl BufRead,
     logger: &mut dyn Logger,
 ) -> Result<Round2Config, Error> {
@@ -185,8 +185,7 @@ pub fn round_2_request_inputs(
 
     let message = hex::decode(message_input.trim()).unwrap();
 
-    let mut commitments = HashMap::new();
-    commitments.insert(my_identifier, signing_commitments);
+    let mut commitments = vec![signing_commitments];
 
     for i in 2..=signers {
         logger.log("Identifier:".to_string());
@@ -194,7 +193,6 @@ pub fn round_2_request_inputs(
         let mut identifier_input = String::new();
 
         input.read_line(&mut identifier_input).unwrap();
-
 
         let id_value = identifier_input.trim().parse::<u16>().unwrap();
         let identifier = Identifier::try_from(id_value).unwrap();
@@ -220,13 +218,23 @@ pub fn round_2_request_inputs(
         let signer_commitments =
             SigningCommitments::new(identifier, hiding_commitment, binding_commitment); // TODO: Add test for correct error to be returned on failing deserialisation
 
-        commitments.insert(identifier, signer_commitments);
+        commitments.push(signer_commitments);
     }
 
     Ok(Round2Config {
         message,
         signer_commitments: commitments,
     })
+}
+
+pub fn generate_signature(
+    config: Round2Config,
+    key_package: &KeyPackage,
+    signing_nonces: &SigningNonces,
+) -> Result<SignatureShare, Error> {
+    let signing_package = SigningPackage::new(config.signer_commitments, &config.message);
+    let signature = round2::sign(&signing_package, signing_nonces, key_package)?;
+    Ok(signature)
 }
 
 #[cfg(test)]

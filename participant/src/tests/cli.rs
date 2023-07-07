@@ -68,7 +68,7 @@ fn check_cli() {
     // We aren't testing randomness so this needs to be generated in the tests. TODO: mock the round1::commit function. To be improved in a later issue.
     let (nonces, commitments) = round1::commit(
         Identifier::try_from(1).unwrap(),
-        &SigningShare::from_hex(&signing_share).unwrap(),
+        &SigningShare::from_hex(signing_share).unwrap(),
         &mut rng,
     );
 
@@ -102,7 +102,7 @@ fn check_cli() {
         "Identifier:",
         "Hiding commitment 3:",
         "Binding commitment 3:",
-        // "Signature share: {:?}", &signature_share,
+        // "Signature share: {}", // TODO: this tests the signature share value returned is correct. The calculation is done in lib.rs tests.
         // "=== Round 2 Completed ==="
     ]
     .to_vec();

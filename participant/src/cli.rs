@@ -1,14 +1,15 @@
 use frost::round1;
 use frost_ed25519 as frost;
 use participant::{
-    generate_key_package, print_values, request_inputs, round_2_request_inputs, Logger,
+    generate_key_package, generate_signature, print_values, request_inputs, round_2_request_inputs,
+    Logger,
 };
 use rand::thread_rng;
 use std::io::BufRead;
 
 pub fn cli(input: &mut impl BufRead, logger: &mut dyn Logger) {
     let round_1_config = request_inputs(input, logger).unwrap(); // TODO: handle error
-    let _key_package = generate_key_package(&round_1_config).unwrap();
+    let key_package = generate_key_package(&round_1_config).unwrap();
     logger.log("Key Package succesfully created.".to_string());
 
     let mut rng = thread_rng();
@@ -17,8 +18,13 @@ pub fn cli(input: &mut impl BufRead, logger: &mut dyn Logger) {
         &round_1_config.signing_share,
         &mut rng,
     );
-    print_values(nonces, commitments, logger);
+    print_values(&nonces, commitments, logger);
 
-    let _round_2_config =
-        round_2_request_inputs(commitments, round_1_config.identifier, input, logger);
+    let round_2_config = round_2_request_inputs(commitments, input, logger).unwrap(); // TODO: handle errors
+
+    // Sign
+
+    let _signature = generate_signature(round_2_config, &key_package, &nonces);
+
+    // print_round_2_values(_signature);
 }
