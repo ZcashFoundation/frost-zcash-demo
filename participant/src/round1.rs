@@ -153,3 +153,37 @@ pub fn print_values(
     logger.log("=== Round 1 Completed ===".to_string());
     logger.log("Please send your Hiding and Binding Commitments to the coordinator".to_string());
 }
+
+#[cfg(test)]
+mod tests {
+    use frost::keys::VerifiableSecretSharingCommitment;
+    use frost_ed25519 as frost;
+    use hex::FromHex;
+
+    use crate::round1::decode_vss_commitment;
+
+    // TODO: Add details of encoding
+    #[test]
+    fn check_decode_vss_commitment() {
+        let vss_commitment_input = hex::decode("0353e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bdcad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4").unwrap();
+        let expected = VerifiableSecretSharingCommitment::deserialize(vec![
+            <[u8; 32]>::from_hex(
+                "53e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bd",
+            )
+            .unwrap(),
+            <[u8; 32]>::from_hex(
+                "cad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441",
+            )
+            .unwrap(),
+            <[u8; 32]>::from_hex(
+                "e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4",
+            )
+            .unwrap(),
+        ])
+        .unwrap();
+
+        let actual = decode_vss_commitment(&vss_commitment_input).unwrap();
+
+        assert!(expected == actual);
+    }
+}

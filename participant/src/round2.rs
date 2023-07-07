@@ -92,4 +92,46 @@ pub fn generate_signature(
     Ok(signature)
 }
 
-pub fn print_round_2_values(_signature: SignatureShare) {}
+fn encode_signature_response(signature_share: SignatureShare) -> String {
+    let id = hex::encode(signature_share.identifier().serialize());
+    let sig = hex::encode(signature_share.signature().to_bytes());
+    id + &sig
+}
+
+pub fn print_values_round_2(signature: SignatureShare, logger: &mut dyn Logger) {
+    logger.log("Please send the following to the Coordinator".to_string());
+    logger.log(format!(
+        "Signature: {}",
+        encode_signature_response(signature)
+    ));
+    logger.log("=== End of Round 2 ===".to_string());
+}
+
+#[cfg(test)]
+mod tests {
+    use frost::{
+        round2::{SignatureResponse, SignatureShare},
+        Identifier,
+    };
+    use frost_ed25519 as frost;
+    use hex::FromHex;
+
+    use crate::round2::encode_signature_response;
+
+    // TODO: Add details of encoding
+    #[test]
+    fn check_encode_signature_response() {
+        const SIGNATURE_RESPONSE: &str =
+            "44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
+        let signature_response =
+            SignatureResponse::from_bytes(<[u8; 32]>::from_hex(SIGNATURE_RESPONSE).unwrap())
+                .unwrap();
+        let signature_share =
+            SignatureShare::new(Identifier::try_from(1).unwrap(), signature_response);
+
+        let expected = "010000000000000000000000000000000000000000000000000000000000000044055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
+        let signature = encode_signature_response(signature_share);
+
+        assert!(expected == signature)
+    }
+}
