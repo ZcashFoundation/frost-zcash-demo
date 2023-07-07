@@ -91,3 +91,5 @@ pub fn generate_signature(
     let signature = round2::sign(&signing_package, signing_nonces, key_package)?;
     Ok(signature)
 }
+
+pub fn print_round_2_values(_signature: SignatureShare) {}

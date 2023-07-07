@@ -1,14 +1,15 @@
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
-    VerifyingKey,
+    round1, VerifyingKey,
 };
 #[cfg(test)]
 use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::round1::{generate_key_package, request_inputs, Round1Config};
+use participant::round1::{generate_key_package, print_values, request_inputs, Round1Config};
 
 use participant::Logger;
+use rand::thread_rng;
 
 const IDENTIFIER: &str = "1";
 const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
@@ -182,4 +183,36 @@ fn check_key_package_generation_fails_with_invalid_secret_share() {
     };
     let key_package = generate_key_package(&config);
     assert!(key_package.is_err());
+}
+
+#[test]
+fn check_print_values() {
+    let mut test_logger = TestLogger(Vec::new());
+    let signing_share =
+        SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
+    let mut rng = thread_rng();
+    let (nonces, commitments) =
+        round1::commit(Identifier::try_from(1).unwrap(), &signing_share, &mut rng);
+
+    print_values(&nonces, commitments, &mut test_logger);
+
+    let log = [
+        "=== Round 1 ===".to_string(),
+        format!("Hiding nonce: {}", hex::encode(nonces.hiding().to_bytes())),
+        format!(
+            "Binding nonce: {}",
+            hex::encode(nonces.binding().to_bytes())
+        ),
+        format!(
+            "Hiding commitment: {}",
+            hex::encode(commitments.hiding().to_bytes())
+        ),
+        format!(
+            "Binding commitment: {}",
+            hex::encode(commitments.binding().to_bytes())
+        ),
+        "=== Round 1 Completed ===".to_string(),
+        "Please send your Hiding and Binding Commitments to the coordinator".to_string(),
+    ];
+    assert_eq!(test_logger.0, log)
 }
