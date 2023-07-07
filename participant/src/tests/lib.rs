@@ -7,13 +7,10 @@ use frost::{
 use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::{
-    generate_key_package, generate_signature, request_inputs, round_2_request_inputs, Round1Config,
-    Round2Config,
-};
+use participant::round1::{generate_key_package, request_inputs, Round1Config};
+use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
+use participant::Logger;
 use rand::thread_rng;
-
-use crate::Logger;
 
 pub struct TestLogger(Vec<String>);
 

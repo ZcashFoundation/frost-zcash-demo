@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use frost::SigningPackage;
 use frost_ed25519 as frost;
-use participant::{generate_signature, Round1Config, Round2Config};
+use participant::round1::Round1Config;
+use participant::round2::{generate_signature, Round2Config};
 use rand::thread_rng;
 
 fn encode_commitment_helper(commitment: Vec<[u8; 32]>) -> String {
