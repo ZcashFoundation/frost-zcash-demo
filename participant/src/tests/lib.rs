@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
-    round1::{NonceCommitment, SigningCommitments},
+    round1::{self, NonceCommitment, SigningCommitments},
     VerifyingKey,
 };
 #[cfg(test)]
@@ -10,8 +8,10 @@ use frost::{Error, Identifier};
 use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::{
-    generate_key_package, request_inputs, round_2_request_inputs, Round1Config, Round2Config,
+    generate_key_package, generate_signature, request_inputs, round_2_request_inputs, Round1Config,
+    Round2Config,
 };
+use rand::thread_rng;
 
 use crate::Logger;
 
@@ -207,39 +207,32 @@ const BINDING_COMMITMENT_3: &str =
 
 #[test]
 fn check_valid_round_2_inputs() {
-    let my_hiding_commitment =
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_HIDING_COMMITMENT).unwrap()).unwrap();
-    let my_binding_commitment =
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_BINDING_COMMITMENT).unwrap()).unwrap();
-
-    let mut signer_commitments = HashMap::new();
-    signer_commitments.insert(
-        Identifier::try_from(2).unwrap(),
-        SigningCommitments::new(
-            Identifier::try_from(2).unwrap(),
-            NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap())
-                .unwrap(),
-            NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap())
-                .unwrap(),
-        ),
+    // TODO: refactor
+    let my_signer_commitments = SigningCommitments::new(
+        Identifier::try_from(1).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_HIDING_COMMITMENT).unwrap()).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_BINDING_COMMITMENT).unwrap()).unwrap(),
     );
-    signer_commitments.insert(
+
+    let signer_commitments_2 = SigningCommitments::new(
+        Identifier::try_from(2).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
+    );
+    let signer_commitments_3 = SigningCommitments::new(
         Identifier::try_from(3).unwrap(),
-        SigningCommitments::new(
-            Identifier::try_from(3).unwrap(),
-            NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap())
-                .unwrap(),
-            NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap())
-                .unwrap(),
-        ),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
     );
 
     let config = Round2Config {
-        message: hex::decode(
-            "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673".to_string(),
-        )
-        .unwrap(),
-        signer_commitments,
+        message: hex::decode("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673")
+            .unwrap(),
+        signer_commitments: vec![
+            my_signer_commitments,
+            signer_commitments_2,
+            signer_commitments_3,
+        ],
     };
     let mut test_logger = TestLogger(Vec::new());
 
@@ -254,18 +247,64 @@ fn check_valid_round_2_inputs() {
         HIDING_COMMITMENT_3,
         BINDING_COMMITMENT_3
     );
-    let my_identifier = Identifier::try_from(1).unwrap();
     let mut valid_input = input.as_bytes();
 
-    let expected = round_2_request_inputs(
-        SigningCommitments::new(my_identifier, my_hiding_commitment, my_binding_commitment),
-        my_identifier,
-        &mut valid_input,
-        &mut test_logger,
-    )
-    .unwrap();
+    let expected =
+        round_2_request_inputs(my_signer_commitments, &mut valid_input, &mut test_logger).unwrap();
 
     assert_eq!(expected.message, config.message);
     // TODO: This is easily resolved in the latest release of Frost which includes the Debug trait
     // assert_eq!(expected.signer_commitments[&Identifier::try_from(1).unwrap()], config.signer_commitments[&Identifier::try_from(1).unwrap()]);
+}
+
+// TODO: test for invalid inputs
+
+#[test]
+fn check_sign() {
+    let config = Round1Config {
+        identifier: Identifier::try_from(1).unwrap(),
+        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+            .unwrap(),
+        vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
+    };
+
+    let key_package = KeyPackage::new(
+        config.identifier,
+        config.signing_share,
+        config.public_key,
+        config.group_public_key,
+    );
+
+    let mut rng = thread_rng();
+
+    // TODO: Nonce doesn't seem to be exported. Look into this to improve these tests
+    let (nonces, my_commitments) = round1::commit(
+        Identifier::try_from(1).unwrap(),
+        &SigningShare::from_hex(SIGNING_SHARE).unwrap(),
+        &mut rng,
+    );
+
+    let signer_commitments_2 = SigningCommitments::new(
+        Identifier::try_from(2).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
+    );
+
+    let signer_commitments_3 = SigningCommitments::new(
+        Identifier::try_from(3).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
+    );
+
+    let config = Round2Config {
+        message: hex::decode("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673")
+            .unwrap(),
+        signer_commitments: vec![my_commitments, signer_commitments_2, signer_commitments_3],
+    };
+
+    let signature = generate_signature(config, &key_package, &nonces);
+
+    assert!(signature.is_ok()) // TODO: Should be able to test this more specifically when I remove randomness from the test
 }
