@@ -1,7 +1,7 @@
 use frost::round1;
 use frost_ed25519 as frost;
 use participant::round1::{generate_key_package, print_values, request_inputs};
-use participant::round2::{generate_signature, print_round_2_values, round_2_request_inputs};
+use participant::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
 use participant::Logger;
 use rand::thread_rng;
 use std::io::BufRead;
@@ -25,5 +25,5 @@ pub fn cli(input: &mut impl BufRead, logger: &mut dyn Logger) {
 
     let signature = generate_signature(round_2_config, &key_package, &nonces).unwrap(); // TODO: handle errors
 
-    print_round_2_values(signature);
+    print_values_round_2(signature, logger);
 }

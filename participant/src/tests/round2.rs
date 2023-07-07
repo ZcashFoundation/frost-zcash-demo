@@ -3,13 +3,14 @@ use frost::Identifier;
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
     round1::{self, NonceCommitment, SigningCommitments},
+    round2::{SignatureResponse, SignatureShare},
     VerifyingKey,
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::round1::Round1Config;
 use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
 use participant::Logger;
+use participant::{round1::Round1Config, round2::print_values_round_2};
 use rand::thread_rng;
 
 pub struct TestLogger(Vec<String>);
@@ -142,4 +143,26 @@ fn check_sign() {
     let signature = generate_signature(config, &key_package, &nonces);
 
     assert!(signature.is_ok()) // TODO: Should be able to test this more specifically when I remove randomness from the test
+}
+
+#[test]
+fn check_print_values_round_2() {
+    let mut test_logger = TestLogger(Vec::new());
+
+    const IDENTIFIER: &str = "0100000000000000000000000000000000000000000000000000000000000000";
+    const SIGNATURE_RESPONSE: &str =
+        "44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
+    let signature_response =
+        SignatureResponse::from_bytes(<[u8; 32]>::from_hex(SIGNATURE_RESPONSE).unwrap()).unwrap();
+    let signature = SignatureShare::new(Identifier::try_from(1).unwrap(), signature_response);
+
+    print_values_round_2(signature, &mut test_logger);
+
+    let log = [
+        "Please send the following to the Coordinator".to_string(),
+        format!("Signature: {}", IDENTIFIER.to_string() + SIGNATURE_RESPONSE),
+        "=== End of Round 2 ===".to_string(),
+    ];
+
+    assert_eq!(test_logger.0, log);
 }
