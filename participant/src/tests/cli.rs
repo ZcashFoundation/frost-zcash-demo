@@ -54,7 +54,7 @@ fn check_cli() {
     );
     let mut reader = input.as_bytes();
     let mut test_logger = TestLogger(Vec::new());
-    cli(&mut reader, &mut test_logger);
+    let _out = cli(&mut reader, &mut test_logger);
 
     let mut rng = thread_rng();
 
