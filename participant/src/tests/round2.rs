@@ -70,6 +70,7 @@ fn check_valid_round_2_inputs() {
             signer_commitments_3,
         ],
     };
+
     let mut test_logger = TestLogger(Vec::new());
 
     let input = format!(
@@ -160,7 +161,10 @@ fn check_print_values_round_2() {
 
     let log = [
         "Please send the following to the Coordinator".to_string(),
-        format!("Signature: {}", IDENTIFIER.to_string() + SIGNATURE_RESPONSE),
+        format!(
+            "Signature share: {}",
+            IDENTIFIER.to_string() + SIGNATURE_RESPONSE
+        ),
         "=== End of Round 2 ===".to_string(),
     ];
 

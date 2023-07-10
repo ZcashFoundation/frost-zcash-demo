@@ -25,10 +25,6 @@ fn check_cli() {
     // Round 2 inputs
     let min_signers = "3";
     const MESSAGE: &str = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-    const MY_HIDING_COMMITMENT: &str =
-        "44105304351ceddc58e15ddea35b2cb48e60ced54ceb22c3b0e5d42d098aa1d8";
-    const MY_BINDING_COMMITMENT: &str =
-        "b8274b18a12f2cef74ae42f876cec1e31daab5cb162f95a56cd2487409c9d1dd";
     const IDENTIFIER_2: &str = "2";
     const HIDING_COMMITMENT_2: &str =
         "30f3f03bd739024dc5b1e9d422745a7f32b0971d5cef302106b30bd9f5642d70";
@@ -41,7 +37,7 @@ fn check_cli() {
         "e1c863cfd08df775b6747ef2456e9bf9a03cc281a479a95261dc39137fcf0967";
 
     let input = format!(
-        "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+        "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
         identifier,
         pub_key,
         group_pub_key,
@@ -49,9 +45,6 @@ fn check_cli() {
         vss_commitment,
         min_signers,
         MESSAGE,
-        identifier,
-        MY_HIDING_COMMITMENT,
-        MY_BINDING_COMMITMENT,
         IDENTIFIER_2,
         HIDING_COMMITMENT_2,
         BINDING_COMMITMENT_2,
@@ -95,7 +88,7 @@ fn check_cli() {
         "Please send your Hiding and Binding Commitments to the coordinator",
         "=== Round 2 ===",
         "Number of signers:",
-        "You will receive a message from the coordinator, please enter here:",
+        "Enter the message to sign (received from the coordinator):",
         "Identifier:",
         "Hiding commitment 2:",
         "Binding commitment 2:",

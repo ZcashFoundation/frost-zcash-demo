@@ -42,7 +42,7 @@ pub fn round_2_request_inputs(
 
     let mut commitments = vec![signing_commitments];
 
-    for i in 2..=signers {
+    for _ in 2..=signers {
         logger.log("Identifier:".to_string());
 
         let mut identifier_input = String::new();
@@ -52,7 +52,7 @@ pub fn round_2_request_inputs(
         let id_value = identifier_input.trim().parse::<u16>().unwrap();
         let identifier = Identifier::try_from(id_value).unwrap();
 
-        logger.log(format!("Hiding commitment {}:", i));
+        logger.log(format!("Hiding commitment {}:", id_value));
         let mut hiding_commitment_input = String::new();
 
         input.read_line(&mut hiding_commitment_input).unwrap();
@@ -60,7 +60,7 @@ pub fn round_2_request_inputs(
             <[u8; 32]>::from_hex(hiding_commitment_input.trim()).unwrap(),
         )?;
 
-        logger.log(format!("Binding commitment {}:", i));
+        logger.log(format!("Binding commitment {}:", id_value));
         let mut binding_commitment_input = String::new();
 
         input.read_line(&mut binding_commitment_input).unwrap();
