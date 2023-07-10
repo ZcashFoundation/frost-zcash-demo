@@ -99,7 +99,7 @@ fn encode_signature_response(signature_share: SignatureShare) -> String {
 pub fn print_values_round_2(signature: SignatureShare, logger: &mut dyn Logger) {
     logger.log("Please send the following to the Coordinator".to_string());
     logger.log(format!(
-        "Signature: {}",
+        "Signature share: {}",
         encode_signature_response(signature)
     ));
     logger.log("=== End of Round 2 ===".to_string());
