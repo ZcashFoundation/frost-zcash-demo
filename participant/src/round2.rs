@@ -32,7 +32,7 @@ pub fn round_2_request_inputs(
 
     let signers = signers_input.trim().parse::<u16>().unwrap();
 
-    logger.log("You will receive a message from the coordinator, please enter here:".to_string());
+    logger.log("Enter the message to sign (received from the coordinator):".to_string());
 
     let mut message_input = String::new();
 
