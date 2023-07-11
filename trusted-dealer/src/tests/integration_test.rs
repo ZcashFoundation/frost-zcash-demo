@@ -1,6 +1,8 @@
 use crate::inputs::Config;
-use crate::tests::integration_test::signature_gen::generate_key_packages;
+use crate::tests::integration_test::signature_gen::{key_package, round_1, round_2};
 use crate::trusted_dealer_keygen::split_secret;
+use frost::aggregate;
+use frost::keys::IdentifierList;
 use frost_ed25519 as frost;
 use rand::thread_rng;
 
@@ -15,17 +17,14 @@ fn check_keygen_with_dealer() {
         max_signers: 3,
         secret: Vec::new(),
     };
-    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
-    let key_packages = generate_key_packages(shares);
-    let (nonces, commitments) =
-        signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
-    let message = "message to sign".as_bytes();
-    let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message);
-    let signature_shares =
-        signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
-    let group_signature =
-        frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
+    let (shares, pubkeys) =
+        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng).unwrap();
+
+    let key_packages = key_package(&shares);
+    let (nonces, commitments) = round_1(config.min_signers, &mut rng, &key_packages);
+    let message = "i am a message".as_bytes();
+    let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
+    let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
     let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
@@ -39,17 +38,14 @@ fn check_keygen_with_dealer_with_large_num_of_signers() {
         max_signers: 20,
         secret: Vec::new(),
     };
-    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
-    let key_packages = generate_key_packages(shares);
-    let (nonces, commitments) =
-        signature_gen::generate_nonces_and_commitments(config.min_signers, &key_packages, &mut rng);
-    let message = "message to sign".as_bytes();
-    let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message);
-    let signature_shares =
-        signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
-    let group_signature =
-        frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
+    let (shares, pubkeys) =
+        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng).unwrap();
+
+    let key_packages = key_package(&shares);
+    let (nonces, commitments) = round_1(config.min_signers, &mut rng, &key_packages);
+    let message = "i am a message".as_bytes();
+    let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
+    let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
     let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
@@ -67,20 +63,14 @@ fn check_keygen_with_dealer_with_secret() {
         max_signers: 3,
         secret,
     };
-    let (shares, pubkeys) = split_secret(&secret_config, &mut rng).unwrap();
-    let key_packages = generate_key_packages(shares);
-    let (nonces, commitments) = signature_gen::generate_nonces_and_commitments(
-        secret_config.min_signers,
-        &key_packages,
-        &mut rng,
-    );
-    let message = "message to sign".as_bytes();
-    let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message);
-    let signature_shares =
-        signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
-    let group_signature =
-        frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
+
+    let (shares, pubkeys) =
+        split_secret(&secret_config, IdentifierList::Default, &mut rng).unwrap();
+    let key_packages = key_package(&shares);
+    let (nonces, commitments) = round_1(secret_config.min_signers, &mut rng, &key_packages);
+    let message = "i am a message".as_bytes();
+    let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
+    let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
     let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
@@ -98,20 +88,13 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
         max_signers: 20,
         secret,
     };
-    let (shares, pubkeys) = split_secret(&secret_config, &mut rng).unwrap();
-    let key_packages = generate_key_packages(shares);
-    let (nonces, commitments) = signature_gen::generate_nonces_and_commitments(
-        secret_config.min_signers,
-        &key_packages,
-        &mut rng,
-    );
-    let message = "message to sign".as_bytes();
-    let comms = commitments.into_values().collect();
-    let signing_package = frost::SigningPackage::new(comms, message);
-    let signature_shares =
-        signature_gen::generate_signature_shares(nonces, &key_packages, &signing_package);
-    let group_signature =
-        frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
+    let (shares, pubkeys) =
+        split_secret(&secret_config, IdentifierList::Default, &mut rng).unwrap();
+    let key_packages = key_package(&shares);
+    let (nonces, commitments) = round_1(secret_config.min_signers, &mut rng, &key_packages);
+    let message = "i am a message".as_bytes();
+    let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
+    let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
     let verify_signature = pubkeys.group_public().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());

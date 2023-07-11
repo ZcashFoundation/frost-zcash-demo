@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 eyre = "0.6.8"
-frost-ed25519 = { version = "0.5.0", features = ["serde"] }
+frost-ed25519 = { version = "0.6.0", features = ["serde"] }
 hex = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"

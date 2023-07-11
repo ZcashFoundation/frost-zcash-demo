@@ -1,3 +1,4 @@
+use frost::keys::IdentifierList;
 use frost::Error;
 use frost_ed25519 as frost;
 use rand::thread_rng;
@@ -18,6 +19,7 @@ pub struct TrustedDealerError {
     pub cli_error: CliError,
 }
 
+// Currently this defaults to the Default value for Identifiers
 pub fn cli() -> Result<(), TrustedDealerError> {
     let mut reader = Box::new(io::stdin().lock());
     let config = request_inputs(&mut reader);
@@ -33,9 +35,9 @@ pub fn cli() -> Result<(), TrustedDealerError> {
     let mut rng = thread_rng();
 
     let keygen = if config.secret.is_empty() {
-        trusted_dealer_keygen(&config, &mut rng)
+        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng)
     } else {
-        split_secret(&config, &mut rng)
+        split_secret(&config, IdentifierList::Default, &mut rng)
     };
 
     if let Err(e) = keygen {

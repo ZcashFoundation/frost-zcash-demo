@@ -48,7 +48,7 @@ pub fn request_inputs(
 
     // A specific VerifyingShare error does not currently exist in Frost so `MalformedVerifyingKey`
     // has been used. This should either be added to Frost or the error handling here can be reconsidered
-    let public_key = VerifyingShare::from_bytes(
+    let public_key = VerifyingShare::deserialize(
         <[u8; 32]>::from_hex(public_key_input.trim()).map_err(|_| Error::MalformedVerifyingKey)?,
     )?; //TODO: test error
 
@@ -57,7 +57,7 @@ pub fn request_inputs(
 
     input.read_line(&mut group_public_key_input).unwrap();
 
-    let group_public_key = VerifyingKey::from_bytes(
+    let group_public_key = VerifyingKey::deserialize(
         <[u8; 32]>::from_hex(group_public_key_input.trim())
             .map_err(|_| Error::MalformedVerifyingKey)?,
     )
@@ -71,7 +71,7 @@ pub fn request_inputs(
 
     // A specific SigningShare error does not currently exist in Frost so `MalformedSigningKey`
     // has been used. This should either be added to Frost or the error handling here can be reconsidered
-    let signing_share = SigningShare::from_bytes(
+    let signing_share = SigningShare::deserialize(
         <[u8; 32]>::from_hex(signing_share_input.trim()).map_err(|_| Error::MalformedSigningKey)?,
     )?; //TODO: test error
 
@@ -134,22 +134,22 @@ pub fn print_values(
     logger.log("=== Round 1 ===".to_string());
     logger.log(format!(
         "Hiding nonce: {}",
-        hex::encode(nonces.hiding().to_bytes())
+        hex::encode(nonces.hiding().serialize())
     ));
 
     logger.log(format!(
         "Binding nonce: {}",
-        hex::encode(nonces.binding().to_bytes())
+        hex::encode(nonces.binding().serialize())
     ));
 
     logger.log(format!(
         "Hiding commitment: {}",
-        hex::encode(commitments.hiding().to_bytes())
+        hex::encode(commitments.hiding().serialize())
     ));
 
     logger.log(format!(
         "Binding commitment: {}",
-        hex::encode(commitments.binding().to_bytes())
+        hex::encode(commitments.binding().serialize())
     ));
     logger.log("=== Round 1 Completed ===".to_string());
     logger.log("Please send your Hiding and Binding Commitments to the coordinator".to_string());

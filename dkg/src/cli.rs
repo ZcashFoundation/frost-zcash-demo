@@ -44,18 +44,17 @@ pub fn cli(
         received_round1_packages.insert(identifier, round1_package);
         writeln!(logger)?;
     }
-    let received_round1_packages = received_round1_packages.into_values().collect::<Vec<_>>();
 
     let (round2_secret_package, round2_packages) =
         frost::keys::dkg::part2(secret_package, &received_round1_packages)?;
 
     writeln!(logger, "=== ROUND 2: SEND PACKAGES ===\n")?;
 
-    for package in round2_packages {
+    for (identifier, package) in round2_packages {
         writeln!(
             logger,
             "Round 2 Package to send to participant {} (your identifier: {}):\n\n{}\n",
-            serde_json::to_string(package.receiver_identifier())?,
+            serde_json::to_string(&identifier)?,
             serde_json::to_string(&config.identifier)?,
             serde_json::to_string(&package)?
         )?;
@@ -74,7 +73,6 @@ pub fn cli(
         received_round2_packages.insert(identifier, round2_package);
         writeln!(logger)?;
     }
-    let received_round2_packages = received_round2_packages.into_values().collect::<Vec<_>>();
 
     writeln!(logger, "=== DKG FINISHED ===")?;
 
