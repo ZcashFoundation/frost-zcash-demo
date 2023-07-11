@@ -1,9 +1,11 @@
+use std::collections::BTreeMap;
+
 #[cfg(test)]
 use frost::Identifier;
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
     round1::{self, NonceCommitment, SigningCommitments},
-    round2::{SignatureResponse, SignatureShare},
+    round2::SignatureShare,
     VerifyingKey,
 };
 use frost_ed25519 as frost;
@@ -45,30 +47,28 @@ const BINDING_COMMITMENT_3: &str =
 fn check_valid_round_2_inputs() {
     // TODO: refactor
     let my_signer_commitments = SigningCommitments::new(
-        Identifier::try_from(1).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_HIDING_COMMITMENT).unwrap()).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(MY_BINDING_COMMITMENT).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(MY_HIDING_COMMITMENT).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(MY_BINDING_COMMITMENT).unwrap()).unwrap(),
     );
 
     let signer_commitments_2 = SigningCommitments::new(
-        Identifier::try_from(2).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
     );
     let signer_commitments_3 = SigningCommitments::new(
-        Identifier::try_from(3).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
     );
+
+    let mut signer_commitments = BTreeMap::new();
+    signer_commitments.insert(Identifier::try_from(1).unwrap(), my_signer_commitments);
+    signer_commitments.insert(Identifier::try_from(2).unwrap(), signer_commitments_2);
+    signer_commitments.insert(Identifier::try_from(3).unwrap(), signer_commitments_3);
 
     let config = Round2Config {
         message: hex::decode("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673")
             .unwrap(),
-        signer_commitments: vec![
-            my_signer_commitments,
-            signer_commitments_2,
-            signer_commitments_3,
-        ],
+        signer_commitments,
     };
 
     let mut test_logger = TestLogger(Vec::new());
@@ -86,8 +86,13 @@ fn check_valid_round_2_inputs() {
     );
     let mut valid_input = input.as_bytes();
 
-    let expected =
-        round_2_request_inputs(my_signer_commitments, &mut valid_input, &mut test_logger).unwrap();
+    let expected = round_2_request_inputs(
+        Identifier::try_from(1).unwrap(),
+        my_signer_commitments,
+        &mut valid_input,
+        &mut test_logger,
+    )
+    .unwrap();
 
     assert_eq!(expected.message, config.message);
     // TODO: This is easily resolved in the latest release of Frost which includes the Debug trait
@@ -100,9 +105,9 @@ fn check_valid_round_2_inputs() {
 fn check_sign() {
     let config = Round1Config {
         identifier: Identifier::try_from(1).unwrap(),
-        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        public_key: VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
         group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
-        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+        signing_share: SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
             .unwrap(),
         vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
@@ -117,28 +122,28 @@ fn check_sign() {
     let mut rng = thread_rng();
 
     // TODO: Nonce doesn't seem to be exported. Look into this to improve these tests
-    let (nonces, my_commitments) = round1::commit(
-        Identifier::try_from(1).unwrap(),
-        &SigningShare::from_hex(SIGNING_SHARE).unwrap(),
-        &mut rng,
-    );
+    let (nonces, my_commitments) =
+        round1::commit(&SigningShare::from_hex(SIGNING_SHARE).unwrap(), &mut rng);
 
     let signer_commitments_2 = SigningCommitments::new(
-        Identifier::try_from(2).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
     );
 
     let signer_commitments_3 = SigningCommitments::new(
-        Identifier::try_from(3).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
-        NonceCommitment::from_bytes(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
     );
+
+    let mut signer_commitments = BTreeMap::new();
+    signer_commitments.insert(Identifier::try_from(1).unwrap(), my_commitments);
+    signer_commitments.insert(Identifier::try_from(2).unwrap(), signer_commitments_2);
+    signer_commitments.insert(Identifier::try_from(3).unwrap(), signer_commitments_3);
 
     let config = Round2Config {
         message: hex::decode("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673")
             .unwrap(),
-        signer_commitments: vec![my_commitments, signer_commitments_2, signer_commitments_3],
+        signer_commitments,
     };
 
     let signature = generate_signature(config, &key_package, &nonces);
@@ -150,14 +155,12 @@ fn check_sign() {
 fn check_print_values_round_2() {
     let mut test_logger = TestLogger(Vec::new());
 
-    const IDENTIFIER: &str = "0100000000000000000000000000000000000000000000000000000000000000";
-    const SIGNATURE_RESPONSE: &str =
+    const SIGNATURE_SHARE: &str =
         "44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
     let signature_response =
-        SignatureResponse::from_bytes(<[u8; 32]>::from_hex(SIGNATURE_RESPONSE).unwrap()).unwrap();
-    let signature = SignatureShare::new(Identifier::try_from(1).unwrap(), signature_response);
+        SignatureShare::deserialize(<[u8; 32]>::from_hex(SIGNATURE_SHARE).unwrap()).unwrap();
 
-    print_values_round_2(signature, &mut test_logger);
+    print_values_round_2(signature_response, &mut test_logger);
 
     let log = [
         "Please send the following to the Coordinator".to_string(),
