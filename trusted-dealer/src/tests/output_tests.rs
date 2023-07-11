@@ -1,3 +1,4 @@
+use frost::keys::IdentifierList;
 use frost::Identifier;
 use frost_ed25519 as frost;
 use rand::thread_rng;
@@ -32,7 +33,8 @@ fn check_output_without_secret() {
         max_signers: 3,
         secret: Vec::new(),
     };
-    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
+    let (shares, pubkeys) =
+        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng).unwrap();
 
     print_values(&shares, &pubkeys, &mut test_logger);
 
@@ -48,7 +50,7 @@ fn check_output_without_secret() {
         test_logger.0[0],
         format!(
             "Group public key: {}",
-            hex::encode(pubkeys.group_public().to_bytes())
+            hex::encode(pubkeys.group_public().serialize())
         )
     );
 
@@ -57,14 +59,14 @@ fn check_output_without_secret() {
         test_logger.0[2],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_1].value().to_bytes())
+            hex::encode(shares[&signer_1].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_1].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_1].serialize())
         )
     );
     assert_eq!(
@@ -80,14 +82,14 @@ fn check_output_without_secret() {
         test_logger.0[6],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_2].value().to_bytes())
+            hex::encode(shares[&signer_2].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[7],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_2].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_2].serialize())
         )
     );
     assert_eq!(
@@ -103,14 +105,14 @@ fn check_output_without_secret() {
         test_logger.0[10],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_3].value().to_bytes())
+            hex::encode(shares[&signer_3].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[11],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_3].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_3].serialize())
         )
     );
     assert_eq!(
@@ -135,7 +137,7 @@ fn check_output_with_secret() {
         max_signers: 3,
         secret,
     };
-    let (shares, pubkeys) = split_secret(&config, &mut rng).unwrap();
+    let (shares, pubkeys) = split_secret(&config, IdentifierList::Default, &mut rng).unwrap();
 
     print_values(&shares, &pubkeys, &mut test_logger);
 
@@ -151,7 +153,7 @@ fn check_output_with_secret() {
         test_logger.0[0],
         format!(
             "Group public key: {}",
-            hex::encode(pubkeys.group_public().to_bytes())
+            hex::encode(pubkeys.group_public().serialize())
         )
     );
 
@@ -160,14 +162,14 @@ fn check_output_with_secret() {
         test_logger.0[2],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_1].value().to_bytes())
+            hex::encode(shares[&signer_1].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[3],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_1].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_1].serialize())
         )
     );
     assert_eq!(
@@ -183,14 +185,14 @@ fn check_output_with_secret() {
         test_logger.0[6],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_2].value().to_bytes())
+            hex::encode(shares[&signer_2].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[7],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_2].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_2].serialize())
         )
     );
     assert_eq!(
@@ -206,14 +208,14 @@ fn check_output_with_secret() {
         test_logger.0[10],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_3].value().to_bytes())
+            hex::encode(shares[&signer_3].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[11],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_3].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_3].serialize())
         )
     );
     assert_eq!(
@@ -234,7 +236,8 @@ fn check_output_with_large_num_of_signers() {
         max_signers: 20,
         secret: Vec::new(),
     };
-    let (shares, pubkeys) = trusted_dealer_keygen(&config, &mut rng).unwrap();
+    let (shares, pubkeys) =
+        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng).unwrap();
 
     print_values(&shares, &pubkeys, &mut test_logger);
 
@@ -245,7 +248,7 @@ fn check_output_with_large_num_of_signers() {
         test_logger.0[0],
         format!(
             "Group public key: {}",
-            hex::encode(pubkeys.group_public().to_bytes())
+            hex::encode(pubkeys.group_public().serialize())
         )
     );
 
@@ -254,14 +257,14 @@ fn check_output_with_large_num_of_signers() {
         test_logger.0[38],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_10].value().to_bytes())
+            hex::encode(shares[&signer_10].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[39],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_10].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_10].serialize())
         )
     );
     assert_eq!(
@@ -286,7 +289,7 @@ fn check_output_with_secret_with_large_num_of_signers() {
         max_signers: 20,
         secret,
     };
-    let (shares, pubkeys) = split_secret(&config, &mut rng).unwrap();
+    let (shares, pubkeys) = split_secret(&config, IdentifierList::Default, &mut rng).unwrap();
 
     print_values(&shares, &pubkeys, &mut test_logger);
 
@@ -297,7 +300,7 @@ fn check_output_with_secret_with_large_num_of_signers() {
         test_logger.0[0],
         format!(
             "Group public key: {}",
-            hex::encode(pubkeys.group_public().to_bytes())
+            hex::encode(pubkeys.group_public().serialize())
         )
     );
 
@@ -306,14 +309,14 @@ fn check_output_with_secret_with_large_num_of_signers() {
         test_logger.0[38],
         format!(
             "Secret share: {}",
-            hex::encode(shares[&signer_10].value().to_bytes())
+            hex::encode(shares[&signer_10].value().serialize())
         )
     );
     assert_eq!(
         test_logger.0[39],
         format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[&signer_10].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[&signer_10].serialize())
         )
     );
     assert_eq!(

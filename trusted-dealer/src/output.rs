@@ -32,7 +32,7 @@ pub fn print_values(
 ) {
     logger.log(format!(
         "Group public key: {}",
-        hex::encode(pubkeys.group_public().to_bytes())
+        hex::encode(pubkeys.group_public().serialize())
     ));
 
     println!("---");
@@ -41,11 +41,11 @@ pub fn print_values(
         logger.log(format!("Participant: {}", get_identifier_value(*k)));
         logger.log(format!(
             "Secret share: {}",
-            hex::encode(v.value().to_bytes())
+            hex::encode(v.value().serialize())
         ));
         logger.log(format!(
             "Public key: {}",
-            hex::encode(pubkeys.signer_pubkeys()[k].to_bytes())
+            hex::encode(pubkeys.signer_pubkeys()[k].serialize())
         ));
         logger.log(format!(
             "Your verifiable secret sharing commitment: {}",

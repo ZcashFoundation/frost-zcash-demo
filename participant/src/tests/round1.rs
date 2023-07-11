@@ -29,9 +29,9 @@ impl Logger for TestLogger {
 fn check_valid_round_1_inputs() {
     let config = Round1Config {
         identifier: Identifier::try_from(1).unwrap(),
-        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        public_key: VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
         group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
-        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+        signing_share: SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
             .unwrap(),
         vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
@@ -149,9 +149,9 @@ fn check_invalid_length_vss_commitment() {
 fn check_key_package_generation() {
     let config = Round1Config {
         identifier: Identifier::try_from(1).unwrap(),
-        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        public_key: VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
         group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
-        signing_share: SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
+        signing_share: SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap())
             .unwrap(),
         vss_commitment: hex::decode(VSS_COMMITMENT).unwrap(),
     };
@@ -173,9 +173,9 @@ fn check_key_package_generation_fails_with_invalid_secret_share() {
         "afc0ba51fd450297725f9efe714400d51a1180a273177b5dd8ad3b8cba41560d";
     let config = Round1Config {
         identifier: Identifier::try_from(1).unwrap(),
-        public_key: VerifyingShare::from_bytes(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
+        public_key: VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
         group_public_key: VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
-        signing_share: SigningShare::from_bytes(
+        signing_share: SigningShare::deserialize(
             <[u8; 32]>::from_hex(incorrect_signing_share).unwrap(),
         )
         .unwrap(),
@@ -189,27 +189,26 @@ fn check_key_package_generation_fails_with_invalid_secret_share() {
 fn check_print_values() {
     let mut test_logger = TestLogger(Vec::new());
     let signing_share =
-        SigningShare::from_bytes(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
+        SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
     let mut rng = thread_rng();
-    let (nonces, commitments) =
-        round1::commit(Identifier::try_from(1).unwrap(), &signing_share, &mut rng);
+    let (nonces, commitments) = round1::commit(&signing_share, &mut rng);
 
     print_values(&nonces, commitments, &mut test_logger);
 
     let log = [
         "=== Round 1 ===".to_string(),
-        format!("Hiding nonce: {}", hex::encode(nonces.hiding().to_bytes())),
+        format!("Hiding nonce: {}", hex::encode(nonces.hiding().serialize())),
         format!(
             "Binding nonce: {}",
-            hex::encode(nonces.binding().to_bytes())
+            hex::encode(nonces.binding().serialize())
         ),
         format!(
             "Hiding commitment: {}",
-            hex::encode(commitments.hiding().to_bytes())
+            hex::encode(commitments.hiding().serialize())
         ),
         format!(
             "Binding commitment: {}",
-            hex::encode(commitments.binding().to_bytes())
+            hex::encode(commitments.binding().serialize())
         ),
         "=== Round 1 Completed ===".to_string(),
         "Please send your Hiding and Binding Commitments to the coordinator".to_string(),
