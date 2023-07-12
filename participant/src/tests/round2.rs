@@ -164,10 +164,7 @@ fn check_print_values_round_2() {
 
     let log = [
         "Please send the following to the Coordinator".to_string(),
-        format!(
-            "Signature share: {}",
-            IDENTIFIER.to_string() + SIGNATURE_RESPONSE
-        ),
+        format!("Signature share: {}", SIGNATURE_SHARE),
         "=== End of Round 2 ===".to_string(),
     ];
 
