@@ -1,5 +1,5 @@
 use crate::cli::cli;
-use frost::{keys::SigningShare, round1, Identifier};
+use frost::{keys::SigningShare, round1};
 use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::Logger;
@@ -59,16 +59,13 @@ fn check_cli() {
     let mut rng = thread_rng();
 
     // We aren't testing randomness so this needs to be generated in the tests. TODO: mock the round1::commit function. To be improved in a later issue.
-    let (nonces, commitments) = round1::commit(
-        Identifier::try_from(1).unwrap(),
-        &SigningShare::from_hex(signing_share).unwrap(),
-        &mut rng,
-    );
+    let (nonces, commitments) =
+        round1::commit(&SigningShare::from_hex(signing_share).unwrap(), &mut rng);
 
-    let _hiding_nonce = hex::encode(nonces.hiding().to_bytes());
-    let _binding_nonce = hex::encode(nonces.binding().to_bytes());
-    let _hiding_commitment = hex::encode(commitments.hiding().to_bytes());
-    let _binding_commitment = hex::encode(commitments.binding().to_bytes());
+    let _hiding_nonce = hex::encode(nonces.hiding().serialize());
+    let _binding_nonce = hex::encode(nonces.binding().serialize());
+    let _hiding_commitment = hex::encode(commitments.hiding().serialize());
+    let _binding_commitment = hex::encode(commitments.binding().serialize());
 
     // let signature_share = hex::encode(sig_share.to_bytes());
 

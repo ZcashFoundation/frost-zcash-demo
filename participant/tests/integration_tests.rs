@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use frost::SigningPackage;
+use frost::keys::IdentifierList;
+use frost::{aggregate, SigningPackage};
 use frost_ed25519 as frost;
 use participant::round1::Round1Config;
 use participant::round2::{generate_signature, Round2Config};
@@ -18,19 +19,20 @@ fn encode_commitment_helper(commitment: Vec<[u8; 32]>) -> String {
 #[test]
 fn check_participant() {
     let mut rng = thread_rng();
-    let (shares, pubkeys) = frost::keys::generate_with_dealer(3, 2, &mut rng).unwrap();
+    let (shares, pubkeys) =
+        frost::keys::generate_with_dealer(3, 2, IdentifierList::Default, &mut rng).unwrap();
 
     let mut key_packages: HashMap<_, _> = HashMap::new();
 
-    for (k, v) in shares.clone() {
-        let key_package = frost::keys::KeyPackage::try_from(v).unwrap();
-        key_packages.insert(k, key_package);
+    for (identifier, secret_share) in &shares {
+        let key_package = frost::keys::KeyPackage::try_from(secret_share.clone()).unwrap();
+        key_packages.insert(identifier, key_package);
     }
 
     // Round 1
 
     let mut nonces = HashMap::new();
-    let mut commitments = HashMap::new();
+    let mut commitments = BTreeMap::new();
 
     for i in shares.keys() {
         let config = Round1Config {
@@ -43,11 +45,8 @@ fn check_participant() {
             ))
             .unwrap(),
         };
-        let (nonce, commitment) = frost::round1::commit(
-            config.identifier,
-            key_packages[&config.identifier].secret_share(),
-            &mut rng,
-        );
+        let (nonce, commitment) =
+            frost::round1::commit(key_packages[&config.identifier].secret_share(), &mut rng);
         nonces.insert(config.identifier, nonce);
         commitments.insert(config.identifier, commitment);
     }
@@ -58,12 +57,12 @@ fn check_participant() {
 
     // Round 2
 
-    let mut signature_shares = Vec::new();
+    let mut signature_shares = HashMap::new();
 
     for participant_identifier in nonces.keys() {
         let config = Round2Config {
             message: message.clone(),
-            signer_commitments: commitments.values().cloned().collect(),
+            signer_commitments: commitments.clone(),
         };
         let signature = generate_signature(
             config,
@@ -71,15 +70,14 @@ fn check_participant() {
             &nonces[participant_identifier],
         )
         .unwrap();
-        signature_shares.push(signature);
+        signature_shares.insert(*participant_identifier, signature);
     }
 
     // Coordinator aggregates signatures
 
-    let signing_package = SigningPackage::new(commitments.values().cloned().collect(), &message);
+    let signing_package = SigningPackage::new(commitments, &message);
 
-    let group_signature =
-        frost::aggregate(&signing_package, &signature_shares[..], &pubkeys).unwrap();
+    let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
     let verify_signature = pubkeys.group_public().verify(&message, &group_signature);
 
     assert!(verify_signature.is_ok());

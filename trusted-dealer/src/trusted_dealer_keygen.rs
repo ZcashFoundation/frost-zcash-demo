@@ -1,4 +1,4 @@
-use frost::keys::{PublicKeyPackage, SecretShare};
+use frost::keys::{IdentifierList, PublicKeyPackage, SecretShare};
 use frost::{Error, Identifier, SigningKey};
 use frost_ed25519 as frost;
 use rand::rngs::ThreadRng;
@@ -8,10 +8,15 @@ use crate::inputs::Config;
 
 pub fn trusted_dealer_keygen(
     config: &Config,
+    identifiers: IdentifierList,
     rng: &mut ThreadRng,
 ) -> Result<(HashMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
-    let (shares, pubkeys) =
-        frost::keys::generate_with_dealer(config.max_signers, config.min_signers, rng)?;
+    let (shares, pubkeys) = frost::keys::generate_with_dealer(
+        config.max_signers,
+        config.min_signers,
+        identifiers,
+        rng,
+    )?;
 
     for (_k, v) in shares.clone() {
         frost::keys::KeyPackage::try_from(v)?;
@@ -22,17 +27,23 @@ pub fn trusted_dealer_keygen(
 
 pub fn split_secret(
     config: &Config,
+    identifiers: IdentifierList,
     rng: &mut ThreadRng,
 ) -> Result<(HashMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
-    let secret_key = SigningKey::from_bytes(
+    let secret_key = SigningKey::deserialize(
         config
             .secret
             .clone()
             .try_into()
             .map_err(|_| Error::MalformedSigningKey)?,
     )?;
-    let (shares, pubkeys) =
-        frost::keys::split(&secret_key, config.max_signers, config.min_signers, rng)?;
+    let (shares, pubkeys) = frost::keys::split(
+        &secret_key,
+        config.max_signers,
+        config.min_signers,
+        identifiers,
+        rng,
+    )?;
 
     for (_k, v) in shares.clone() {
         frost::keys::KeyPackage::try_from(v)?;
@@ -44,6 +55,7 @@ pub fn split_secret(
 #[cfg(test)]
 mod tests {
 
+    use frost_ed25519::keys::IdentifierList;
     use rand::thread_rng;
 
     use crate::{inputs::Config, trusted_dealer_keygen::split_secret};
@@ -57,7 +69,7 @@ mod tests {
             secret: b"helloIamaninvalidsecret111111111".to_vec(),
         };
 
-        let out = split_secret(&secret_config, &mut rng);
+        let out = split_secret(&secret_config, IdentifierList::Default, &mut rng);
 
         assert!(out.is_err());
     }
@@ -75,7 +87,7 @@ mod tests {
             secret,
         };
 
-        let out = split_secret(&secret_config, &mut rng);
+        let out = split_secret(&secret_config, IdentifierList::Default, &mut rng);
 
         assert!(out.is_err());
     }

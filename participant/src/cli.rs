@@ -45,15 +45,12 @@ pub fn cli(input: &mut impl BufRead, logger: &mut dyn Logger) -> Result<(), Part
     logger.log("Key Package succesfully created.".to_string());
 
     let mut rng = thread_rng();
-    let (nonces, commitments) = round1::commit(
-        round_1_config_ok.identifier,
-        &round_1_config_ok.signing_share,
-        &mut rng,
-    );
+    let (nonces, commitments) = round1::commit(&round_1_config_ok.signing_share, &mut rng);
 
     print_values(&nonces, commitments, logger);
 
-    let round_2_config = round_2_request_inputs(commitments, input, logger); // TODO: handle errors
+    let round_2_config =
+        round_2_request_inputs(round_1_config_ok.identifier, commitments, input, logger); // TODO: handle errors
 
     if let Err(e) = round_2_config {
         return Err(ParticipantError {
