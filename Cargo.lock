@@ -316,6 +316,7 @@ dependencies = [
  "frost-ed25519",
  "hex",
  "itertools 0.11.0",
+ "pipe",
  "rand",
  "serde_json",
  "thiserror",
@@ -622,6 +623,15 @@ dependencies = [
  "frost-ed25519",
  "hex",
  "rand",
+]
+
+[[package]]
+name = "pipe"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c7b8f27da217eb966df4c58d4159ea939431950ca03cf782c22bd7c5c1d8d75"
+dependencies = [
+ "crossbeam-channel",
 ]
 
 [[package]]
