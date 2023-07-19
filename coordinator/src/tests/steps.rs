@@ -91,8 +91,6 @@ fn check_step_3() {
 
     let signing_package = SigningPackage::new(signing_commitments, b"test");
 
-    // expect group sig: "72c948a63797c693e8e978fdb703a1f5a7590472a539da13b71dd6c2b8c1b2a664b7b4af6194439357c5d15f366760fce53c985a186709e74bb0f8e5078ea805"
-
     step_3(
         &mut valid_input,
         &mut buf,
