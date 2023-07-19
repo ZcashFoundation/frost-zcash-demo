@@ -9,7 +9,7 @@ use std::io;
 
 fn main() -> io::Result<()> {
     let mut reader = Box::new(io::stdin().lock());
-    let mut logger = ConsoleLogger::default();
+    let mut logger = ConsoleLogger;
     let out = cli(&mut reader, &mut logger);
 
     if let Err(e) = out {
