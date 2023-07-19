@@ -17,10 +17,10 @@ pub fn step_2(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     participants: Vec<Identifier>,
-) -> SigningPackage {
-    let signing_package = request_inputs_commitments(input, logger, participants).unwrap();
+) -> Result<SigningPackage, Box<dyn std::error::Error>> {
+    let signing_package = request_inputs_commitments(input, logger, participants)?;
     print_commitments(logger, &signing_package);
-    signing_package
+    Ok(signing_package)
 }
 
 // Input required:
@@ -37,7 +37,7 @@ fn request_inputs_commitments(
     let mut msg = String::new();
     input.read_line(&mut msg)?;
 
-    let message = hex::decode(msg.trim()).unwrap(); //TODO: handle error
+    let message = hex::decode(msg.trim())?;
 
     writeln!(logger, "The number of signers: ")?;
 
@@ -48,8 +48,7 @@ fn request_inputs_commitments(
             logger,
             "Please enter JSON encoded commitments for participant {:#?}:",
             p
-        )
-        .unwrap(); // TODO: improve printing
+        )?; // TODO: improve printing
 
         let mut commitments_input = String::new();
         input.read_line(&mut commitments_input)?;
