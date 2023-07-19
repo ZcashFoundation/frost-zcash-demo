@@ -10,7 +10,7 @@ pub fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let participants_config = step_1(reader, logger);
+    let participants_config = step_1(reader, logger)?;
 
     writeln!(
         logger,
