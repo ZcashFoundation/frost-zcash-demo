@@ -32,14 +32,12 @@ fn request_inputs_commitments(
     logger: &mut dyn Write,
     participants: Vec<Identifier>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    writeln!(logger, "The message to be signed")?;
+    writeln!(logger, "The message to be signed (hex encoded)")?;
 
     let mut msg = String::new();
     input.read_line(&mut msg)?;
 
     let message = hex::decode(msg.trim())?;
-
-    writeln!(logger, "The number of signers: ")?;
 
     let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
 

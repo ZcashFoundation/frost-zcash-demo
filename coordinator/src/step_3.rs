@@ -29,13 +29,6 @@ fn request_inputs_signature_shares(
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
-    writeln!(
-        logger,
-        "The number of signers: {}",
-        participants.participants.len()
-    )?;
-    println!("{}", participants.participants.len());
-
     let mut signatures_list: HashMap<Identifier, SignatureShare> = HashMap::new();
 
     for p in participants.participants {

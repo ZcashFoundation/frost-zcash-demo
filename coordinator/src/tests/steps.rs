@@ -98,7 +98,7 @@ fn check_step_3() {
         signing_package,
     );
 
-    let expected = "The number of signers: 2\nPlease enter JSON encoded signatures for participant Identifier(\"0100000000000000000000000000000000000000000000000000000000000000\"):\nPlease enter JSON encoded signatures for participant Identifier(\"0300000000000000000000000000000000000000000000000000000000000000\"):\nGroup signature: \"72c948a63797c693e8e978fdb703a1f5a7590472a539da13b71dd6c2b8c1b2a664b7b4af6194439357c5d15f366760fce53c985a186709e74bb0f8e5078ea805\"\n";
+    let expected = "Please enter JSON encoded signatures for participant Identifier(\"0100000000000000000000000000000000000000000000000000000000000000\"):\nPlease enter JSON encoded signatures for participant Identifier(\"0300000000000000000000000000000000000000000000000000000000000000\"):\nGroup signature: \"72c948a63797c693e8e978fdb703a1f5a7590472a539da13b71dd6c2b8c1b2a664b7b4af6194439357c5d15f366760fce53c985a186709e74bb0f8e5078ea805\"\n";
 
     let (_, res) = &buf.into_parts();
     let actual = hex::encode(res.as_ref().unwrap());

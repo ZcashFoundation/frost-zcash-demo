@@ -2,6 +2,7 @@ use frost_ed25519 as frost;
 
 use frost::{keys::PublicKeyPackage, Error, Identifier};
 
+use eyre::eyre;
 use std::io::{BufRead, Write};
 
 pub struct ParticipantsConfig {
@@ -34,7 +35,15 @@ fn validate(
 }
 
 // TODO: validate min num of participants
-// TODO: validate participant must exist
+
+pub fn read_identifier(input: &mut impl BufRead) -> Result<Identifier, Box<dyn std::error::Error>> {
+    let mut identifier_input = String::new();
+    input.read_line(&mut identifier_input)?;
+    let bytes = hex::decode(identifier_input.trim())?;
+    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
+    let identifier = Identifier::deserialize(&serialization)?;
+    Ok(identifier)
+}
 
 // Input required:
 // 1. public key package
@@ -61,11 +70,7 @@ fn choose_participants(
         let package = pub_key_package.clone();
         writeln!(logger, "Identifier for participant {:?} (hex encoded):", i).unwrap();
 
-        let mut identifier_input = String::new();
-
-        input.read_line(&mut identifier_input).unwrap();
-
-        let id_value = serde_json::from_str(&identifier_input).unwrap();
+        let id_value = read_identifier(input).unwrap();
 
         validate(id_value, package, &participants)?;
 
