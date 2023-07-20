@@ -29,6 +29,35 @@ fn build_pub_key_package() -> PublicKeyPackage {
     PublicKeyPackage::new(signer_pubkeys, group_public)
 }
 
+fn build_signing_package() -> SigningPackage {
+    let id_1 = Identifier::try_from(1).unwrap();
+    let id_3 = Identifier::try_from(3).unwrap();
+
+    const HIDING_COMMITMENT_1: &str =
+        "5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92";
+    const BINDING_COMMITMENT_1: &str =
+        "936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0";
+    const HIDING_COMMITMENT_3: &str =
+        "91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e";
+    const BINDING_COMMITMENT_3: &str =
+        "c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007";
+
+    let signer_commitments_1 = SigningCommitments::new(
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_1).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_1).unwrap()).unwrap(),
+    );
+    let signer_commitments_3 = SigningCommitments::new(
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
+    );
+
+    let mut signing_commitments = BTreeMap::new();
+    signing_commitments.insert(id_1, signer_commitments_1);
+    signing_commitments.insert(id_3, signer_commitments_3);
+
+    SigningPackage::new(signing_commitments, b"test")
+}
+
 // Input required:
 // 1. public key package
 // 2. number of signers
@@ -40,19 +69,23 @@ fn check_step_1() {
     let id_1 = Identifier::try_from(1).unwrap();
     let id_3 = Identifier::try_from(3).unwrap();
 
-    let id_1_ser = "\"0100000000000000000000000000000000000000000000000000000000000000\"";
-    let id_3_ser = "\"0300000000000000000000000000000000000000000000000000000000000000\"";
-
-    let num_of_participants = 2;
+    // -- INPUTS --
 
     let pub_key_package = "{\"signer_pubkeys\":{\"0100000000000000000000000000000000000000000000000000000000000000\":\"fc2c9b8e335c132d9ebe0403c9317aac480bbbf8cbdb1bc3730bb68eb60dadf9\",  \"0200000000000000000000000000000000000000000000000000000000000000\":\"f7c3031debffbaf121022409d057e6e1034a532636301d12e26beddff58d05c7\",\"0300000000000000000000000000000000000000000000000000000000000000\":\"2cff4148a2f965801fb1f25f1d2a4e5df2f75b3a57cd06f30471c2c774419a41\"},\"group_public\":\"15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673\", \"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}";
 
+    let num_of_participants = 2;
+
+    let id_input_1 = "\"0100000000000000000000000000000000000000000000000000000000000000\"";
+    let id_input_3 = "\"0300000000000000000000000000000000000000000000000000000000000000\"";
+
     let input = format!(
         "{}\n{}\n{}\n{}\n",
-        pub_key_package, num_of_participants, id_1_ser, id_3_ser
+        pub_key_package, num_of_participants, id_input_1, id_input_3
     );
 
     let mut valid_input = input.as_bytes();
+
+    // --
 
     let expected_participants_config = ParticipantsConfig {
         participants: vec![id_1, id_3],
@@ -61,12 +94,8 @@ fn check_step_1() {
 
     let participants_config = step_1(&mut valid_input, &mut buf);
 
-    // println!("{:?}\n -- \n{:?}", &participants_config.unwrap(), &expected_participants_config);
-
-    // assert!(participants_config.is_ok());
+    assert!(participants_config.is_ok());
     assert!(participants_config.unwrap() == expected_participants_config);
-
-    // println!("{} -- {}", participants_config.unwrap(), expected_participants_config);
 
     let expected = "Paste the JSON public key package: \nThe number of participants: \nIdentifier for participant 1 (hex encoded): \nIdentifier for participant 2 (hex encoded): \nSelected participants: \n\"0100000000000000000000000000000000000000000000000000000000000000\"\n\"0300000000000000000000000000000000000000000000000000000000000000\"\n";
 
@@ -76,16 +105,52 @@ fn check_step_1() {
     assert_eq!(hex::encode(expected), actual)
 }
 
-// // Input required:
-// // 1. message
-// // 2. number of signers
-// // 3. commitments for all signers
-// #[test]
-// fn check_step_2() {
-// }
+// Input required:
+// 1. message
+// 2. number of signers
+// 3. commitments for all signers
+#[test]
+fn check_step_2() {
+    let mut buf = BufWriter::new(Vec::new());
+
+    // -- INPUTS --
+
+    let message = "74657374";
+
+    let commitments_input_1 = "{\"hiding\": \"5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92\", \"binding\": \"936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0\", \"ciphersuite\":\"FROST(Ed25519, SHA-512)\" }";
+    let commitments_input_3 = "{\"hiding\":\"91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e\",\"binding\":\"c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}";
+
+    let input = format!(
+        "{}\n{}\n{}\n",
+        message, commitments_input_1, commitments_input_3
+    );
+
+    let mut valid_input = input.as_bytes();
+
+    // --
+
+    let id_1 = Identifier::try_from(1).unwrap();
+    let id_3 = Identifier::try_from(3).unwrap();
+    let participants = vec![id_1, id_3];
+
+    let expected_signing_package = build_signing_package();
+
+    let signing_package = step_2(&mut valid_input, &mut buf, participants);
+
+    assert!(signing_package.is_ok());
+    assert!(signing_package.unwrap() == expected_signing_package);
+
+    let expected = "The message to be signed\nPlease enter JSON encoded commitments for participant Identifier(\n    \"0100000000000000000000000000000000000000000000000000000000000000\",\n):\nPlease enter JSON encoded commitments for participant Identifier(\n    \"0300000000000000000000000000000000000000000000000000000000000000\",\n):\nSigning Package: {\"signing_commitments\":{\"0100000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92\",\"binding\":\"936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"},\"0300000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e\",\"binding\":\"c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}},\"message\":\"74657374\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}\n";
+
+    let (_, res) = &buf.into_parts();
+    let actual = hex::encode(res.as_ref().unwrap());
+
+    assert_eq!(hex::encode(expected), actual)
+}
 
 use crate::{
     step_1::{step_1, ParticipantsConfig},
+    step_2::step_2,
     step_3::step_3,
 };
 use frost::{
@@ -138,29 +203,7 @@ fn check_step_3() {
         participants: vec![id_1, id_3],
         pub_key_package: PublicKeyPackage::new(signer_pubkeys, group_public),
     };
-    const HIDING_COMMITMENT_1: &str =
-        "5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92";
-    const BINDING_COMMITMENT_1: &str =
-        "936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0";
-    const HIDING_COMMITMENT_3: &str =
-        "91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e";
-    const BINDING_COMMITMENT_3: &str =
-        "c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007";
-
-    let signer_commitments_1 = SigningCommitments::new(
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_1).unwrap()).unwrap(),
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_1).unwrap()).unwrap(),
-    );
-    let signer_commitments_3 = SigningCommitments::new(
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_3).unwrap()).unwrap(),
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_3).unwrap()).unwrap(),
-    );
-
-    let mut signing_commitments = BTreeMap::new();
-    signing_commitments.insert(id_1, signer_commitments_1);
-    signing_commitments.insert(id_3, signer_commitments_3);
-
-    let signing_package = SigningPackage::new(signing_commitments, b"test");
+    let signing_package = build_signing_package();
 
     step_3(
         &mut valid_input,
