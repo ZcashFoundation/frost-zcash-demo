@@ -5,6 +5,7 @@ use frost::{keys::PublicKeyPackage, Error, Identifier};
 use eyre::eyre;
 use std::io::{BufRead, Write};
 
+#[derive(PartialEq, Debug)]
 pub struct ParticipantsConfig {
     pub participants: Vec<Identifier>,
     pub pub_key_package: PublicKeyPackage,
@@ -64,26 +65,26 @@ fn choose_participants(
     input.read_line(&mut participants).unwrap();
     let num_of_participants = participants.trim().parse::<u16>().unwrap();
 
-    let mut participants = Vec::new();
+    let mut participants_list = Vec::new();
 
     for i in 1..=num_of_participants {
         let package = pub_key_package.clone();
-        writeln!(logger, "Identifier for participant {:?} (hex encoded):", i).unwrap();
+        writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i).unwrap();
 
         let id_value = read_identifier(input).unwrap();
 
-        validate(id_value, package, &participants)?;
+        validate(id_value, package, &participants_list)?;
 
-        participants.push(id_value)
+        participants_list.push(id_value)
     }
     Ok(ParticipantsConfig {
-        participants,
+        participants: participants_list,
         pub_key_package,
     })
 }
 
 pub fn print_participants(logger: &mut dyn Write, participants: &Vec<Identifier>) {
-    writeln!(logger, "Selected participants:",).unwrap();
+    writeln!(logger, "Selected participants: ",).unwrap();
 
     for p in participants {
         writeln!(logger, "{}", serde_json::to_string(p).unwrap()).unwrap();

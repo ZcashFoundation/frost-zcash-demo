@@ -1,12 +1,80 @@
 // Test values from https://github.com/ZcashFoundation/frost/blob/main/frost-ed25519/tests/helpers/vectors.json
 
-// // Input required:
-// // 1. public key package
-// // 2. number of signparticipantsers
-// // 3. identifiers for all signers
-// #[test]
-// fn check_step_1() {
-// }
+const PUBLIC_KEY_1: &str = "fc2c9b8e335c132d9ebe0403c9317aac480bbbf8cbdb1bc3730bb68eb60dadf9";
+const PUBLIC_KEY_2: &str = "f7c3031debffbaf121022409d057e6e1034a532636301d12e26beddff58d05c7";
+const PUBLIC_KEY_3: &str = "2cff4148a2f965801fb1f25f1d2a4e5df2f75b3a57cd06f30471c2c774419a41";
+const GROUP_PUBLIC_KEY: &str = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
+
+fn build_pub_key_package() -> PublicKeyPackage {
+    let id_1 = Identifier::try_from(1).unwrap();
+    let id_2 = Identifier::try_from(2).unwrap();
+    let id_3 = Identifier::try_from(3).unwrap();
+
+    let mut signer_pubkeys = HashMap::new();
+    signer_pubkeys.insert(
+        id_1,
+        VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_1).unwrap()).unwrap(),
+    );
+    signer_pubkeys.insert(
+        id_2,
+        VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_2).unwrap()).unwrap(),
+    );
+    signer_pubkeys.insert(
+        id_3,
+        VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_3).unwrap()).unwrap(),
+    );
+
+    let group_public = VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap();
+
+    PublicKeyPackage::new(signer_pubkeys, group_public)
+}
+
+// Input required:
+// 1. public key package
+// 2. number of signers
+// 3. identifiers for all signers
+#[test]
+fn check_step_1() {
+    let mut buf = BufWriter::new(Vec::new());
+
+    let id_1 = Identifier::try_from(1).unwrap();
+    let id_3 = Identifier::try_from(3).unwrap();
+
+    let id_1_ser = "\"0100000000000000000000000000000000000000000000000000000000000000\"";
+    let id_3_ser = "\"0300000000000000000000000000000000000000000000000000000000000000\"";
+
+    let num_of_participants = 2;
+
+    let pub_key_package = "{\"signer_pubkeys\":{\"0100000000000000000000000000000000000000000000000000000000000000\":\"fc2c9b8e335c132d9ebe0403c9317aac480bbbf8cbdb1bc3730bb68eb60dadf9\",  \"0200000000000000000000000000000000000000000000000000000000000000\":\"f7c3031debffbaf121022409d057e6e1034a532636301d12e26beddff58d05c7\",\"0300000000000000000000000000000000000000000000000000000000000000\":\"2cff4148a2f965801fb1f25f1d2a4e5df2f75b3a57cd06f30471c2c774419a41\"},\"group_public\":\"15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673\", \"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}";
+
+    let input = format!(
+        "{}\n{}\n{}\n{}\n",
+        pub_key_package, num_of_participants, id_1_ser, id_3_ser
+    );
+
+    let mut valid_input = input.as_bytes();
+
+    let expected_participants_config = ParticipantsConfig {
+        participants: vec![id_1, id_3],
+        pub_key_package: build_pub_key_package(),
+    };
+
+    let participants_config = step_1(&mut valid_input, &mut buf);
+
+    // println!("{:?}\n -- \n{:?}", &participants_config.unwrap(), &expected_participants_config);
+
+    // assert!(participants_config.is_ok());
+    assert!(participants_config.unwrap() == expected_participants_config);
+
+    // println!("{} -- {}", participants_config.unwrap(), expected_participants_config);
+
+    let expected = "Paste the JSON public key package: \nThe number of participants: \nIdentifier for participant 1 (hex encoded): \nIdentifier for participant 2 (hex encoded): \nSelected participants: \n\"0100000000000000000000000000000000000000000000000000000000000000\"\n\"0300000000000000000000000000000000000000000000000000000000000000\"\n";
+
+    let (_, res) = &buf.into_parts();
+    let actual = hex::encode(res.as_ref().unwrap());
+
+    assert_eq!(hex::encode(expected), actual)
+}
 
 // // Input required:
 // // 1. message
@@ -16,7 +84,10 @@
 // fn check_step_2() {
 // }
 
-use crate::{step_1::ParticipantsConfig, step_3::step_3};
+use crate::{
+    step_1::{step_1, ParticipantsConfig},
+    step_3::step_3,
+};
 use frost::{
     keys::{PublicKeyPackage, VerifyingShare},
     round1::{NonceCommitment, SigningCommitments},
