@@ -49,7 +49,7 @@ pub fn cli() -> Result<(), TrustedDealerError> {
 
     let (shares, pubkeys) = keygen.unwrap();
 
-    let mut console_logger = ConsoleLogger::default();
+    let mut console_logger = ConsoleLogger;
 
     print_values(&shares, &pubkeys, &mut console_logger);
 

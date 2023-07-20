@@ -50,7 +50,7 @@ pub fn request_inputs(
         .parse::<u16>()
         .map_err(|_| Error::InvalidMinSigners)?;
 
-    writeln!(logger, "The maximum number of signers: ")?;
+    writeln!(logger, "The maximum number of signers:")?;
 
     let mut max = String::new();
     input.read_line(&mut max)?;
@@ -71,7 +71,7 @@ pub fn request_inputs(
     let u16_identifier = identifier_input
         .trim()
         .parse::<u16>()
-        .map_err(|_| eyre!("Invalid identifier"))?;
+        .map_err(|_| Error::MalformedIdentifier)?;
     let identifier = u16_identifier.try_into()?;
 
     let config = Config {
