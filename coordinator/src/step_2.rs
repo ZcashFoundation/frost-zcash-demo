@@ -62,7 +62,7 @@ fn request_inputs_commitments(
 fn print_commitments(logger: &mut dyn Write, signing_package: &SigningPackage) {
     writeln!(
         logger,
-        "Signing Package: {}",
+        "SigningPackage:\n{}",
         serde_json::to_string(&signing_package).unwrap()
     )
     .unwrap();

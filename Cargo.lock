@@ -637,6 +637,7 @@ dependencies = [
  "frost-ed25519",
  "hex",
  "rand",
+ "serde_json",
 ]
 
 [[package]]
