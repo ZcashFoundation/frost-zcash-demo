@@ -44,8 +44,8 @@ fn request_inputs_commitments(
     for p in participants {
         writeln!(
             logger,
-            "Please enter JSON encoded commitments for participant {:#?}:",
-            p
+            "Please enter JSON encoded commitments for participant {}:",
+            hex::encode(p.serialize())
         )?; // TODO: improve printing
 
         let mut commitments_input = String::new();
@@ -62,7 +62,7 @@ fn request_inputs_commitments(
 fn print_commitments(logger: &mut dyn Write, signing_package: &SigningPackage) {
     writeln!(
         logger,
-        "SigningPackage:\n{}",
+        "Signing Package:\n{}",
         serde_json::to_string(&signing_package).unwrap()
     )
     .unwrap();

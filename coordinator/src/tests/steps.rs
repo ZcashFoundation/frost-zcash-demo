@@ -140,12 +140,12 @@ fn check_step_2() {
     assert!(signing_package.is_ok());
     assert!(signing_package.unwrap() == expected_signing_package);
 
-    let expected = "The message to be signed (hex encoded)\nPlease enter JSON encoded commitments for participant Identifier(\n    \"0100000000000000000000000000000000000000000000000000000000000000\",\n):\nPlease enter JSON encoded commitments for participant Identifier(\n    \"0300000000000000000000000000000000000000000000000000000000000000\",\n):\nSigning Package: {\"signing_commitments\":{\"0100000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92\",\"binding\":\"936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"},\"0300000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e\",\"binding\":\"c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}},\"message\":\"74657374\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}\n";
+    let expected = "The message to be signed (hex encoded)\nPlease enter JSON encoded commitments for participant 0100000000000000000000000000000000000000000000000000000000000000:\nPlease enter JSON encoded commitments for participant 0300000000000000000000000000000000000000000000000000000000000000:\nSigning Package:\n{\"signing_commitments\":{\"0100000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"5078f5c6d679654bb88a8887242d49cc21a553ed26caed4d52570c6656fb9b92\",\"binding\":\"936b660d3008d8298b0a7220a327a0813ffedd9d07604bdc73d7cffef63c0da0\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"},\"0300000000000000000000000000000000000000000000000000000000000000\":{\"hiding\":\"91c2469b501fe5af8493f9ae77c8f57999460af317f2d9f2d4378ae0e665860e\",\"binding\":\"c225618accff2266a45d87dc3219b04c774ca26c8629c4fa483e7e87da820007\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}},\"message\":\"74657374\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}\n";
 
     let (_, res) = &buf.into_parts();
-    let actual = hex::encode(res.as_ref().unwrap());
+    let actual = String::from_utf8(res.as_ref().unwrap().to_owned()).unwrap();
 
-    assert_eq!(hex::encode(expected), actual)
+    assert_eq!(expected, actual)
 }
 
 use crate::{
@@ -212,10 +212,10 @@ fn check_step_3() {
         signing_package,
     );
 
-    let expected = "Please enter JSON encoded signatures for participant Identifier(\"0100000000000000000000000000000000000000000000000000000000000000\"):\nPlease enter JSON encoded signatures for participant Identifier(\"0300000000000000000000000000000000000000000000000000000000000000\"):\nGroup signature: \"72c948a63797c693e8e978fdb703a1f5a7590472a539da13b71dd6c2b8c1b2a664b7b4af6194439357c5d15f366760fce53c985a186709e74bb0f8e5078ea805\"\n";
+    let expected = "Please enter JSON encoded signature shares for participant 0100000000000000000000000000000000000000000000000000000000000000:\nPlease enter JSON encoded signature shares for participant 0300000000000000000000000000000000000000000000000000000000000000:\nGroup signature: \"72c948a63797c693e8e978fdb703a1f5a7590472a539da13b71dd6c2b8c1b2a664b7b4af6194439357c5d15f366760fce53c985a186709e74bb0f8e5078ea805\"\n";
 
     let (_, res) = &buf.into_parts();
-    let actual = hex::encode(res.as_ref().unwrap());
+    let actual = String::from_utf8(res.as_ref().unwrap().to_owned()).unwrap();
 
-    assert_eq!(hex::encode(expected), actual)
+    assert_eq!(expected, actual)
 }
