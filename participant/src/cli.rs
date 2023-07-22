@@ -1,5 +1,9 @@
-use frost::{round1, Error};
+#[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
+use frost::{round1, Error};
 use participant::round1::{print_values, request_inputs};
 use participant::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
 use participant::Logger;

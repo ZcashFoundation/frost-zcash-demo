@@ -1,5 +1,9 @@
-use frost::Error;
+#[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
+use frost::Error;
 use std::io::BufRead;
 
 #[derive(Debug, PartialEq, Clone)]

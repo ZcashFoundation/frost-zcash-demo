@@ -1,6 +1,9 @@
-use frost::{round2::SignatureShare, Identifier, Signature, SigningPackage};
-
+#[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
+use frost::{round2::SignatureShare, Identifier, Signature, SigningPackage};
 
 use std::{
     collections::HashMap,
@@ -9,14 +12,39 @@ use std::{
 
 use crate::step_1::ParticipantsConfig;
 
+#[cfg(feature = "redpallas")]
+pub fn request_randomizer(
+    input: &mut impl BufRead,
+    logger: &mut dyn Write,
+) -> Result<frost::round2::Randomizer, Box<dyn std::error::Error>> {
+    writeln!(logger, "Enter the randomizer (hex string):")?;
+
+    let mut randomizer = String::new();
+    input.read_line(&mut randomizer)?;
+
+    Ok(frost::round2::Randomizer::deserialize(
+        &hex::decode(randomizer.trim())?
+            .try_into()
+            .map_err(|_| frost::Error::MalformedIdentifier)?,
+    )?)
+}
+
 pub fn step_3(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
+    #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
 ) {
-    let group_signature =
-        request_inputs_signature_shares(input, logger, participants, signing_package).unwrap();
+    let group_signature = request_inputs_signature_shares(
+        input,
+        logger,
+        participants,
+        signing_package,
+        #[cfg(feature = "redpallas")]
+        randomizer,
+    )
+    .unwrap();
     print_signature(logger, group_signature);
 }
 
@@ -28,6 +56,7 @@ fn request_inputs_signature_shares(
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
+    #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
     let mut signatures_list: HashMap<Identifier, SignatureShare> = HashMap::new();
 
@@ -45,10 +74,18 @@ fn request_inputs_signature_shares(
         signatures_list.insert(p, signatures);
     }
 
+    #[cfg(feature = "redpallas")]
+    let randomizer_params = frost::RandomizedParams::from_randomizer(
+        participants.pub_key_package.group_public(),
+        randomizer,
+    );
+
     let group_signature = frost::aggregate(
         &signing_package,
         &signatures_list,
         &participants.pub_key_package,
+        #[cfg(feature = "redpallas")]
+        &randomizer_params,
     )
     .unwrap();
 

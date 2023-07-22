@@ -1,6 +1,12 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas::keys::PositiveY;
+
 use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Identifier;
-use frost_ed25519 as frost;
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -19,6 +25,11 @@ pub fn print_values(
     pubkeys: &PublicKeyPackage,
     logger: &mut dyn Logger,
 ) {
+    #[cfg(feature = "redpallas")]
+    let pubkeys = pubkeys.clone().into_positive_y();
+    #[cfg(feature = "redpallas")]
+    let pubkeys = &pubkeys;
+
     logger.log(format!(
         "Public key package:\n{}",
         serde_json::to_string(pubkeys).unwrap()

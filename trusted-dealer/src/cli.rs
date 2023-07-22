@@ -1,6 +1,10 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
 use frost::keys::IdentifierList;
 use frost::Error;
-use frost_ed25519 as frost;
 use rand::thread_rng;
 use std::io;
 

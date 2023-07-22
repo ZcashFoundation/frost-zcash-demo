@@ -1,6 +1,10 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
 use frost::keys::{IdentifierList, PublicKeyPackage, SecretShare};
 use frost::{Error, Identifier, SigningKey};
-use frost_ed25519 as frost;
 use rand::rngs::ThreadRng;
 use std::collections::HashMap;
 

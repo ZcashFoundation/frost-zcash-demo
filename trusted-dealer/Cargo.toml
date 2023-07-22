@@ -7,10 +7,15 @@ edition = "2021"
 
 [dependencies]
 frost-ed25519 = "0.6.0"
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "8534e283acf0015cc2450e2a6b49685a3bb3145d", features = ["frost"] }
 thiserror = "1.0"
 rand = "0.8"
 hex = "0.4"
 itertools = "0.11.0"
 exitcode = "1.1.2"
 serde_json = "1.0"
+
+[features]
+redpallas = []
+default = []
 
