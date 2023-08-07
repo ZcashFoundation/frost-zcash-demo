@@ -34,8 +34,8 @@ fn request_inputs_signature_shares(
     for p in participants.participants {
         writeln!(
             logger,
-            "Please enter JSON encoded signatures for participant {:?}:",
-            p
+            "Please enter JSON encoded signature shares for participant {}:",
+            hex::encode(p.serialize())
         )
         .unwrap();
 

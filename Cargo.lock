@@ -637,6 +637,7 @@ dependencies = [
  "frost-ed25519",
  "hex",
  "rand",
+ "serde_json",
 ]
 
 [[package]]
@@ -1045,6 +1046,7 @@ dependencies = [
  "hex",
  "itertools 0.11.0",
  "rand",
+ "serde_json",
  "thiserror",
 ]
 

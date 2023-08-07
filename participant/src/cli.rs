@@ -1,6 +1,6 @@
 use frost::{round1, Error};
 use frost_ed25519 as frost;
-use participant::round1::{generate_key_package, print_values, request_inputs};
+use participant::round1::{print_values, request_inputs};
 use participant::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
 use participant::Logger;
 use rand::thread_rng;
@@ -10,7 +10,6 @@ use std::io::BufRead;
 pub enum CliError {
     Config,
     Signing,
-    KeyPackage,
 }
 
 pub struct ParticipantError {
@@ -31,26 +30,16 @@ pub fn cli(input: &mut impl BufRead, logger: &mut dyn Logger) -> Result<(), Part
 
     let round_1_config_ok = round_1_config.unwrap();
 
-    let key_package = generate_key_package(&round_1_config_ok);
-
-    if let Err(e) = key_package {
-        return Err(ParticipantError {
-            frost_error: e,
-            cli_error: CliError::KeyPackage,
-        });
-    }
-
-    let key_package_ok = key_package.unwrap();
+    let key_package_ok = round_1_config_ok.key_package;
 
     logger.log("Key Package succesfully created.".to_string());
 
     let mut rng = thread_rng();
-    let (nonces, commitments) = round1::commit(&round_1_config_ok.signing_share, &mut rng);
+    let (nonces, commitments) = round1::commit(key_package_ok.secret_share(), &mut rng);
 
-    print_values(&nonces, commitments, logger);
+    print_values(commitments, logger);
 
-    let round_2_config =
-        round_2_request_inputs(round_1_config_ok.identifier, commitments, input, logger); // TODO: handle errors
+    let round_2_config = round_2_request_inputs(input, logger); // TODO: handle errors
 
     if let Err(e) = round_2_config {
         return Err(ParticipantError {

@@ -1,23 +1,16 @@
 use crate::Logger;
 use frost::{
-    keys::{
-        KeyPackage, SecretShare, SigningShare, VerifiableSecretSharingCommitment, VerifyingShare,
-    },
-    round1::{SigningCommitments, SigningNonces},
-    Error, GroupError, Identifier, VerifyingKey,
+    keys::{KeyPackage, SecretShare},
+    round1::SigningCommitments,
+    Error,
 };
 use frost_ed25519 as frost;
-use hex::FromHex;
 use std::io::BufRead;
 
 // TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
 pub struct Round1Config {
-    pub identifier: Identifier,
-    pub public_key: VerifyingShare,
-    pub group_public_key: VerifyingKey,
-    pub signing_share: SigningShare,
-    pub vss_commitment: Vec<u8>,
+    pub key_package: KeyPackage,
 }
 
 // pub trait Logger {
@@ -29,162 +22,30 @@ pub fn request_inputs(
     input: &mut impl BufRead,
     logger: &mut dyn Logger,
 ) -> Result<Round1Config, Error> {
-    logger.log("Your identifier (this should be an integer between 1 and 65535):".to_string());
+    logger.log("Your JSON-encoded secret share or key package:".to_string());
 
-    let mut identifier_input = String::new();
+    let mut json = String::new();
 
-    input.read_line(&mut identifier_input).unwrap();
+    input.read_line(&mut json).unwrap();
 
-    let identifier = identifier_input
-        .trim()
-        .parse::<u16>()
-        .map_err(|_| Error::MalformedIdentifier)?;
+    let key_package = if let Ok(secret_share) = serde_json::from_str::<SecretShare>(&json) {
+        KeyPackage::try_from(secret_share.clone())?
+    } else {
+        // TODO: Improve error
+        serde_json::from_str::<KeyPackage>(&json).map_err(|_| Error::InvalidSecretShare)?
+    };
 
-    logger.log("Your public key:".to_string());
-
-    let mut public_key_input = String::new();
-
-    input.read_line(&mut public_key_input).unwrap();
-
-    // A specific VerifyingShare error does not currently exist in Frost so `MalformedVerifyingKey`
-    // has been used. This should either be added to Frost or the error handling here can be reconsidered
-    let public_key = VerifyingShare::deserialize(
-        <[u8; 32]>::from_hex(public_key_input.trim()).map_err(|_| Error::MalformedVerifyingKey)?,
-    )?; //TODO: test error
-
-    logger.log("The group public key:".to_string());
-    let mut group_public_key_input = String::new();
-
-    input.read_line(&mut group_public_key_input).unwrap();
-
-    let group_public_key = VerifyingKey::deserialize(
-        <[u8; 32]>::from_hex(group_public_key_input.trim())
-            .map_err(|_| Error::MalformedVerifyingKey)?,
-    )
-    .map_err(|_| Error::MalformedVerifyingKey)?; // TODO: Add test for correct error to be returned on failing deserialisation
-
-    logger.log("Your secret share:".to_string());
-
-    let mut signing_share_input = String::new();
-
-    input.read_line(&mut signing_share_input).unwrap();
-
-    // A specific SigningShare error does not currently exist in Frost so `MalformedSigningKey`
-    // has been used. This should either be added to Frost or the error handling here can be reconsidered
-    let signing_share = SigningShare::deserialize(
-        <[u8; 32]>::from_hex(signing_share_input.trim()).map_err(|_| Error::MalformedSigningKey)?,
-    )?; //TODO: test error
-
-    logger.log("Your verifiable secret sharing commitment:".to_string());
-
-    let mut vss_commitment_input = String::new();
-
-    input.read_line(&mut vss_commitment_input).unwrap();
-
-    let vss_commitment =
-        hex::decode(vss_commitment_input.trim()).map_err(|_| GroupError::MalformedElement)?;
-
-    Ok(Round1Config {
-        identifier: Identifier::try_from(identifier)?,
-        public_key,
-        group_public_key,
-        signing_share,
-        vss_commitment,
-    })
-}
-
-pub fn generate_key_package(config: &Round1Config) -> Result<KeyPackage, Error> {
-    let secret_share = SecretShare::new(
-        config.identifier,
-        config.signing_share,
-        decode_vss_commitment(&config.vss_commitment)?,
-    );
-    let key_package = KeyPackage::try_from(secret_share)?;
-
-    Ok(key_package)
-}
-
-fn decode_vss_commitment(
-    vss_commitment: &Vec<u8>,
-) -> Result<VerifiableSecretSharingCommitment, Error> {
-    let coeff_commitments_data = vss_commitment[1..vss_commitment.len()].to_vec();
-
-    let n = vss_commitment[0] as usize;
-    let l = coeff_commitments_data.len() / n;
-
-    let mut coeff_commitments = Vec::with_capacity(n);
-
-    for i in 0..n {
-        let commitment_value = hex::encode(&coeff_commitments_data[(i * l)..((i * l) + l)]);
-        let serialized =
-            <[u8; 32]>::from_hex(commitment_value).map_err(|_| Error::InvalidCoefficients)?; // TODO: Is this the right error? Need to add test
-        coeff_commitments.push(serialized)
-    }
-
-    let out = VerifiableSecretSharingCommitment::deserialize(coeff_commitments)?; //TODO: test for this error
-    Ok(out)
+    Ok(Round1Config { key_package })
 }
 
 // The nonces are printed out here for demo purposes only. The hiding and binding nonces are SECRET and not to be shared.
-pub fn print_values(
-    nonces: &SigningNonces,
-    commitments: SigningCommitments,
-    logger: &mut dyn Logger,
-) {
+pub fn print_values(commitments: SigningCommitments, logger: &mut dyn Logger) {
     logger.log("=== Round 1 ===".to_string());
+    logger.log("SigningNonces were generated and stored in memory".to_string());
     logger.log(format!(
-        "Hiding nonce: {}",
-        hex::encode(nonces.hiding().serialize())
-    ));
-
-    logger.log(format!(
-        "Binding nonce: {}",
-        hex::encode(nonces.binding().serialize())
-    ));
-
-    logger.log(format!(
-        "Hiding commitment: {}",
-        hex::encode(commitments.hiding().serialize())
-    ));
-
-    logger.log(format!(
-        "Binding commitment: {}",
-        hex::encode(commitments.binding().serialize())
+        "SigningCommitments:\n{}",
+        serde_json::to_string(&commitments).unwrap(),
     ));
     logger.log("=== Round 1 Completed ===".to_string());
-    logger.log("Please send your Hiding and Binding Commitments to the coordinator".to_string());
-}
-
-#[cfg(test)]
-mod tests {
-    use frost::keys::VerifiableSecretSharingCommitment;
-    use frost_ed25519 as frost;
-    use hex::FromHex;
-
-    use crate::round1::decode_vss_commitment;
-
-    // TODO: Add details of encoding
-    #[test]
-    fn check_decode_vss_commitment() {
-        let vss_commitment_input = hex::decode("0353e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bdcad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4").unwrap();
-        let expected = VerifiableSecretSharingCommitment::deserialize(vec![
-            <[u8; 32]>::from_hex(
-                "53e4f0ed77543d021eb12cac53c35d4d99f5fc0fa5c3dfd82a3e1e296fba01bd",
-            )
-            .unwrap(),
-            <[u8; 32]>::from_hex(
-                "cad2a298d93b5f0079f5f3874599ca2295482e9a4fa75be6c6deb273b61ee441",
-            )
-            .unwrap(),
-            <[u8; 32]>::from_hex(
-                "e30ae9f78c1b56a4648130417247826afe3499c0d80b449740f8c968c64df0a4",
-            )
-            .unwrap(),
-        ])
-        .unwrap();
-
-        let actual = decode_vss_commitment(&vss_commitment_input).unwrap();
-
-        assert!(expected == actual);
-    }
+    logger.log("Please send your SigningCommitments to the coordinator".to_string());
 }
