@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-frost-ed25519 = "0.6.0"
+frost-ed25519 = { version = "0.6.0", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"
 hex = "0.4"
