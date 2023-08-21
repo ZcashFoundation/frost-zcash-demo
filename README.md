@@ -1,7 +1,5 @@
 # Zcash Foundation FROST Demos
 
-TODO
-
 This will be part of a set of demos and a proof of concept application that uses the FROST libraries and reference implementation. The purpose of these demos is to:
 
 1. identify gaps in our documentation
@@ -18,9 +16,20 @@ schemes in general assume that an adversary can corrupt strictly fewer than a th
 [Two-Round Threshold Schnorr Signatures with FROST](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/) presents a variant of a Flexible Round-Optimized Schnorr Threshold (FROST) signature scheme originally defined in [FROST20](https://eprint.iacr.org/2020/852.pdf). FROST reduces network overhead during threshold
 signing operations while employing a novel technique to protect against forgery attacks applicable to prior Schnorr-based threshold signature constructions. This variant of FROST requires two rounds to compute a signature, and implements signing efficiency improvements described by [Schnorr21](https://eprint.iacr.org/2021/1375.pdf). Single-round signing with FROST is not implemented here.
 
+## Projects
+
+This repo contains 4 projects:
+1. [Trusted Dealer](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/trusted-dealer)
+2. [DKG](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/dkg)
+3. [Coordinator](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/coordinator)
+4. [Participant](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/participant)
+
 ## Status ⚠
 
-TODO
+Trusted Dealer demo - WIP
+DKG demo - WIP
+Coordinator demo - WIP
+Participant demo - WIP
 
 ## Usage
 
@@ -31,11 +40,13 @@ You will need to have [Rust and Cargo](https://doc.rust-lang.org/cargo/getting-s
 To run:
 1. Clone the repo. Run `git clone https://github.com/ZcashFoundation/frost-zcash-demo.git`
 2. Run `cargo install`
-3. Run `cargo run`
 
-## Developer information
+and in separate terminals:
+3. Run `cargo run --bin trusted-dealer` or `cargo run --bin dkg`
+4. Run `cargo run --bin coordinator`
+5. Run `cargo run --bin participants`. Do this in separate terminals for separate participants.
 
-TODO
+## Developer Information
 
 ### Pre-commit checks
 
