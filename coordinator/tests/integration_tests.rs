@@ -8,7 +8,7 @@
 // use rand::thread_rng;
 // use std::collections::{BTreeMap, HashMap};
 
-// // #[test]
+// #[test]
 // fn check_keygen_with_dealer() {
 //     let mut rng = thread_rng();
 //     let (shares, pubkeys) =
@@ -17,7 +17,7 @@
 //     let (nonces, commitments) = round_1(2, &mut rng, &key_packages);
 //     let message = "i am a message".as_bytes();
 
-//     let signing_packages = step_2()
+//     let signing_packages = step_2();
 
 //     let signature_shares = round_2(nonces, &key_packages, signing_packages);
 

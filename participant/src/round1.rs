@@ -13,10 +13,6 @@ pub struct Round1Config {
     pub key_package: KeyPackage,
 }
 
-// pub trait Logger {
-//     fn log(&mut self, value: String);
-// }
-
 // TODO: refactor to generate config
 pub fn request_inputs(
     input: &mut impl BufRead,
@@ -29,7 +25,7 @@ pub fn request_inputs(
     input.read_line(&mut json).unwrap();
 
     let key_package = if let Ok(secret_share) = serde_json::from_str::<SecretShare>(&json) {
-        KeyPackage::try_from(secret_share.clone())?
+        KeyPackage::try_from(secret_share)?
     } else {
         // TODO: Improve error
         serde_json::from_str::<KeyPackage>(&json).map_err(|_| Error::InvalidSecretShare)?
