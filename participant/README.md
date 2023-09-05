@@ -1,22 +1,6 @@
 # FROST Participant Demo
 
-TODO
-
-This will be part of a set of demos and a proof of concept application that uses the FROST libraries and reference implementation. The purpose of these demos is to:
-
-1. identify gaps in our documentation
-2. provide usage examples for developer facing documentation
-3. provide reference implementations for developers wanting to use FROST in a “real world” scenario.
-
-This demo uses the (Ed25519, SHA-512) ciphersuite. The crate can be found [here](https://crates.io/crates/frost-ed25519).
-
-## About FROST (Flexible Round-Optimised Schnorr Threshold signatures)
-
-Unlike signatures in a single-party setting, threshold signatures require cooperation among a threshold number of signers, each holding a share of a common private key. The security of threshold
-schemes in general assume that an adversary can corrupt strictly fewer than a threshold number of participants.
-
-[Two-Round Threshold Schnorr Signatures with FROST](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/) presents a variant of a Flexible Round-Optimized Schnorr Threshold (FROST) signature scheme originally defined in [FROST20](https://eprint.iacr.org/2020/852.pdf). FROST reduces network overhead during threshold
-signing operations while employing a novel technique to protect against forgery attacks applicable to prior Schnorr-based threshold signature constructions. This variant of FROST requires two rounds to compute a signature, and implements signing efficiency improvements described by [Schnorr21](https://eprint.iacr.org/2021/1375.pdf). Single-round signing with FROST is not implemented here.
+[Overview of demos](https://github.com/ZcashFoundation/frost-zcash-demo/blob/main/README.md)
 
 ## Status ⚠
 
@@ -31,17 +15,40 @@ You will need to have [Rust and Cargo](https://doc.rust-lang.org/cargo/getting-s
 To run:
 1. Clone the repo. Run `git clone https://github.com/ZcashFoundation/frost-zcash-demo.git`
 2. Run `cargo install`
-3. Run `cargo run`
+3. Run `cargo run --bin participant`
 
-TODO
+### Round 1
 
-## Using the output
+The participant CLI will prompt for:
 
-TODO
+1. Your secret share or key package
+
+The participant CLI will then use that data to generate:
+
+1. Signing nonces
+2. Signing commitments
+
+### Communication round
+
+The signing commitments will be sent to the coordinator
+The coordinator will then send the signing package
+
+### Round 2
+
+The participant CLI will prompt for:
+
+1. Signing package
+
+The participant CLI will then use that data to generate:
+
+1. Signature share
+
+### Communication round
+
+The signature share will be sent to the coordinator
+The coordinator will then send the Group signature
 
 ## Developer information
-
-TODO
 
 ### Pre-commit checks
 
