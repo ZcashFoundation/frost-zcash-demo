@@ -1,3 +1,5 @@
+#[cfg(feature = "redpallas")]
+use frost::FieldError;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -45,12 +47,11 @@ pub fn round_2_request_inputs(
 
         input.read_line(&mut json).unwrap();
 
-        // TODO: fix error
         let randomizer = frost::round2::Randomizer::deserialize(
             &hex::decode(json.trim())
-                .map_err(|_| Error::MalformedIdentifier)?
+                .map_err(|_| Error::FieldError(FieldError::MalformedScalar))?
                 .try_into()
-                .map_err(|_| Error::MalformedIdentifier)?,
+                .map_err(|_| Error::FieldError(FieldError::MalformedScalar))?,
         )?;
         Ok(Round2Config {
             signing_package,
