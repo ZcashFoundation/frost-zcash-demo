@@ -1,6 +1,9 @@
-use frost::{round1::SigningCommitments, Identifier, SigningPackage};
-
+#[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
+use frost::{round1::SigningCommitments, Identifier, SigningPackage};
 
 use std::{
     collections::BTreeMap,

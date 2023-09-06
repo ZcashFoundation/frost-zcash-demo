@@ -4,6 +4,9 @@ use crate::step_1::step_1;
 use crate::step_2::step_2;
 use crate::step_3::step_3;
 
+#[cfg(feature = "redpallas")]
+use crate::step_3::request_randomizer;
+
 pub fn cli(
     reader: &mut impl BufRead,
     logger: &mut impl Write,
@@ -19,9 +22,19 @@ pub fn cli(
 
     let signing_package = step_2(reader, logger, participants_config.participants.clone())?;
 
+    #[cfg(feature = "redpallas")]
+    let randomizer = request_randomizer(reader, logger)?;
+
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
-    step_3(reader, logger, participants_config, signing_package);
+    step_3(
+        reader,
+        logger,
+        participants_config,
+        signing_package,
+        #[cfg(feature = "redpallas")]
+        randomizer,
+    );
 
     writeln!(logger, "=== END ===")?;
 

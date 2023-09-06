@@ -1,6 +1,12 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas::keys::PositiveY;
+
 use frost::keys::dkg::{round1, round2};
 use frost::Identifier;
-use frost_ed25519 as frost;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
@@ -81,6 +87,10 @@ pub fn cli(
         &received_round1_packages,
         &received_round2_packages,
     )?;
+    #[cfg(feature = "redpallas")]
+    let public_key_package = public_key_package.into_positive_y();
+    #[cfg(feature = "redpallas")]
+    let key_package = key_package.into_positive_y();
 
     writeln!(
         logger,

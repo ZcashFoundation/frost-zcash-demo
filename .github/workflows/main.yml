@@ -39,11 +39,14 @@ jobs:
           # GitHub displays the clippy job and its results as separate entries
           name: Clippy (stable) Results
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -D warnings
+          # Notet that we don't use --all-features because we go against Rust
+          # convention and have a non-additive "redpallas" feature, and the
+          # tests only work without it currently.
+          args: --all-targets -- -D warnings
 
       - name: Run clippy manually without annotations
         if: ${{ !steps.check_permissions.outputs.has-permission }}
-        run: cargo clippy --all-features --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
   fmt:
     name: Rustfmt

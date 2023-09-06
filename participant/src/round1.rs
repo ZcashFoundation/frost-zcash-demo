@@ -1,10 +1,16 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas::keys::PositiveY;
+
 use crate::Logger;
 use frost::{
     keys::{KeyPackage, SecretShare},
     round1::SigningCommitments,
     Error,
 };
-use frost_ed25519 as frost;
 use std::io::BufRead;
 
 // TODO: Rethink the types here. They're inconsistent with each other
@@ -30,6 +36,9 @@ pub fn request_inputs(
         // TODO: Improve error
         serde_json::from_str::<KeyPackage>(&json).map_err(|_| Error::InvalidSecretShare)?
     };
+
+    #[cfg(feature = "redpallas")]
+    let key_package = key_package.into_positive_y();
 
     Ok(Round1Config { key_package })
 }
