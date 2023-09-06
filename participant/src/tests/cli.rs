@@ -2,16 +2,7 @@
 // use frost::{keys::SigningShare, round1};
 // use frost_ed25519 as frost;
 // use hex::FromHex;
-// use participant::Logger;
 // use rand::thread_rng;
-
-// pub struct TestLogger(Vec<String>);
-
-// impl Logger for TestLogger {
-//     fn log(&mut self, value: String) {
-//         self.0.push(value);
-//     }
-// }
 
 // #[test]
 // fn check_cli() {
