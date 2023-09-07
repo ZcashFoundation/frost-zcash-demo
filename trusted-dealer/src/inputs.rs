@@ -4,7 +4,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 use frost::Error;
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
@@ -29,30 +29,36 @@ fn validate_inputs(config: &Config) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn request_inputs(input: &mut impl BufRead) -> Result<Config, Error> {
-    println!("The minimum number of signers: (2 or more)");
+pub fn request_inputs(
+    input: &mut impl BufRead,
+    logger: &mut impl Write,
+) -> Result<Config, Box<dyn std::error::Error>> {
+    writeln!(logger, "The minimum number of signers: (2 or more)")?;
 
     let mut min = String::new();
-    input.read_line(&mut min).unwrap();
+    input.read_line(&mut min)?;
 
     let min_signers = min
         .trim()
         .parse::<u16>()
         .map_err(|_| Error::InvalidMinSigners)?;
 
-    println!("The maximum number of signers: ");
+    writeln!(logger, "The maximum number of signers: ")?;
 
     let mut max = String::new();
-    input.read_line(&mut max).unwrap();
+    input.read_line(&mut max)?;
     let max_signers = max
         .trim()
         .parse::<u16>()
         .map_err(|_| Error::InvalidMaxSigners)?;
 
-    println!("Secret key (press enter to randomly generate a fresh one): ");
+    writeln!(
+        logger,
+        "Secret key (press enter to randomly generate a fresh one): "
+    )?;
 
     let mut secret_input = String::new();
-    input.read_line(&mut secret_input).unwrap();
+    input.read_line(&mut secret_input)?;
     let secret = hex::decode(secret_input.trim()).map_err(|_| Error::MalformedSigningKey)?;
 
     let config = Config {

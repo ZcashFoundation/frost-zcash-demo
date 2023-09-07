@@ -64,8 +64,6 @@ fn check_valid_round_2_inputs() {
     let input = format!("{}\n", signing_package);
     let mut valid_input = input.as_bytes();
 
-    println!("After valid input");
-
     let round_2_config = round_2_request_inputs(&mut valid_input, &mut buf);
 
     assert!(round_2_config.is_ok());

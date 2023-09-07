@@ -9,10 +9,7 @@ use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Identifier;
 use itertools::Itertools;
 use std::collections::HashMap;
-
-pub trait Logger {
-    fn log(&mut self, value: String);
-}
+use std::io::Write;
 
 fn get_identifier_value(i: Identifier) -> String {
     let s = i.serialize();
@@ -23,28 +20,29 @@ fn get_identifier_value(i: Identifier) -> String {
 pub fn print_values(
     keys: &HashMap<Identifier, SecretShare>,
     pubkeys: &PublicKeyPackage,
-    logger: &mut dyn Logger,
-) {
+    logger: &mut dyn Write,
+) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "redpallas")]
     let pubkeys = pubkeys.clone().into_positive_y();
     #[cfg(feature = "redpallas")]
     let pubkeys = &pubkeys;
 
-    logger.log(format!(
+    writeln!(
+        logger,
         "Public key package:\n{}",
         serde_json::to_string(pubkeys).unwrap()
-    ));
-
-    println!("---");
+    )?;
 
     for (k, v) in keys.iter().sorted_by_key(|x| x.0) {
-        logger.log(format!("Participant: {}", get_identifier_value(*k)));
-        logger.log(format!(
+        writeln!(logger, "Participant: {}", get_identifier_value(*k))?;
+        writeln!(
+            logger,
             "Secret share:\n{}",
             serde_json::to_string(v).unwrap()
-        ));
-        println!("---")
+        )?;
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
