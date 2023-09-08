@@ -6,7 +6,7 @@ mod tests;
 
 use std::io;
 
-use crate::cli::cli;
+use cli::cli;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut reader = Box::new(io::stdin().lock());

@@ -1,11 +1,11 @@
+use dkg::cli::cli;
+
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::thread;
 
 use frost_ed25519::keys::{KeyPackage, PublicKeyPackage};
 use frost_ed25519::Identifier;
-
-use crate::cli::cli;
 
 // Read a single line from the given reader.
 fn read_line(mut reader: impl BufRead) -> Result<String, std::io::Error> {

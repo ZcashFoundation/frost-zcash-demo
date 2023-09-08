@@ -6,8 +6,8 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::io::BufWriter;
 
+use crate::inputs::print_values;
 use crate::inputs::Config;
-use crate::output::print_values;
 use crate::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
 fn get_identifier_value(i: Identifier) -> String {

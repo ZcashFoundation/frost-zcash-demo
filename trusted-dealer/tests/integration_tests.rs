@@ -1,13 +1,14 @@
-use crate::inputs::Config;
-use crate::tests::integration_test::signature_gen::{key_package, round_1, round_2};
-use crate::trusted_dealer_keygen::split_secret;
+mod helpers;
+
 use frost::aggregate;
 use frost::keys::IdentifierList;
 use frost_ed25519 as frost;
+use helpers::signature_gen::{key_package, round_1, round_2};
 use rand::thread_rng;
+use trusted_dealer::inputs::Config;
+use trusted_dealer::trusted_dealer_keygen::split_secret;
 
-use crate::trusted_dealer_keygen::trusted_dealer_keygen;
-mod signature_gen;
+use trusted_dealer::trusted_dealer_keygen::trusted_dealer_keygen;
 
 #[test]
 fn check_keygen_with_dealer() {

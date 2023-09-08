@@ -7,8 +7,7 @@ use frost::keys::IdentifierList;
 use rand::thread_rng;
 use std::io::{BufRead, Write};
 
-use crate::inputs::request_inputs;
-use crate::output::print_values;
+use crate::inputs::{print_values, request_inputs};
 use crate::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
 // Currently this uses the Default Identifiers
