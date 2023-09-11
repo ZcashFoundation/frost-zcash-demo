@@ -21,8 +21,6 @@
 
 //     let signature_shares = round_2(nonces, &key_packages, signing_packages);
 
-//     let signing_packages = step_2()
-
 //     // Coordinator
 
 //     let config = Config {

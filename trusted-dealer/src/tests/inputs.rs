@@ -1,8 +1,8 @@
 use std::io::BufWriter;
 
-use crate::inputs::{request_inputs, Config};
 use frost::Error;
 use frost_ed25519 as frost;
+use trusted_dealer::inputs::{request_inputs, Config};
 
 #[test]
 fn check_valid_input_for_signers() {

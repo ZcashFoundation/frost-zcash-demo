@@ -6,9 +6,9 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::io::BufWriter;
 
-use crate::inputs::print_values;
-use crate::inputs::Config;
-use crate::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
+use trusted_dealer::inputs::print_values;
+use trusted_dealer::inputs::Config;
+use trusted_dealer::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
 fn get_identifier_value(i: Identifier) -> String {
     let s = i.serialize();

@@ -1,13 +1,9 @@
-mod cli;
-mod inputs;
-mod trusted_dealer_keygen;
-
 #[cfg(test)]
 mod tests;
 
 use std::io;
 
-use crate::cli::cli;
+use trusted_dealer::cli::cli;
 
 // TODO: Update to use exit codes
 fn main() -> Result<(), Box<dyn std::error::Error>> {

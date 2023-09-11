@@ -1,4 +1,7 @@
 mod cli;
+mod round1;
+mod round2;
+
 #[cfg(test)]
 mod tests;
 

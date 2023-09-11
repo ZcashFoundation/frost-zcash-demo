@@ -3,5 +3,10 @@ members = [
     "participant",
     "trusted-dealer",
     "dkg",
-    "coordinator"
+    "coordinator", "tests"
 ]
+default-members = ["participant",
+    "trusted-dealer",
+    "dkg",
+    "coordinator", "tests"]
+

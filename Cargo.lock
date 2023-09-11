@@ -1143,6 +1143,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "tests"
+version = "0.1.0"
+dependencies = [
+ "coordinator",
+ "dkg",
+ "exitcode",
+ "frost-ed25519",
+ "hex",
+ "participant",
+ "rand",
+ "reddsa",
+ "serde_json",
+ "trusted-dealer",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
