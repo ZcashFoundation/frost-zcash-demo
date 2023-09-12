@@ -85,7 +85,6 @@ fn return_malformed_identifier_error_if_identifier_invalid() {
     let mut buf = BufWriter::new(Vec::new());
     let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
 
-    println!("{:?}", expected);
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
         Error::MalformedIdentifier
