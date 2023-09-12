@@ -42,7 +42,6 @@ pub fn request_inputs(
     Ok(Round1Config { key_package })
 }
 
-// The nonces are printed out here for demo purposes only. The hiding and binding nonces are SECRET and not to be shared.
 pub fn print_values(
     commitments: SigningCommitments,
     logger: &mut dyn Write,

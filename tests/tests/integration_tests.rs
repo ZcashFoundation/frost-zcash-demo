@@ -147,6 +147,4 @@ fn trusted_dealer_journey() {
         .verify("test".as_bytes(), &group_signature)
         .is_ok();
     assert!(is_signature_valid);
-
-    assert_eq!(1, 1)
 }
