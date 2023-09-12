@@ -10,12 +10,6 @@ use trusted_dealer::inputs::print_values;
 use trusted_dealer::inputs::Config;
 use trusted_dealer::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
-fn get_identifier_value(i: Identifier) -> String {
-    let s = i.serialize();
-    let le_bytes: [u8; 2] = [s[0], s[1]];
-    u16::from_le_bytes(le_bytes).to_string()
-}
-
 fn build_output(shares: HashMap<Identifier, SecretShare>, pubkeys: PublicKeyPackage) -> String {
     let pub_key_package = format!(
         "Public key package:\n{}",
@@ -26,7 +20,7 @@ fn build_output(shares: HashMap<Identifier, SecretShare>, pubkeys: PublicKeyPack
 
     for (k, v) in shares.iter().sorted_by_key(|x| x.0) {
         out = out
-            + &format!("\nParticipant: {}", get_identifier_value(*k))
+            + &format!("\nParticipant: {}", hex::encode(k.serialize()))
             + &format!("\nSecret share:\n{}", serde_json::to_string(v).unwrap())
     }
 

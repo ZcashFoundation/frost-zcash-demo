@@ -76,12 +76,6 @@ pub fn request_inputs(
     Ok(config)
 }
 
-fn get_identifier_value(i: Identifier) -> String {
-    let s = i.serialize();
-    let le_bytes: [u8; 2] = [s[0], s[1]];
-    u16::from_le_bytes(le_bytes).to_string()
-}
-
 pub fn print_values(
     keys: &HashMap<Identifier, SecretShare>,
     pubkeys: &PublicKeyPackage,
@@ -99,7 +93,7 @@ pub fn print_values(
     )?;
 
     for (k, v) in keys.iter().sorted_by_key(|x| x.0) {
-        writeln!(logger, "Participant: {}", get_identifier_value(*k))?;
+        writeln!(logger, "Participant: {}", hex::encode(k.serialize()))?;
         writeln!(
             logger,
             "Secret share:\n{}",
@@ -108,24 +102,4 @@ pub fn print_values(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::inputs::get_identifier_value;
-    use frost::Identifier;
-    use frost_ed25519 as frost;
-
-    #[test]
-    fn check_get_identifier_value() {
-        let min = "1";
-        let identifier_min = Identifier::try_from(1).unwrap();
-
-        assert!(get_identifier_value(identifier_min) == min);
-
-        let max = "65535";
-        let identifier_max = Identifier::try_from(65535).unwrap();
-
-        assert!(get_identifier_value(identifier_max) == max);
-    }
 }
