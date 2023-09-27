@@ -35,7 +35,7 @@ pub fn step_3(
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
     #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-) {
+) -> Signature {
     let group_signature = request_inputs_signature_shares(
         input,
         logger,
@@ -46,6 +46,7 @@ pub fn step_3(
     )
     .unwrap();
     print_signature(logger, group_signature);
+    group_signature
 }
 
 // Input required:

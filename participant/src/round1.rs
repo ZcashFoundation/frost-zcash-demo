@@ -5,13 +5,12 @@ use reddsa::frost::redpallas as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas::keys::PositiveY;
 
-use crate::Logger;
 use frost::{
     keys::{KeyPackage, SecretShare},
     round1::SigningCommitments,
     Error,
 };
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 
 // TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
@@ -22,13 +21,13 @@ pub struct Round1Config {
 // TODO: refactor to generate config
 pub fn request_inputs(
     input: &mut impl BufRead,
-    logger: &mut dyn Logger,
-) -> Result<Round1Config, Error> {
-    logger.log("Your JSON-encoded secret share or key package:".to_string());
+    logger: &mut impl Write,
+) -> Result<Round1Config, Box<dyn std::error::Error>> {
+    writeln!(logger, "Your JSON-encoded secret share or key package:")?;
 
     let mut json = String::new();
 
-    input.read_line(&mut json).unwrap();
+    input.read_line(&mut json)?;
 
     let key_package = if let Ok(secret_share) = serde_json::from_str::<SecretShare>(&json) {
         KeyPackage::try_from(secret_share)?
@@ -43,14 +42,22 @@ pub fn request_inputs(
     Ok(Round1Config { key_package })
 }
 
-// The nonces are printed out here for demo purposes only. The hiding and binding nonces are SECRET and not to be shared.
-pub fn print_values(commitments: SigningCommitments, logger: &mut dyn Logger) {
-    logger.log("=== Round 1 ===".to_string());
-    logger.log("SigningNonces were generated and stored in memory".to_string());
-    logger.log(format!(
+pub fn print_values(
+    commitments: SigningCommitments,
+    logger: &mut dyn Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    writeln!(logger, "=== Round 1 ===")?;
+    writeln!(logger, "SigningNonces were generated and stored in memory")?;
+    writeln!(
+        logger,
         "SigningCommitments:\n{}",
         serde_json::to_string(&commitments).unwrap(),
-    ));
-    logger.log("=== Round 1 Completed ===".to_string());
-    logger.log("Please send your SigningCommitments to the coordinator".to_string());
+    )?;
+    writeln!(logger, "=== Round 1 Completed ===")?;
+    writeln!(
+        logger,
+        "Please send your SigningCommitments to the coordinator"
+    )?;
+
+    Ok(())
 }

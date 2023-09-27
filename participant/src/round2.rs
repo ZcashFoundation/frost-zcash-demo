@@ -5,16 +5,15 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-use crate::Logger;
 use frost::{
     keys::KeyPackage,
     round1::SigningNonces,
     round2::{self, SignatureShare},
     Error, SigningPackage,
 };
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 
-// #[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Round2Config {
     pub signing_package: SigningPackage,
     #[cfg(feature = "redpallas")]
@@ -25,15 +24,15 @@ pub struct Round2Config {
 // TODO: handle errors
 pub fn round_2_request_inputs(
     input: &mut impl BufRead,
-    logger: &mut dyn Logger,
-) -> Result<Round2Config, Error> {
-    logger.log("=== Round 2 ===".to_string());
+    logger: &mut dyn Write,
+) -> Result<Round2Config, Box<dyn std::error::Error>> {
+    writeln!(logger, "=== Round 2 ===")?;
 
-    logger.log("Enter the JSON-encoded SigningPackage:".to_string());
+    writeln!(logger, "Enter the JSON-encoded SigningPackage:")?;
 
     let mut signing_package_json = String::new();
 
-    input.read_line(&mut signing_package_json).unwrap();
+    input.read_line(&mut signing_package_json)?;
 
     // TODO: change to return a generic Error and use a better error
     let signing_package: SigningPackage = serde_json::from_str(signing_package_json.trim())
@@ -41,7 +40,7 @@ pub fn round_2_request_inputs(
 
     #[cfg(feature = "redpallas")]
     {
-        logger.log("Enter the randomizer (hex string):".to_string());
+        writeln!(logger, "Enter the randomizer (hex string):")?;
 
         let mut json = String::new();
 
@@ -81,11 +80,17 @@ pub fn generate_signature(
     Ok(signature)
 }
 
-pub fn print_values_round_2(signature: SignatureShare, logger: &mut dyn Logger) {
-    logger.log("Please send the following to the Coordinator".to_string());
-    logger.log(format!(
+pub fn print_values_round_2(
+    signature: SignatureShare,
+    logger: &mut dyn Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    writeln!(logger, "Please send the following to the Coordinator")?;
+    writeln!(
+        logger,
         "SignatureShare:\n{}",
         serde_json::to_string(&signature).unwrap()
-    ));
-    logger.log("=== End of Round 2 ===".to_string());
+    )?;
+    writeln!(logger, "=== End of Round 2 ===")?;
+
+    Ok(())
 }

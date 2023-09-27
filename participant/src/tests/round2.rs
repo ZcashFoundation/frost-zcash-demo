@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, io::BufWriter};
 
 #[cfg(test)]
 use frost::Identifier;
@@ -12,16 +12,7 @@ use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::round2::print_values_round_2;
 use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
-use participant::Logger;
 use rand::thread_rng;
-
-pub struct TestLogger(Vec<String>);
-
-impl Logger for TestLogger {
-    fn log(&mut self, value: String) {
-        self.0.push(value);
-    }
-}
 
 const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
 const GROUP_PUBLIC_KEY: &str = "087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e";
@@ -68,14 +59,12 @@ fn check_valid_round_2_inputs() {
         signing_package: SigningPackage::new(signer_commitments, &message),
     };
 
-    let mut test_logger = TestLogger(Vec::new());
+    let mut buf = BufWriter::new(Vec::new());
 
     let input = format!("{}\n", signing_package);
     let mut valid_input = input.as_bytes();
 
-    println!("After valid input");
-
-    let round_2_config = round_2_request_inputs(&mut valid_input, &mut test_logger);
+    let round_2_config = round_2_request_inputs(&mut valid_input, &mut buf);
 
     assert!(round_2_config.is_ok());
     assert_eq!(
@@ -129,19 +118,20 @@ fn check_sign() {
 
 #[test]
 fn check_print_values_round_2() {
-    let mut test_logger = TestLogger(Vec::new());
+    let mut buf = BufWriter::new(Vec::new());
 
     const SIGNATURE_SHARE: &str =
         "44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
     let signature_response =
         SignatureShare::deserialize(<[u8; 32]>::from_hex(SIGNATURE_SHARE).unwrap()).unwrap();
 
-    print_values_round_2(signature_response, &mut test_logger);
+    print_values_round_2(signature_response, &mut buf).unwrap();
 
-    let log = [
-    "Please send the following to the Coordinator", 
-    "SignatureShare:\n{\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}", 
-    "=== End of Round 2 ==="];
+    let log = "Please send the following to the Coordinator\n".to_owned() + 
+    "SignatureShare:\n{\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}\n" + 
+    "=== End of Round 2 ===\n";
 
-    assert_eq!(test_logger.0, log);
+    let out = String::from_utf8(buf.into_inner().unwrap()).unwrap();
+
+    assert_eq!(out, log);
 }

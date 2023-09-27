@@ -5,7 +5,7 @@ CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 script = "cargo fmt"
 
 [tasks.clippy-full]
-script = "cargo clippy --all-features --all-targets -- -D warnings"
+script = "cargo clippy --all-targets -- -D warnings"
 
 [tasks.all]
 dependencies = [

@@ -1,31 +1,15 @@
-mod cli;
-mod inputs;
-mod output;
-mod trusted_dealer_keygen;
-
 #[cfg(test)]
 mod tests;
 
-use cli::CliError;
 use std::io;
 
-use crate::cli::cli;
+use trusted_dealer::cli::cli;
 
-fn main() -> io::Result<()> {
-    let out = cli();
-
-    if let Err(e) = out {
-        if e.cli_error == CliError::Config {
-            {
-                eprintln!("Error: {}", e.frost_error);
-                std::process::exit(exitcode::DATAERR)
-            };
-        };
-        if e.cli_error == CliError::Keygen {
-            eprintln!("Error: {}", e.frost_error);
-            std::process::exit(1)
-        };
-    }
+// TODO: Update to use exit codes
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut reader = Box::new(io::stdin().lock());
+    let mut logger = io::stdout();
+    cli(&mut reader, &mut logger)?;
 
     Ok(())
 }

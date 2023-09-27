@@ -1,103 +1,21 @@
-// use crate::cli::cli;
-// use frost::{keys::SigningShare, round1};
-// use frost_ed25519 as frost;
-// use hex::FromHex;
-// use participant::Logger;
-// use rand::thread_rng;
+use std::io::BufWriter;
 
-// pub struct TestLogger(Vec<String>);
+use crate::cli::cli;
 
-// impl Logger for TestLogger {
-//     fn log(&mut self, value: String) {
-//         self.0.push(value);
-//     }
-// }
+#[test]
+fn check_cli() {
+    let key_package = r#"{"identifier":"0100000000000000000000000000000000000000000000000000000000000000","value":"ee4a66fec3ced53cac04b0abc309bb57f03f8d7dede033e4ae7b6ef57630120f","commitment":["21446705fa7da298998a567a3c2fdd7274903a886dcde9a77f615d915feb6764","56ce223ffbde8ce5971be587cbb0b8b31aa2bc220a6803b9ce73c63f9f432514","6dcc10da9443ef2c9bbd5fc6a9c3bcd4c5ede8048cc0b1342b091fd1ff6dc53c"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
 
-// #[test]
-// fn check_cli() {
-//     // Round 1 inputs
-//     let identifier = "1";
-//     let pub_key = "470f53fb724502bf5b851471e9f8317616fcc7be9405ccff3347c232a3052ce7";
-//     let group_pub_key = "42ae1baa1bce5a38c130e60aade154ec8775076e729881aba66dabd0c0ac6332";
-//     let signing_share = "1edfa2ebd280cba9a72f0bc027d21c30078c11f92e0c908addb958062c1ac900";
-//     let vss_commitment = "0342ae1baa1bce5a38c130e60aade154ec8775076e729881aba66dabd0c0ac6332393a813a6b47782f0fbe653593cbb7b0e0e13f01b54b801144545cb774c0fe5683d8bee3cd63b10523ccace10044869c56bce8a6061950f9aebd7f2e36249571";
+    let signing_package = r#"{"signing_commitments":{"0100000000000000000000000000000000000000000000000000000000000000":{"hiding":"710a280fcedbcbe626fff055f682e4a525c31f157dd6071ef2c04ea0ecbe8de9","binding":"6dc707cdf26a589b3e2de4f6bae09b94d5d3bb939937b52bc6b16bdecd0b041f","ciphersuite":"FROST(Ed25519, SHA-512)"},"0200000000000000000000000000000000000000000000000000000000000000":{"hiding":"777f011bf695e27ce62474747a9c110cc3b827268047913a21030c3eba0e1eed","binding":"67f051035284cd619f0e7fc583eb3cb0c88d993aad621c856edc0f995f4588b2","ciphersuite":"FROST(Ed25519, SHA-512)"},"0300000000000000000000000000000000000000000000000000000000000000":{"hiding":"c052599bb7a52911b6b58e7c20747f12d45d23aab4aec98aaecdc7909dc6aff3","binding":"b3fbefc67070b1b56203ef875a2c7caf24802dbc943bdc62decac33287b63b23","ciphersuite":"FROST(Ed25519, SHA-512)"}},"message":"74657374","ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
+    let group_signature = "\"daae8e867c1c3000687a819262099c44e4799853729d87738b4811637a659f3075829c4ee6c5f6767e11b937e18dce20886b0d3f015caaf4ccdb76d4d185910c\"";
 
-//     // Round 2 inputs
-//     let min_signers = "3";
-//     const MESSAGE: &str = "15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673";
-//     const IDENTIFIER_2: &str = "2";
-//     const HIDING_COMMITMENT_2: &str =
-//         "30f3f03bd739024dc5b1e9d422745a7f32b0971d5cef302106b30bd9f5642d70";
-//     const BINDING_COMMITMENT_2: &str =
-//         "a7ccae3750846fbd7d132efec85e96236a711b2097a6f03b1afa04f6029458cc";
-//     const IDENTIFIER_3: &str = "3";
-//     const HIDING_COMMITMENT_3: &str =
-//         "d31bd81ce216b1c83912803a574a0285796275cb8b14f6dc92c8b09a6951f0a2";
-//     const BINDING_COMMITMENT_3: &str =
-//         "e1c863cfd08df775b6747ef2456e9bf9a03cc281a479a95261dc39137fcf0967";
+    let mut buf = BufWriter::new(Vec::new());
 
-//     let input = format!(
-//         "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
-//         identifier,
-//         pub_key,
-//         group_pub_key,
-//         signing_share,
-//         vss_commitment,
-//         min_signers,
-//         MESSAGE,
-//         IDENTIFIER_2,
-//         HIDING_COMMITMENT_2,
-//         BINDING_COMMITMENT_2,
-//         IDENTIFIER_3,
-//         HIDING_COMMITMENT_3,
-//         BINDING_COMMITMENT_3
-//     );
-//     let mut reader = input.as_bytes();
-//     let mut test_logger = TestLogger(Vec::new());
-//     let _out = cli(&mut reader, &mut test_logger);
+    let input = format!(
+        "{}\n{}\n{}\n",
+        key_package, signing_package, group_signature
+    );
 
-//     let mut rng = thread_rng();
-
-//     // We aren't testing randomness so this needs to be generated in the tests. TODO: mock the round1::commit function. To be improved in a later issue.
-//     let (nonces, commitments) =
-//         round1::commit(&SigningShare::from_hex(signing_share).unwrap(), &mut rng);
-
-//     let _hiding_nonce = hex::encode(nonces.hiding().serialize());
-//     let _binding_nonce = hex::encode(nonces.binding().serialize());
-//     let _hiding_commitment = hex::encode(commitments.hiding().serialize());
-//     let _binding_commitment = hex::encode(commitments.binding().serialize());
-
-//     // let signature_share = hex::encode(sig_share.to_bytes());
-
-//     let log = [
-//         "Your identifier (this should be an integer between 1 and 65535):",
-//         "Your public key:",
-//         "The group public key:",
-//         "Your secret share:",
-//         "Your verifiable secret sharing commitment:",
-//         "Key Package succesfully created.",
-//         "=== Round 1 ===",
-//         "Hiding nonce: {}",
-//         "Binding nonce: {}",
-//         "Hiding commitment: {}",
-//         "Binding commitment: {}",
-//         "=== Round 1 Completed ===",
-//         "Please send your Hiding and Binding Commitments to the coordinator",
-//         "=== Round 2 ===",
-//         "Number of signers:",
-//         "Enter the message to sign (received from the coordinator):",
-//         "Identifier:",
-//         "Hiding commitment 2:",
-//         "Binding commitment 2:",
-//         "Identifier:",
-//         "Hiding commitment 3:",
-//         "Binding commitment 3:",
-//         // "Signature share: {}", // TODO: this tests the signature share value returned is correct. The calculation is done in lib.rs tests.
-//         // "=== Round 2 Completed ==="
-//     ]
-//     .to_vec();
-
-//     assert_eq!(test_logger.0[0..7], log[0..7]);
-//     assert_eq!(test_logger.0[12..22], log[12..22]);
-//     // TODO: test nonce and commitment values
-// }
+    let signature = cli(&mut input.as_bytes(), &mut buf);
+    assert!(signature.is_ok());
+}
