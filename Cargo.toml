@@ -9,4 +9,4 @@ default-members = ["participant",
     "trusted-dealer",
     "dkg",
     "coordinator", "tests"]
-
+resolver = "2"
