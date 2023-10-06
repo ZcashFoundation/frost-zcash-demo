@@ -10,6 +10,15 @@ on:
 
 jobs:
 
+  build_redpallas:
+    name: Build with redpallas
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.1.0
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --features redpallas
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
