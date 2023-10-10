@@ -13,7 +13,7 @@ use frost::{
 };
 use std::io::{BufRead, Write};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Round2Config {
     pub signing_package: SigningPackage,
     #[cfg(feature = "redpallas")]

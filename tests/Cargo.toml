@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 frost-ed25519 = { version = "0.6.0", features = ["serde"] }
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "8534e283acf0015cc2450e2a6b49685a3bb3145d", features = ["frost"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "5ea1293bb8df90c8a19dedf7ab5510903650dda9", features = ["frost"] }
 hex = "0.4"
 rand = "0.8"
 exitcode = "1.1.2"
