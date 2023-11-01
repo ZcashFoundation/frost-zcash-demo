@@ -11,7 +11,7 @@ use std::{
     io::{BufRead, Write},
 };
 
-use crate::{args::Args, input::read_from_file_or_stdin};
+use crate::{args::Args, comms::Comms, input::read_from_file_or_stdin};
 
 #[derive(PartialEq, Debug)]
 pub struct ParticipantsConfig {
@@ -20,47 +20,26 @@ pub struct ParticipantsConfig {
 }
 
 // TODO: needs to include the coordinator's keys!
-pub fn step_1(
+pub async fn step_1(
     args: &Args,
+    comms: impl Comms,
     reader: &mut impl BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
-    let participants = read_commitments(args, reader, logger)?;
+    let participants = read_commitments(args, comms, reader, logger).await?;
     print_participants(logger, &participants.commitments);
     Ok(participants)
 }
 
-fn validate(
-    id: Identifier,
-    key_package: &PublicKeyPackage,
-    id_list: &[Identifier],
-) -> Result<(), Error> {
-    if !key_package.signer_pubkeys().contains_key(&id) {
-        return Err(Error::MalformedIdentifier);
-    }; // TODO: Error is actually that the identifier does not exist
-    if id_list.contains(&id) {
-        return Err(Error::DuplicatedIdentifier);
-    };
-    Ok(())
-}
-
 // TODO: validate min num of participants
-
-pub fn read_identifier(input: &mut impl BufRead) -> Result<Identifier, Box<dyn std::error::Error>> {
-    let mut identifier_input = String::new();
-    input.read_line(&mut identifier_input)?;
-    let bytes = hex::decode(identifier_input.trim())?;
-    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::deserialize(&serialization)?;
-    Ok(identifier)
-}
 
 // Input required:
 // 1. public key package
 // 2. number of participants
 // 3. identifiers for all participants
-fn read_commitments(
+async fn read_commitments(
     args: &Args,
+    comms: impl Comms,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
@@ -80,6 +59,8 @@ fn read_commitments(
 
     let mut participants_list = Vec::new();
     let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
+
+    let commitments_list = comms.get_signing_commitments().await?;
 
     for i in 1..=num_of_participants {
         writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i)?;

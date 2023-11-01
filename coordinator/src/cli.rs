@@ -1,6 +1,7 @@
 use std::io::{BufRead, Write};
 
 use crate::args::Args;
+use crate::comms::CLIComms;
 use crate::step_1::step_1;
 use crate::step_2::step_2;
 use crate::step_3::step_3;
@@ -8,14 +9,19 @@ use crate::step_3::step_3;
 #[cfg(feature = "redpallas")]
 use crate::step_3::request_randomizer;
 
-pub fn cli(
+pub async fn cli(
     args: &Args,
     reader: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let participants_config = step_1(args, reader, logger)?;
+    let comms = CLIComms {
+        input: reader,
+        output: logger,
+    };
+
+    let participants_config = step_1(args, comms, reader, logger).await?;
 
     writeln!(
         logger,

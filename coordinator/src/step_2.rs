@@ -21,16 +21,14 @@ pub fn step_2(
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    let signing_package = request_inputs_commitments(input, logger, commitments)?;
-    print_commitments(logger, &signing_package);
+    let signing_package = request_message(input, logger, commitments)?;
+    print_signing_package(logger, &signing_package);
     Ok(signing_package)
 }
 
 // Input required:
 // 1. message
-// 2. number of signers
-// 3. commitments for all signers
-fn request_inputs_commitments(
+fn request_message(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
@@ -47,7 +45,7 @@ fn request_inputs_commitments(
     Ok(signing_package)
 }
 
-fn print_commitments(logger: &mut dyn Write, signing_package: &SigningPackage) {
+fn print_signing_package(logger: &mut dyn Write, signing_package: &SigningPackage) {
     writeln!(
         logger,
         "Signing Package:\n{}",
