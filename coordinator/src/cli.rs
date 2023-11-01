@@ -22,7 +22,7 @@ pub fn cli(
         "=== STEP 2: CHOOSE MESSAGE AND GENERATE COMMITMENT PACKAGE ===\n"
     )?;
 
-    let signing_package = step_2(reader, logger, participants_config.participants.clone())?;
+    let signing_package = step_2(reader, logger, participants_config.commitments.clone())?;
 
     #[cfg(feature = "redpallas")]
     let randomizer = request_randomizer(reader, logger)?;

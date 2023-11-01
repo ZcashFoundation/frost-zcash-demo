@@ -19,9 +19,9 @@ pub struct CommitmentsConfig {
 pub fn step_2(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-    participants: Vec<Identifier>,
+    commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    let signing_package = request_inputs_commitments(input, logger, participants)?;
+    let signing_package = request_inputs_commitments(input, logger, commitments)?;
     print_commitments(logger, &signing_package);
     Ok(signing_package)
 }
@@ -33,7 +33,7 @@ pub fn step_2(
 fn request_inputs_commitments(
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-    participants: Vec<Identifier>,
+    commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
     writeln!(logger, "The message to be signed (hex encoded)")?;
 
@@ -42,22 +42,7 @@ fn request_inputs_commitments(
 
     let message = hex::decode(msg.trim())?;
 
-    let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
-
-    for p in participants {
-        writeln!(
-            logger,
-            "Please enter JSON encoded commitments for participant {}:",
-            hex::encode(p.serialize())
-        )?; // TODO: improve printing
-
-        let mut commitments_input = String::new();
-        input.read_line(&mut commitments_input)?;
-        let commitments = serde_json::from_str(&commitments_input)?;
-        commitments_list.insert(p, commitments);
-    }
-
-    let signing_package = SigningPackage::new(commitments_list, &message);
+    let signing_package = SigningPackage::new(commitments, &message);
 
     Ok(signing_package)
 }

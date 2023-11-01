@@ -3,16 +3,19 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-use frost::{keys::PublicKeyPackage, Error, Identifier};
+use frost::{keys::PublicKeyPackage, round1::SigningCommitments, Error, Identifier};
 
 use eyre::eyre;
-use std::io::{BufRead, Write};
+use std::{
+    collections::BTreeMap,
+    io::{BufRead, Write},
+};
 
 use crate::{args::Args, input::read_from_file_or_stdin};
 
 #[derive(PartialEq, Debug)]
 pub struct ParticipantsConfig {
-    pub participants: Vec<Identifier>,
+    pub commitments: BTreeMap<Identifier, SigningCommitments>,
     pub pub_key_package: PublicKeyPackage,
 }
 
@@ -22,14 +25,14 @@ pub fn step_1(
     reader: &mut impl BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
-    let participants = choose_participants(args, reader, logger)?;
-    print_participants(logger, &participants.participants);
+    let participants = read_commitments(args, reader, logger)?;
+    print_participants(logger, &participants.commitments);
     Ok(participants)
 }
 
 fn validate(
     id: Identifier,
-    key_package: PublicKeyPackage,
+    key_package: &PublicKeyPackage,
     id_list: &[Identifier],
 ) -> Result<(), Error> {
     if !key_package.signer_pubkeys().contains_key(&id) {
@@ -56,7 +59,7 @@ pub fn read_identifier(input: &mut impl BufRead) -> Result<Identifier, Box<dyn s
 // 1. public key package
 // 2. number of participants
 // 3. identifiers for all participants
-fn choose_participants(
+fn read_commitments(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
@@ -76,27 +79,38 @@ fn choose_participants(
     let num_of_participants = participants.trim().parse::<u16>()?;
 
     let mut participants_list = Vec::new();
+    let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
 
     for i in 1..=num_of_participants {
-        let package = pub_key_package.clone();
         writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i)?;
-
         let id_value = read_identifier(input)?;
+        validate(id_value, &pub_key_package, &participants_list)?;
+        participants_list.push(id_value);
 
-        validate(id_value, package, &participants_list)?;
-
-        participants_list.push(id_value)
+        writeln!(
+            logger,
+            "Please enter JSON encoded commitments for participant {}:",
+            hex::encode(id_value.serialize())
+        )?;
+        let mut commitments_input = String::new();
+        input.read_line(&mut commitments_input)?;
+        let commitments = serde_json::from_str(&commitments_input)?;
+        commitments_list.insert(id_value, commitments);
     }
+
     Ok(ParticipantsConfig {
-        participants: participants_list,
+        commitments: commitments_list,
         pub_key_package,
     })
 }
 
-pub fn print_participants(logger: &mut dyn Write, participants: &Vec<Identifier>) {
+pub fn print_participants(
+    logger: &mut dyn Write,
+    participants: &BTreeMap<Identifier, SigningCommitments>,
+) {
     writeln!(logger, "Selected participants: ",).unwrap();
 
-    for p in participants {
+    for p in participants.keys() {
         writeln!(logger, "{}", serde_json::to_string(p).unwrap()).unwrap();
     }
 }

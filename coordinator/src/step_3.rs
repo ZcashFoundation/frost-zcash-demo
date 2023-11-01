@@ -61,7 +61,7 @@ fn request_inputs_signature_shares(
 ) -> Result<Signature, Box<dyn std::error::Error>> {
     let mut signatures_list: HashMap<Identifier, SignatureShare> = HashMap::new();
 
-    for p in participants.participants {
+    for p in participants.commitments.keys() {
         writeln!(
             logger,
             "Please enter JSON encoded signature shares for participant {}:",
@@ -72,7 +72,7 @@ fn request_inputs_signature_shares(
         let mut signature_input = String::new();
         input.read_line(&mut signature_input)?;
         let signatures = serde_json::from_str(&signature_input)?;
-        signatures_list.insert(p, signatures);
+        signatures_list.insert(*p, signatures);
     }
 
     #[cfg(feature = "redpallas")]
