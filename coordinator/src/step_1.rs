@@ -8,6 +8,8 @@ use frost::{keys::PublicKeyPackage, Error, Identifier};
 use eyre::eyre;
 use std::io::{BufRead, Write};
 
+use crate::{args::Args, input::read_from_file_or_stdin};
+
 #[derive(PartialEq, Debug)]
 pub struct ParticipantsConfig {
     pub participants: Vec<Identifier>,
@@ -16,10 +18,11 @@ pub struct ParticipantsConfig {
 
 // TODO: needs to include the coordinator's keys!
 pub fn step_1(
+    args: &Args,
     reader: &mut impl BufRead,
     logger: &mut dyn Write,
-) -> Result<ParticipantsConfig, Error> {
-    let participants = choose_participants(reader, logger)?;
+) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
+    let participants = choose_participants(args, reader, logger)?;
     print_participants(logger, &participants.participants);
     Ok(participants)
 }
@@ -54,27 +57,31 @@ pub fn read_identifier(input: &mut impl BufRead) -> Result<Identifier, Box<dyn s
 // 2. number of participants
 // 3. identifiers for all participants
 fn choose_participants(
+    args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-) -> Result<ParticipantsConfig, Error> {
-    writeln!(logger, "Paste the JSON public key package: ").unwrap();
-    let mut key_package = String::new();
-    input.read_line(&mut key_package).unwrap();
-    let pub_key_package: PublicKeyPackage = serde_json::from_str(&key_package).unwrap();
+) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
+    let pub_key_package = read_from_file_or_stdin(
+        input,
+        logger,
+        "public key package",
+        &args.public_key_package,
+    )?;
+    let pub_key_package: PublicKeyPackage = serde_json::from_str(&pub_key_package)?;
 
-    writeln!(logger, "The number of participants: ").unwrap();
+    writeln!(logger, "The number of participants: ")?;
 
     let mut participants = String::new();
-    input.read_line(&mut participants).unwrap();
-    let num_of_participants = participants.trim().parse::<u16>().unwrap();
+    input.read_line(&mut participants)?;
+    let num_of_participants = participants.trim().parse::<u16>()?;
 
     let mut participants_list = Vec::new();
 
     for i in 1..=num_of_participants {
         let package = pub_key_package.clone();
-        writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i).unwrap();
+        writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i)?;
 
-        let id_value = read_identifier(input).unwrap();
+        let id_value = read_identifier(input)?;
 
         validate(id_value, package, &participants_list)?;
 

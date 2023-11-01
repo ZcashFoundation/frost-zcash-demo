@@ -1,11 +1,15 @@
 use std::io;
 
-use coordinator::cli::cli;
+use clap::Parser;
+
+use coordinator::{args::Args, cli::cli};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
     let mut reader = Box::new(io::stdin().lock());
     let mut logger = io::stdout();
-    cli(&mut reader, &mut logger)?;
+    cli(&args, &mut reader, &mut logger)?;
 
     Ok(())
 }
