@@ -18,19 +18,20 @@ use std::{
 pub(crate) trait Comms {
     async fn get_signing_commitments(
         &mut self,
+        input: &mut dyn BufRead,
+        output: &mut dyn Write,
         pub_key_package: &PublicKeyPackage,
         num_of_participants: u16,
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>>;
 }
 
-pub struct CLIComms<'a> {
-    pub input: &'a mut dyn BufRead,
-    pub output: &'a mut dyn Write,
-}
+pub struct CLIComms {}
 
-impl<'a> Comms for CLIComms<'a> {
+impl Comms for CLIComms {
     async fn get_signing_commitments(
         &mut self,
+        input: &mut dyn BufRead,
+        output: &mut dyn Write,
         pub_key_package: &PublicKeyPackage,
         num_of_participants: u16,
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
@@ -38,22 +39,18 @@ impl<'a> Comms for CLIComms<'a> {
         let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
 
         for i in 1..=num_of_participants {
-            writeln!(
-                self.output,
-                "Identifier for participant {:?} (hex encoded): ",
-                i
-            )?;
-            let id_value = read_identifier(self.input)?;
+            writeln!(output, "Identifier for participant {:?} (hex encoded): ", i)?;
+            let id_value = read_identifier(input)?;
             validate(id_value, &pub_key_package, &participants_list)?;
             participants_list.push(id_value);
 
             writeln!(
-                self.output,
+                output,
                 "Please enter JSON encoded commitments for participant {}:",
                 hex::encode(id_value.serialize())
             )?;
             let mut commitments_input = String::new();
-            self.input.read_line(&mut commitments_input)?;
+            input.read_line(&mut commitments_input)?;
             let commitments = serde_json::from_str(&commitments_input)?;
             commitments_list.insert(id_value, commitments);
         }

@@ -11,7 +11,7 @@ use std::{
 /// `object_name` is used for printing prompts and it should describe what
 /// is being read.
 pub fn read_from_file_or_stdin(
-    input: &mut impl BufRead,
+    input: &mut dyn BufRead,
     output: &mut dyn Write,
     object_name: &str,
     file_path: &str,

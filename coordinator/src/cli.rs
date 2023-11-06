@@ -16,12 +16,9 @@ pub async fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let comms = CLIComms {
-        input: reader,
-        output: logger,
-    };
+    let mut comms = CLIComms {};
 
-    let participants_config = step_1(args, comms, reader, logger).await?;
+    let participants_config = step_1(args, &mut comms, reader, logger).await?;
 
     writeln!(
         logger,

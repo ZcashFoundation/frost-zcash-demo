@@ -3,9 +3,8 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-use frost::{keys::PublicKeyPackage, round1::SigningCommitments, Error, Identifier};
+use frost::{keys::PublicKeyPackage, round1::SigningCommitments, Identifier};
 
-use eyre::eyre;
 use std::{
     collections::BTreeMap,
     io::{BufRead, Write},
@@ -20,10 +19,10 @@ pub struct ParticipantsConfig {
 }
 
 // TODO: needs to include the coordinator's keys!
-pub async fn step_1(
+pub(crate) async fn step_1(
     args: &Args,
-    comms: impl Comms,
-    reader: &mut impl BufRead,
+    comms: &mut impl Comms,
+    reader: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
     let participants = read_commitments(args, comms, reader, logger).await?;
@@ -39,8 +38,8 @@ pub async fn step_1(
 // 3. identifiers for all participants
 async fn read_commitments(
     args: &Args,
-    comms: impl Comms,
-    input: &mut impl BufRead,
+    comms: &mut impl Comms,
+    input: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
     let pub_key_package = read_from_file_or_stdin(
@@ -57,27 +56,9 @@ async fn read_commitments(
     input.read_line(&mut participants)?;
     let num_of_participants = participants.trim().parse::<u16>()?;
 
-    let mut participants_list = Vec::new();
-    let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
-
-    let commitments_list = comms.get_signing_commitments().await?;
-
-    for i in 1..=num_of_participants {
-        writeln!(logger, "Identifier for participant {:?} (hex encoded): ", i)?;
-        let id_value = read_identifier(input)?;
-        validate(id_value, &pub_key_package, &participants_list)?;
-        participants_list.push(id_value);
-
-        writeln!(
-            logger,
-            "Please enter JSON encoded commitments for participant {}:",
-            hex::encode(id_value.serialize())
-        )?;
-        let mut commitments_input = String::new();
-        input.read_line(&mut commitments_input)?;
-        let commitments = serde_json::from_str(&commitments_input)?;
-        commitments_list.insert(id_value, commitments);
-    }
+    let commitments_list = comms
+        .get_signing_commitments(input, logger, &pub_key_package, num_of_participants)
+        .await?;
 
     Ok(ParticipantsConfig {
         commitments: commitments_list,
