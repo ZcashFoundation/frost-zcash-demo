@@ -77,7 +77,7 @@ pub fn print_participants(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "redpallas")))]
 mod tests {
     use std::collections::HashMap;
 
@@ -88,7 +88,7 @@ mod tests {
     use frost_ed25519 as frost;
     use hex::FromHex;
 
-    use crate::step_1::validate;
+    use crate::comms::validate;
 
     const PUBLIC_KEY_1: &str = "fc2c9b8e335c132d9ebe0403c9317aac480bbbf8cbdb1bc3730bb68eb60dadf9";
     const PUBLIC_KEY_2: &str = "2cff4148a2f965801fb1f25f1d2a4e5df2f75b3a57cd06f30471c2c774419a41";

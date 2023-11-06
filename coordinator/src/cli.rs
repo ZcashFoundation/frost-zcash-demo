@@ -33,13 +33,15 @@ pub async fn cli(
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
     step_3(
+        &mut comms,
         reader,
         logger,
         participants_config,
         signing_package,
         #[cfg(feature = "redpallas")]
         randomizer,
-    );
+    )
+    .await?;
 
     writeln!(logger, "=== END ===")?;
 

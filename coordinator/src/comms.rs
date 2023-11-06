@@ -5,7 +5,9 @@ use reddsa::frost::redpallas as frost;
 
 use eyre::eyre;
 
-use frost::{keys::PublicKeyPackage, round1::SigningCommitments, Identifier};
+use frost::{
+    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
+};
 
 use std::{
     collections::BTreeMap,
@@ -23,6 +25,13 @@ pub(crate) trait Comms {
         pub_key_package: &PublicKeyPackage,
         num_of_participants: u16,
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>>;
+
+    async fn get_signature_shares(
+        &mut self,
+        input: &mut dyn BufRead,
+        output: &mut dyn Write,
+        commitments: &BTreeMap<Identifier, SigningCommitments>,
+    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>>;
 }
 
 pub struct CLIComms {}
@@ -41,7 +50,7 @@ impl Comms for CLIComms {
         for i in 1..=num_of_participants {
             writeln!(output, "Identifier for participant {:?} (hex encoded): ", i)?;
             let id_value = read_identifier(input)?;
-            validate(id_value, &pub_key_package, &participants_list)?;
+            validate(id_value, pub_key_package, &participants_list)?;
             participants_list.push(id_value);
 
             writeln!(
@@ -57,6 +66,29 @@ impl Comms for CLIComms {
 
         Ok(commitments_list)
     }
+
+    async fn get_signature_shares(
+        &mut self,
+        input: &mut dyn BufRead,
+        output: &mut dyn Write,
+        commitments: &BTreeMap<Identifier, SigningCommitments>,
+    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
+        let mut signatures_list: BTreeMap<Identifier, SignatureShare> = BTreeMap::new();
+        for p in commitments.keys() {
+            writeln!(
+                output,
+                "Please enter JSON encoded signature shares for participant {}:",
+                hex::encode(p.serialize())
+            )
+            .unwrap();
+
+            let mut signature_input = String::new();
+            input.read_line(&mut signature_input)?;
+            let signatures = serde_json::from_str(&signature_input)?;
+            signatures_list.insert(*p, signatures);
+        }
+        Ok(signatures_list)
+    }
 }
 
 pub fn read_identifier(input: &mut dyn BufRead) -> Result<Identifier, Box<dyn Error>> {
@@ -68,7 +100,7 @@ pub fn read_identifier(input: &mut dyn BufRead) -> Result<Identifier, Box<dyn Er
     Ok(identifier)
 }
 
-fn validate(
+pub fn validate(
     id: Identifier,
     key_package: &PublicKeyPackage,
     id_list: &[Identifier],

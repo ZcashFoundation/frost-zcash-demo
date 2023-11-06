@@ -3,14 +3,14 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-use frost::{round2::SignatureShare, Identifier, Signature, SigningPackage};
+use frost::{Signature, SigningPackage};
 
 use std::{
     collections::HashMap,
     io::{BufRead, Write},
 };
 
-use crate::step_1::ParticipantsConfig;
+use crate::{comms::Comms, step_1::ParticipantsConfig};
 
 #[cfg(feature = "redpallas")]
 pub fn request_randomizer(
@@ -29,14 +29,16 @@ pub fn request_randomizer(
     )?)
 }
 
-pub fn step_3(
-    input: &mut impl BufRead,
+pub(crate) async fn step_3(
+    comms: &mut impl Comms,
+    input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
     #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-) -> Signature {
+) -> Result<Signature, Box<dyn std::error::Error>> {
     let group_signature = request_inputs_signature_shares(
+        comms,
         input,
         logger,
         participants,
@@ -44,42 +46,33 @@ pub fn step_3(
         #[cfg(feature = "redpallas")]
         randomizer,
     )
-    .unwrap();
+    .await?;
     print_signature(logger, group_signature);
-    group_signature
+    Ok(group_signature)
 }
 
 // Input required:
 // 1. number of signers (TODO: maybe pass this in?)
 // 2. signatures for all signers
-fn request_inputs_signature_shares(
-    input: &mut impl BufRead,
+async fn request_inputs_signature_shares(
+    comms: &mut impl Comms,
+    input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
     signing_package: SigningPackage,
     #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
-    let mut signatures_list: HashMap<Identifier, SignatureShare> = HashMap::new();
-
-    for p in participants.commitments.keys() {
-        writeln!(
-            logger,
-            "Please enter JSON encoded signature shares for participant {}:",
-            hex::encode(p.serialize())
-        )
-        .unwrap();
-
-        let mut signature_input = String::new();
-        input.read_line(&mut signature_input)?;
-        let signatures = serde_json::from_str(&signature_input)?;
-        signatures_list.insert(*p, signatures);
-    }
+    let signatures_list = comms
+        .get_signature_shares(input, logger, &participants.commitments)
+        .await?;
 
     #[cfg(feature = "redpallas")]
     let randomizer_params = frost::RandomizedParams::from_randomizer(
         participants.pub_key_package.group_public(),
         randomizer,
     );
+
+    let signatures_list: HashMap<_, _> = signatures_list.into_iter().collect();
 
     let group_signature = frost::aggregate(
         &signing_package,
