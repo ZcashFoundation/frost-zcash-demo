@@ -11,7 +11,7 @@ pub struct Args {
 
     /// IP to bind to, if using online comms
     #[arg(short, long, default_value = "0.0.0.0")]
-    pub ip: Option<String>,
+    pub ip: String,
 
     /// Port to bind to, if using online comms
     #[arg(short, long, default_value_t = 2744)]
