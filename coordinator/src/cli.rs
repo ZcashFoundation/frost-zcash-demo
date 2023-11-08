@@ -37,7 +37,7 @@ pub async fn cli(
         reader,
         logger,
         participants_config,
-        signing_package,
+        &signing_package,
         #[cfg(feature = "redpallas")]
         randomizer,
     )

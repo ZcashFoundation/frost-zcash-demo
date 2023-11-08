@@ -1,7 +1,7 @@
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 use message_io::{
-    network::{NetEvent, Transport},
+    network::{Endpoint, NetEvent, NetworkController, Transport},
     node::{self, NodeHandler, NodeListener},
 };
 #[cfg(feature = "redpallas")]
@@ -11,8 +11,9 @@ use eyre::eyre;
 
 use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
+    SigningPackage,
 };
-use tokio::sync::mpsc::{self, Receiver};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use std::{
     collections::BTreeMap,
@@ -44,6 +45,8 @@ pub(crate) trait Comms {
         input: &mut dyn BufRead,
         output: &mut dyn Write,
         commitments: &BTreeMap<Identifier, SigningCommitments>,
+        signing_package: &SigningPackage,
+        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
     ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>>;
 }
 
@@ -85,6 +88,8 @@ impl Comms for CLIComms {
         input: &mut dyn BufRead,
         output: &mut dyn Write,
         commitments: &BTreeMap<Identifier, SigningCommitments>,
+        _signing_package: &SigningPackage,
+        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
         let mut signatures_list: BTreeMap<Identifier, SignatureShare> = BTreeMap::new();
         for p in commitments.keys() {
@@ -128,11 +133,13 @@ pub fn validate(
 }
 
 pub struct SocketComms {
-    rx: Receiver<Vec<u8>>,
+    input_rx: Receiver<(Endpoint, Vec<u8>)>,
+    endpoints: BTreeMap<Identifier, Endpoint>,
+    handler: NodeHandler<()>,
 }
 
 impl SocketComms {
-    pub fn run(&self, args: &Args) {
+    pub fn new(args: &Args) -> Self {
         let (handler, listener) = node::split::<()>();
         let addr = format!("{}:{}", args.ip, args.port);
         let (tx, rx) = mpsc::channel(100);
@@ -142,16 +149,27 @@ impl SocketComms {
             .listen(Transport::FramedTcp, addr)
             .unwrap();
 
+        let socket_comm = Self {
+            input_rx: rx,
+            endpoints: BTreeMap::new(),
+            handler,
+        };
+
+        // TODO: save handle
+        let _ = tokio::spawn(async move { Self::run(listener, tx) });
+
+        socket_comm
+    }
+
+    fn run(listener: NodeListener<()>, input_tx: Sender<(Endpoint, Vec<u8>)>) {
         // Read incoming network events.
-        listener.for_each(move |event| match event.network() {
+        listener.for_each(|event| match event.network() {
             NetEvent::Connected(_, _) => unreachable!(), // Used for explicit connections.
             NetEvent::Accepted(_endpoint, _listener) => println!("Client connected"), // Tcp or Ws
             NetEvent::Message(endpoint, data) => {
                 println!("Received: {}", String::from_utf8_lossy(data));
-                // TODO: send Endpoint, so that each peer can't trivially impersonate others?
                 // TODO: handle error
-                let _ = tx.try_send(data.to_vec());
-                handler.network().send(endpoint, data);
+                let _ = input_tx.try_send((endpoint, data.to_vec()));
             }
             NetEvent::Disconnected(_endpoint) => println!("Client disconnected"), //Tcp or Ws
         });
@@ -161,12 +179,23 @@ impl SocketComms {
 impl Comms for SocketComms {
     async fn get_signing_commitments(
         &mut self,
-        input: &mut dyn BufRead,
-        output: &mut dyn Write,
-        pub_key_package: &PublicKeyPackage,
+        _input: &mut dyn BufRead,
+        _output: &mut dyn Write,
+        _pub_key_package: &PublicKeyPackage,
         num_of_participants: u16,
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
-        todo!()
+        let signing_commitments = BTreeMap::new();
+        for _ in 0..num_of_participants {
+            let (endpoint, _data) = self
+                .input_rx
+                .recv()
+                .await
+                .ok_or(eyre!("Did not receive all commitments"))?;
+            // TODO: parse data and insert into map
+            self.endpoints
+                .insert(Identifier::try_from(1u16).unwrap(), endpoint);
+        }
+        Ok(signing_commitments)
     }
 
     async fn get_signature_shares(
@@ -174,7 +203,16 @@ impl Comms for SocketComms {
         input: &mut dyn BufRead,
         output: &mut dyn Write,
         commitments: &BTreeMap<Identifier, SigningCommitments>,
+        _signing_package: &SigningPackage,
+        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
-        todo!()
+        for identifier in commitments.keys() {
+            let endpoint = self
+                .endpoints
+                .get(identifier)
+                .ok_or(eyre!("unknown identifier"))?;
+            self.handler.network().send(*endpoint, &[]);
+        }
+        Ok(BTreeMap::new())
     }
 }

@@ -34,7 +34,7 @@ pub(crate) async fn step_3(
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
-    signing_package: SigningPackage,
+    signing_package: &SigningPackage,
     #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
     let group_signature = request_inputs_signature_shares(
@@ -59,11 +59,18 @@ async fn request_inputs_signature_shares(
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
-    signing_package: SigningPackage,
+    signing_package: &SigningPackage,
     #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
     let signatures_list = comms
-        .get_signature_shares(input, logger, &participants.commitments)
+        .get_signature_shares(
+            input,
+            logger,
+            &participants.commitments,
+            signing_package,
+            #[cfg(feature = "redpallas")]
+            randomizer,
+        )
         .await?;
 
     #[cfg(feature = "redpallas")]
@@ -75,7 +82,7 @@ async fn request_inputs_signature_shares(
     let signatures_list: HashMap<_, _> = signatures_list.into_iter().collect();
 
     let group_signature = frost::aggregate(
-        &signing_package,
+        signing_package,
         &signatures_list,
         &participants.pub_key_package,
         #[cfg(feature = "redpallas")]
