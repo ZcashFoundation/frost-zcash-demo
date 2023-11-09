@@ -1,7 +1,7 @@
 use std::io::{BufRead, Write};
 
 use crate::args::Args;
-use crate::comms::CLIComms;
+use crate::comms::cli::CLIComms;
 use crate::step_1::step_1;
 use crate::step_2::step_2;
 use crate::step_3::step_3;

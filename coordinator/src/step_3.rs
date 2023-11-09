@@ -66,7 +66,6 @@ async fn request_inputs_signature_shares(
         .get_signature_shares(
             input,
             logger,
-            &participants.commitments,
             signing_package,
             #[cfg(feature = "redpallas")]
             randomizer,
