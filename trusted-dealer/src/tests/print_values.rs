@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 use frost::keys::{IdentifierList, PublicKeyPackage, SecretShare};
 use frost::Identifier;
 use frost_ed25519 as frost;

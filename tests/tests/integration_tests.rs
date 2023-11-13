@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 use coordinator::args::Args;
 use coordinator::comms::cli::CLIComms;
 use frost_ed25519 as frost;

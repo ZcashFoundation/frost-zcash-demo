@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 use std::collections::{BTreeMap, HashMap};
 
 use frost::keys::IdentifierList;

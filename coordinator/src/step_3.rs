@@ -71,7 +71,7 @@ async fn request_inputs_signature_shares(
 
     #[cfg(feature = "redpallas")]
     let randomizer_params = frost::RandomizedParams::from_randomizer(
-        participants.pub_key_package.group_public(),
+        participants.pub_key_package.verifying_key(),
         randomizer,
     );
 

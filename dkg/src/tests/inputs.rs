@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 use std::io::BufWriter;
 
 use crate::inputs::{request_inputs, Config};

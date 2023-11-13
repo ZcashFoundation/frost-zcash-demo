@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 mod helpers;
 
 use frost::aggregate;

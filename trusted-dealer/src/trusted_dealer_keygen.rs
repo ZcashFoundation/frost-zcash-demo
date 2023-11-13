@@ -56,6 +56,7 @@ pub fn split_secret(
     Ok((shares, pubkeys))
 }
 
+#[cfg(not(feature = "redpallas"))]
 #[cfg(test)]
 mod tests {
 

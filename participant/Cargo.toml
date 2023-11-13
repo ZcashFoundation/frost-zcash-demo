@@ -9,7 +9,7 @@ edition = "2021"
 # frost-ed25519 = { version = "0.7.0", features = ["serde"] }
 # Re-export serde PR, point to 1.0.0-rc.0 after that's released
 frost-ed25519 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "6d5e1ff23ad6587357ff0762b5b004525c387755", features = ["serde"] }
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "885f118fdf4956238345c8547946a46cbd39c566", features = ["frost"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "6e55be4da9fa7beec9f744d49a1bad844318a932", features = ["frost"] }
 hex = "0.4"
 rand = "0.8"
 eyre = "0.6.8"
