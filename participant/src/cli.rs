@@ -20,7 +20,7 @@ pub fn cli(
     writeln!(logger, "Key Package succesfully created.")?;
 
     let mut rng = thread_rng();
-    let (nonces, commitments) = frost::round1::commit(key_package.secret_share(), &mut rng);
+    let (nonces, commitments) = frost::round1::commit(key_package.signing_share(), &mut rng);
 
     print_values(commitments, logger)?;
 
@@ -36,7 +36,7 @@ pub fn cli(
 
     let group_signature = request_signature(input, logger)?;
     key_package
-        .group_public()
+        .verifying_key()
         .verify(config_message.signing_package.message(), &group_signature)?;
 
     writeln!(logger, "Group Signature verified.")?;

@@ -2,7 +2,7 @@ mod cli;
 mod round1;
 mod round2;
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "redpallas")))]
 mod tests;
 
 use cli::cli;

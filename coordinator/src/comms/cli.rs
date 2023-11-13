@@ -91,7 +91,7 @@ pub fn validate(
     key_package: &PublicKeyPackage,
     id_list: &[Identifier],
 ) -> Result<(), frost::Error> {
-    if !key_package.signer_pubkeys().contains_key(&id) {
+    if !key_package.verifying_shares().contains_key(&id) {
         return Err(frost::Error::MalformedIdentifier);
     }; // TODO: Error is actually that the identifier does not exist
     if id_list.contains(&id) {

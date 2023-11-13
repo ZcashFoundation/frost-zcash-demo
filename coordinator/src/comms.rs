@@ -22,6 +22,7 @@ use std::{
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
+#[allow(clippy::large_enum_variant)]
 pub enum Message {
     IdentifiedCommitments {
         identifier: Identifier,
@@ -31,7 +32,8 @@ pub enum Message {
     SignatureShare(SignatureShare),
 }
 
-pub(crate) trait Comms {
+#[allow(async_fn_in_trait)]
+pub trait Comms {
     async fn get_signing_commitments(
         &mut self,
         input: &mut dyn BufRead,

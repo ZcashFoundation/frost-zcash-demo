@@ -25,7 +25,7 @@ fn check_participant() {
     let mut commitments = BTreeMap::new();
 
     for i in shares.keys() {
-        let (nonce, commitment) = frost::round1::commit(key_packages[&i].secret_share(), &mut rng);
+        let (nonce, commitment) = frost::round1::commit(key_packages[&i].signing_share(), &mut rng);
         nonces.insert(*i, nonce);
         commitments.insert(*i, commitment);
     }
@@ -36,7 +36,7 @@ fn check_participant() {
 
     // Round 2
 
-    let mut signature_shares = HashMap::new();
+    let mut signature_shares = BTreeMap::new();
 
     for participant_identifier in nonces.keys() {
         let config = Round2Config {
@@ -56,7 +56,7 @@ fn check_participant() {
     let signing_package = SigningPackage::new(commitments, &message);
 
     let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public().verify(&message, &group_signature);
+    let verify_signature = pubkeys.verifying_key().verify(&message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }

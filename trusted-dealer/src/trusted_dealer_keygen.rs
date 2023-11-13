@@ -6,7 +6,7 @@ use reddsa::frost::redpallas as frost;
 use frost::keys::{IdentifierList, PublicKeyPackage, SecretShare};
 use frost::{Error, Identifier, SigningKey};
 use rand::rngs::ThreadRng;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::inputs::Config;
 
@@ -14,7 +14,7 @@ pub fn trusted_dealer_keygen(
     config: &Config,
     identifiers: IdentifierList,
     rng: &mut ThreadRng,
-) -> Result<(HashMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
+) -> Result<(BTreeMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
     let (shares, pubkeys) = frost::keys::generate_with_dealer(
         config.max_signers,
         config.min_signers,
@@ -33,7 +33,7 @@ pub fn split_secret(
     config: &Config,
     identifiers: IdentifierList,
     rng: &mut ThreadRng,
-) -> Result<(HashMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
+) -> Result<(BTreeMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
     let secret_key = SigningKey::deserialize(
         config
             .secret

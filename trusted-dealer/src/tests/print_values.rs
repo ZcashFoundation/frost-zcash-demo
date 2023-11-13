@@ -3,14 +3,14 @@ use frost::Identifier;
 use frost_ed25519 as frost;
 use itertools::Itertools;
 use rand::thread_rng;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::BufWriter;
 
 use trusted_dealer::inputs::print_values;
 use trusted_dealer::inputs::Config;
 use trusted_dealer::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
-fn build_output(shares: HashMap<Identifier, SecretShare>, pubkeys: PublicKeyPackage) -> String {
+fn build_output(shares: BTreeMap<Identifier, SecretShare>, pubkeys: PublicKeyPackage) -> String {
     let pub_key_package = format!(
         "Public key package:\n{}",
         serde_json::to_string(&pubkeys).unwrap()

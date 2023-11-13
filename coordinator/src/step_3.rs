@@ -5,10 +5,7 @@ use reddsa::frost::redpallas as frost;
 
 use frost::{Signature, SigningPackage};
 
-use std::{
-    collections::HashMap,
-    io::{BufRead, Write},
-};
+use std::io::{BufRead, Write};
 
 use crate::{comms::Comms, step_1::ParticipantsConfig};
 
@@ -29,7 +26,7 @@ pub fn request_randomizer(
     )?)
 }
 
-pub(crate) async fn step_3(
+pub async fn step_3(
     comms: &mut impl Comms,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
@@ -77,8 +74,6 @@ async fn request_inputs_signature_shares(
         participants.pub_key_package.group_public(),
         randomizer,
     );
-
-    let signatures_list: HashMap<_, _> = signatures_list.into_iter().collect();
 
     let group_signature = frost::aggregate(
         signing_package,

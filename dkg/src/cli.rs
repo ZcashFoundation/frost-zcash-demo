@@ -5,10 +5,8 @@ use reddsa::frost::redpallas as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas::keys::PositiveY;
 
-use frost::keys::dkg::{round1, round2};
-use frost::Identifier;
 use rand::thread_rng;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::{BufRead, Write};
 
 use crate::inputs::{read_round1_package, read_round2_package, request_inputs};
@@ -44,7 +42,7 @@ pub fn cli(
         "Input Round 1 Packages from the other {} participants.\n",
         config.max_signers - 1,
     )?;
-    let mut received_round1_packages: HashMap<Identifier, round1::Package> = HashMap::new();
+    let mut received_round1_packages = BTreeMap::new();
     for _ in 0..config.max_signers - 1 {
         let (identifier, round1_package) = read_round1_package(reader, logger)?;
         received_round1_packages.insert(identifier, round1_package);
@@ -73,7 +71,7 @@ pub fn cli(
         "Input Round 2 Packages from the other {} participants.\n",
         config.max_signers - 1,
     )?;
-    let mut received_round2_packages: HashMap<Identifier, round2::Package> = HashMap::new();
+    let mut received_round2_packages = BTreeMap::new();
     for _ in 0..config.max_signers - 1 {
         let (identifier, round2_package) = read_round2_package(reader, logger)?;
         received_round2_packages.insert(identifier, round2_package);

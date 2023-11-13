@@ -332,9 +332,9 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "4.1.0"
+version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "622178105f911d937a42cdb140730ba4a3ed2becd8ae6ce39c7d28b5d75d4588"
+checksum = "e89b8c6a2e4b1f45971ad09761aafb85514a84744b67a95e32c3cc1352d1f65c"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -501,14 +501,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "frost-core"
+version = "0.7.0"
+source = "git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755#6d5e1ff23ad6587357ff0762b5b004525c387755"
+dependencies = [
+ "byteorder",
+ "const-crc32",
+ "debugless-unwrap",
+ "derive-getters",
+ "document-features",
+ "hex",
+ "itertools",
+ "postcard",
+ "rand_core",
+ "serde",
+ "serdect",
+ "thiserror",
+ "visibility",
+ "zeroize",
+]
+
+[[package]]
 name = "frost-ed25519"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d396ad5b64a5ff2b11c0c360e2476886bf5079a5638af8fc1d566b33c6abfa97"
+source = "git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755#6d5e1ff23ad6587357ff0762b5b004525c387755"
 dependencies = [
  "curve25519-dalek",
  "document-features",
- "frost-core",
+ "frost-core 0.7.0 (git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755)",
+ "frost-rerandomized 0.7.0 (git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755)",
  "rand_core",
  "sha2",
 ]
@@ -521,7 +542,18 @@ checksum = "2b45409d93cf5000f52ae64847a8a270a4562f1a035e74c3fae0e2462adb97ae"
 dependencies = [
  "derive-getters",
  "document-features",
- "frost-core",
+ "frost-core 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core",
+]
+
+[[package]]
+name = "frost-rerandomized"
+version = "0.7.0"
+source = "git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755#6d5e1ff23ad6587357ff0762b5b004525c387755"
+dependencies = [
+ "derive-getters",
+ "document-features",
+ "frost-core 0.7.0 (git+https://github.com/ZcashFoundation/frost.git?rev=6d5e1ff23ad6587357ff0762b5b004525c387755)",
  "rand_core",
 ]
 
@@ -843,6 +875,7 @@ name = "participant"
 version = "0.1.0"
 dependencies = [
  "exitcode",
+ "eyre",
  "frost-ed25519",
  "hex",
  "rand",
@@ -969,7 +1002,7 @@ source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=885f118fdf495623
 dependencies = [
  "blake2b_simd",
  "byteorder",
- "frost-rerandomized",
+ "frost-rerandomized 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "group",
  "hex",
  "jubjub",
@@ -1214,6 +1247,7 @@ dependencies = [
  "rand",
  "reddsa",
  "serde_json",
+ "tokio",
  "trusted-dealer",
 ]
 

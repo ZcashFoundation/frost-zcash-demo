@@ -50,7 +50,7 @@ impl SocketComms {
         };
 
         // TODO: save handle
-        let _ = tokio::spawn(async move { Self::run(listener, tx) });
+        let _handle = tokio::spawn(async move { Self::run(listener, tx) });
 
         socket_comm
     }

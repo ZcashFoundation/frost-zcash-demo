@@ -19,7 +19,7 @@ pub struct ParticipantsConfig {
 }
 
 // TODO: needs to include the coordinator's keys!
-pub(crate) async fn step_1(
+pub async fn step_1(
     args: &Args,
     comms: &mut impl Comms,
     reader: &mut dyn BufRead,
@@ -79,7 +79,7 @@ pub fn print_participants(
 
 #[cfg(all(test, not(feature = "redpallas")))]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use frost::{
         keys::{PublicKeyPackage, VerifyingShare},
@@ -88,7 +88,7 @@ mod tests {
     use frost_ed25519 as frost;
     use hex::FromHex;
 
-    use crate::comms::validate;
+    use crate::comms::cli::validate;
 
     const PUBLIC_KEY_1: &str = "fc2c9b8e335c132d9ebe0403c9317aac480bbbf8cbdb1bc3730bb68eb60dadf9";
     const PUBLIC_KEY_2: &str = "2cff4148a2f965801fb1f25f1d2a4e5df2f75b3a57cd06f30471c2c774419a41";
@@ -99,7 +99,7 @@ mod tests {
         let id_1 = Identifier::try_from(1).unwrap();
         let id_2 = Identifier::try_from(2).unwrap();
 
-        let mut signer_pubkeys = HashMap::new();
+        let mut signer_pubkeys = BTreeMap::new();
         signer_pubkeys.insert(
             id_1,
             VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_1).unwrap()).unwrap(),
@@ -109,7 +109,8 @@ mod tests {
             VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_2).unwrap()).unwrap(),
         );
 
-        let group_public = VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap();
+        let group_public =
+            VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap();
 
         PublicKeyPackage::new(signer_pubkeys, group_public)
     }
@@ -122,7 +123,7 @@ mod tests {
         let id_list = [id_1];
         let key_package = build_pub_key_package();
 
-        let validated = validate(id_2, key_package, &id_list);
+        let validated = validate(id_2, &key_package, &id_list);
 
         assert!(validated.is_ok())
     }
@@ -136,7 +137,7 @@ mod tests {
         let id_list = [id_1, id_2];
         let key_package = build_pub_key_package();
 
-        let validated = validate(id_3, key_package, &id_list);
+        let validated = validate(id_3, &key_package, &id_list);
         assert!(validated.is_err());
         assert!(validated == Err(Error::MalformedIdentifier))
     }
@@ -149,7 +150,7 @@ mod tests {
         let id_list = [id_1, id_2];
         let key_package = build_pub_key_package();
 
-        let validated = validate(id_1, key_package, &id_list);
+        let validated = validate(id_1, &key_package, &id_list);
         assert!(validated.is_err());
         assert!(validated == Err(Error::DuplicatedIdentifier))
     }
