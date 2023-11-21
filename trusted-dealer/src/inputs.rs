@@ -9,7 +9,7 @@ use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Error;
 use frost::Identifier;
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::{BufRead, Write};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -79,7 +79,7 @@ pub fn request_inputs(
 }
 
 pub fn print_values(
-    keys: &HashMap<Identifier, SecretShare>,
+    keys: &BTreeMap<Identifier, SecretShare>,
     pubkeys: &PublicKeyPackage,
     logger: &mut dyn Write,
 ) -> Result<(), Box<dyn std::error::Error>> {

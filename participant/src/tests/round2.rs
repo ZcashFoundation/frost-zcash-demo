@@ -53,7 +53,7 @@ fn check_valid_round_2_inputs() {
 
     let message = <[u8; 32]>::from_hex(MESSAGE).unwrap();
 
-    let signing_package = r#"{"signing_commitments":{"0100000000000000000000000000000000000000000000000000000000000000":{"hiding":"beb81feb53ed75a2695b07f377b464a88c4c2824e7d7b63911b745df01dc2d87","binding":"d2102c5f8b8abb7ad2f1706f47a4aab3be6ede28e408f3e74baeff1f6fbcd5c0","ciphersuite":"FROST(Ed25519, SHA-512)"},"0200000000000000000000000000000000000000000000000000000000000000":{"hiding":"cc9e9503921cdd3f4d64f2c9e7b22c9ab6d7c940111ce36f84e4a114331c6edd","binding":"b0e13794eaf00be2e430b16ec7f72ab0b6579e52ca604d17406a4fd1597afd66","ciphersuite":"FROST(Ed25519, SHA-512)"}},"message":"15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673","ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
+    let signing_package = r#"{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"signing_commitments":{"0100000000000000000000000000000000000000000000000000000000000000":{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"hiding":"beb81feb53ed75a2695b07f377b464a88c4c2824e7d7b63911b745df01dc2d87","binding":"d2102c5f8b8abb7ad2f1706f47a4aab3be6ede28e408f3e74baeff1f6fbcd5c0"},"0200000000000000000000000000000000000000000000000000000000000000":{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"hiding":"cc9e9503921cdd3f4d64f2c9e7b22c9ab6d7c940111ce36f84e4a114331c6edd","binding":"b0e13794eaf00be2e430b16ec7f72ab0b6579e52ca604d17406a4fd1597afd66"}},"message":"15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673"}"#;
 
     let expected = Round2Config {
         signing_package: SigningPackage::new(signer_commitments, &message),
@@ -81,7 +81,8 @@ fn check_sign() {
         Identifier::try_from(1).unwrap(),
         SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
         VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
-        VerifyingKey::from_hex(GROUP_PUBLIC_KEY).unwrap(),
+        VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
+        2,
     );
 
     // let config = Round1Config {
@@ -91,8 +92,10 @@ fn check_sign() {
     let mut rng = thread_rng();
 
     // TODO: Nonce doesn't seem to be exported. Look into this to improve these tests
-    let (nonces, my_commitments) =
-        round1::commit(&SigningShare::from_hex(SIGNING_SHARE).unwrap(), &mut rng);
+    let (nonces, my_commitments) = round1::commit(
+        &SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
+        &mut rng,
+    );
 
     let signer_commitments_2 = SigningCommitments::new(
         NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
@@ -127,9 +130,7 @@ fn check_print_values_round_2() {
 
     print_values_round_2(signature_response, &mut buf).unwrap();
 
-    let log = "Please send the following to the Coordinator\n".to_owned() + 
-    "SignatureShare:\n{\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\",\"ciphersuite\":\"FROST(Ed25519, SHA-512)\"}\n" + 
-    "=== End of Round 2 ===\n";
+    let log = "Please send the following to the Coordinator\nSignatureShare:\n{\"header\":{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"},\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\"}\n=== End of Round 2 ===\n";
 
     let out = String::from_utf8(buf.into_inner().unwrap()).unwrap();
 

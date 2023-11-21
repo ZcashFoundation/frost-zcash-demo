@@ -4,17 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-frost-ed25519 = { version = "0.6.0", features = ["serde"] }
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "5ea1293bb8df90c8a19dedf7ab5510903650dda9", features = ["frost"] }
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "6e55be4da9fa7beec9f744d49a1bad844318a932", features = ["frost"] }
 hex = "0.4"
 rand = "0.8"
 exitcode = "1.1.2"
 serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-frost-ed25519 = { version = "0.6.0", features = ["serde"] }
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
 dkg = { path = "../dkg"}
 trusted-dealer = { path = "../trusted-dealer"}
 participant = { path = "../participant"}
 coordinator = { path = "../coordinator"}
 rand = "0.8"
+
+[features]
+redpallas = []
+default = []

@@ -1,11 +1,16 @@
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
+use reddsa::frost::redpallas as frost;
+
 use dkg::cli::cli;
 
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::thread;
 
-use frost_ed25519::keys::{KeyPackage, PublicKeyPackage};
-use frost_ed25519::Identifier;
+use frost::keys::{KeyPackage, PublicKeyPackage};
+use frost::Identifier;
 
 // Read a single line from the given reader.
 fn read_line(mut reader: impl BufRead) -> Result<String, std::io::Error> {

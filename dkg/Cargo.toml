@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 eyre = "0.6.9"
-frost-ed25519 = { version = "0.6.0", features = ["serde"] }
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "5ea1293bb8df90c8a19dedf7ab5510903650dda9", features = ["frost"] }
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "6e55be4da9fa7beec9f744d49a1bad844318a932", features = ["frost"] }
 hex = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"

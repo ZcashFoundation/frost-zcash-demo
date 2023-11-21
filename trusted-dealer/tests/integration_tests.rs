@@ -1,3 +1,5 @@
+#![cfg(not(feature = "redpallas"))]
+
 mod helpers;
 
 use frost::aggregate;
@@ -26,7 +28,7 @@ fn check_keygen_with_dealer() {
     let message = "i am a message".as_bytes();
     let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
     let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
+    let verify_signature = pubkeys.verifying_key().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -47,7 +49,7 @@ fn check_keygen_with_dealer_with_large_num_of_signers() {
     let message = "i am a message".as_bytes();
     let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
     let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
+    let verify_signature = pubkeys.verifying_key().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -72,7 +74,7 @@ fn check_keygen_with_dealer_with_secret() {
     let message = "i am a message".as_bytes();
     let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
     let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
+    let verify_signature = pubkeys.verifying_key().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
@@ -96,7 +98,7 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
     let message = "i am a message".as_bytes();
     let (signing_package, signature_shares) = round_2(nonces, &key_packages, commitments, message);
     let group_signature = aggregate(&signing_package, &signature_shares, &pubkeys).unwrap();
-    let verify_signature = pubkeys.group_public().verify(message, &group_signature);
+    let verify_signature = pubkeys.verifying_key().verify(message, &group_signature);
 
     assert!(verify_signature.is_ok());
 }
