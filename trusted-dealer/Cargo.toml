@@ -6,9 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# frost-ed25519 = { version = "0.7.0", features = ["serde"] }
-# Re-export serde PR, point to 1.0.0-rc.0 after that's released
-frost-ed25519 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "6d5e1ff23ad6587357ff0762b5b004525c387755", features = ["serde"] }
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "6e55be4da9fa7beec9f744d49a1bad844318a932", features = ["frost"] }
 thiserror = "1.0"
 rand = "0.8"
