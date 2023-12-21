@@ -2,8 +2,6 @@
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas::keys::PositiveY;
 
 use frost::{
     keys::{KeyPackage, SecretShare},
@@ -35,9 +33,6 @@ pub fn request_inputs(
         // TODO: Improve error
         serde_json::from_str::<KeyPackage>(&json).map_err(|_| Error::InvalidSecretShare)?
     };
-
-    #[cfg(feature = "redpallas")]
-    let key_package = key_package.into_positive_y();
 
     Ok(Round1Config { key_package })
 }
