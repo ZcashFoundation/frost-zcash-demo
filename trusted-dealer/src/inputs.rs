@@ -2,8 +2,6 @@
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas::keys::PositiveY;
 
 use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Error;
@@ -83,11 +81,6 @@ pub fn print_values(
     pubkeys: &PublicKeyPackage,
     logger: &mut dyn Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(feature = "redpallas")]
-    let pubkeys = pubkeys.clone().into_positive_y();
-    #[cfg(feature = "redpallas")]
-    let pubkeys = &pubkeys;
-
     writeln!(
         logger,
         "Public key package:\n{}",

@@ -277,7 +277,7 @@ dependencies = [
  "eyre",
  "frost-ed25519",
  "hex",
- "itertools 0.12.0",
+ "itertools",
  "message-io",
  "rand",
  "reddsa",
@@ -402,7 +402,7 @@ dependencies = [
  "eyre",
  "frost-ed25519",
  "hex",
- "itertools 0.12.0",
+ "itertools",
  "pipe",
  "rand",
  "reddsa",
@@ -480,27 +480,6 @@ dependencies = [
 
 [[package]]
 name = "frost-core"
-version = "0.7.0"
-source = "git+https://github.com/ZcashFoundation/frost.git?rev=e69002e0f671a4813e2dba7d6e1c7c72b9bb04ad#e69002e0f671a4813e2dba7d6e1c7c72b9bb04ad"
-dependencies = [
- "byteorder",
- "const-crc32",
- "debugless-unwrap",
- "derive-getters",
- "document-features",
- "hex",
- "itertools 0.11.0",
- "postcard",
- "rand_core",
- "serde",
- "serdect",
- "thiserror",
- "visibility",
- "zeroize",
-]
-
-[[package]]
-name = "frost-core"
 version = "1.0.0-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eae732628620e7e52b3146df2eef3636f321b63dfba6e92b3b67147e0c5b2bb2"
@@ -511,7 +490,7 @@ dependencies = [
  "derive-getters",
  "document-features",
  "hex",
- "itertools 0.12.0",
+ "itertools",
  "postcard",
  "rand_core",
  "serde",
@@ -529,21 +508,10 @@ checksum = "fc013ae54f8da9f6eed495c797e0e3948cf69b3784ac306f8616cdd697ae5372"
 dependencies = [
  "curve25519-dalek",
  "document-features",
- "frost-core 1.0.0-rc.0",
- "frost-rerandomized 1.0.0-rc.0",
+ "frost-core",
+ "frost-rerandomized",
  "rand_core",
  "sha2",
-]
-
-[[package]]
-name = "frost-rerandomized"
-version = "0.7.0"
-source = "git+https://github.com/ZcashFoundation/frost.git?rev=e69002e0f671a4813e2dba7d6e1c7c72b9bb04ad#e69002e0f671a4813e2dba7d6e1c7c72b9bb04ad"
-dependencies = [
- "derive-getters",
- "document-features",
- "frost-core 0.7.0",
- "rand_core",
 ]
 
 [[package]]
@@ -554,7 +522,7 @@ checksum = "abc9f0445f27262bd1e1d4754ad8ce7ac03c8d079704e6c696f5e40bab85d1e2"
 dependencies = [
  "derive-getters",
  "document-features",
- "frost-core 1.0.0-rc.0",
+ "frost-core",
  "rand_core",
 ]
 
@@ -684,15 +652,6 @@ name = "integer-encoding"
 version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
-
-[[package]]
-name = "itertools"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
-dependencies = [
- "either",
-]
 
 [[package]]
 name = "itertools"
@@ -1008,11 +967,11 @@ dependencies = [
 [[package]]
 name = "reddsa"
 version = "0.5.1"
-source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=6e55be4da9fa7beec9f744d49a1bad844318a932#6e55be4da9fa7beec9f744d49a1bad844318a932"
+source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=81c649c412e5b6ba56d491d2857f91fbd28adbc7#81c649c412e5b6ba56d491d2857f91fbd28adbc7"
 dependencies = [
  "blake2b_simd",
  "byteorder",
- "frost-rerandomized 0.7.0",
+ "frost-rerandomized",
  "group",
  "hex",
  "jubjub",
@@ -1333,7 +1292,7 @@ dependencies = [
  "exitcode",
  "frost-ed25519",
  "hex",
- "itertools 0.12.0",
+ "itertools",
  "rand",
  "reddsa",
  "serde_json",
