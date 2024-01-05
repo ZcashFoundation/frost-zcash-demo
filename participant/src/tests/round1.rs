@@ -8,7 +8,11 @@ use frost::{
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
-use participant::round1::{print_values, request_inputs, Round1Config};
+use participant::{
+    args::Args,
+    comms::cli::CLIComms,
+    round1::{print_values, request_inputs, Round1Config},
+};
 
 use rand::thread_rng;
 
@@ -17,7 +21,7 @@ const GROUP_PUBLIC_KEY: &str = "087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34f
 const SIGNING_SHARE: &str = "ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104";
 const SECRET_SHARE_JSON: &str = r#"{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"identifier":"0100000000000000000000000000000000000000000000000000000000000000","signing_share":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","926d5910e146dccb9148ca39dc7607f4f7123ff1c0ffaf109add1d165c568bf2", "291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"]}"#;
 
-fn build_key_package() -> KeyPackage {
+async fn build_key_package() -> KeyPackage {
     KeyPackage::new(
         Identifier::try_from(1).unwrap(),
         SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
@@ -27,32 +31,42 @@ fn build_key_package() -> KeyPackage {
     )
 }
 
-#[test]
-fn check_valid_round_1_inputs() {
+#[tokio::test]
+async fn check_valid_round_1_inputs() {
     let config = Round1Config {
-        key_package: build_key_package(),
+        key_package: build_key_package().await,
     };
 
     let mut buf = BufWriter::new(Vec::new());
+    let mut comms = CLIComms {};
+    let args = Args {
+        key_package: "-".to_string(),
+        ip: "0.0.0.0".to_string(),
+        port: 80,
+    };
 
     let input = SECRET_SHARE_JSON;
     let mut valid_input = input.as_bytes();
 
-    let expected = request_inputs(&mut valid_input, &mut buf).unwrap();
+    let expected = request_inputs(&args, &mut valid_input, &mut buf)
+        .await
+        .unwrap();
 
     assert_eq!(expected, config);
 }
 
-#[test]
-fn check_0_input_for_identifier() {
+#[tokio::test]
+async fn check_0_input_for_identifier() {
     let mut buf = BufWriter::new(Vec::new());
+    let mut comms = CLIComms {};
+    let args = Args::default();
 
     let input = r#"{"identifier":"0000000000000000000000000000000000000000000000000000000000000000","value":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
     let mut invalid_input = input.as_bytes();
 
-    // let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
-
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected = request_inputs(&args, &mut invalid_input, &mut buf)
+        .await
+        .unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -60,15 +74,19 @@ fn check_0_input_for_identifier() {
     );
 }
 
-#[test]
-fn check_invalid_length_signing_share() {
+#[tokio::test]
+async fn check_invalid_length_signing_share() {
     let mut buf = BufWriter::new(Vec::new());
+    let mut comms = CLIComms {};
+    let args = Args::default();
 
     let input = r#"{"identifier":"0100000000000000000000000000000000000000000000000000000000000000","value":"ed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
 
     let mut invalid_input = input.as_bytes();
 
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected = request_inputs(&args, &mut invalid_input, &mut buf)
+        .await
+        .unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -76,15 +94,19 @@ fn check_invalid_length_signing_share() {
     );
 }
 
-#[test]
-fn check_invalid_round_1_inputs() {
+#[tokio::test]
+async fn check_invalid_round_1_inputs() {
     let input = r#"{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"signing_share":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","926d5910e146dccb9148ca39dc7607f4f7123ff1c0ffaf109add1d165c568bf2", "291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"]}"#;
 
     let mut buf = BufWriter::new(Vec::new());
+    let mut comms = CLIComms {};
+    let args = Args::default();
 
     let mut valid_input = input.as_bytes();
 
-    let expected = request_inputs(&mut valid_input, &mut buf).unwrap_err();
+    let expected = request_inputs(&args, &mut valid_input, &mut buf)
+        .await
+        .unwrap_err();
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
         Error::InvalidSecretShare
@@ -92,21 +114,26 @@ fn check_invalid_round_1_inputs() {
 }
 
 // TODO: Handle this error differently
-#[test]
-fn check_invalid_length_vss_commitment() {
+#[tokio::test]
+async fn check_invalid_length_vss_commitment() {
     let mut buf = BufWriter::new(Vec::new());
+    let mut comms = CLIComms {};
+    let args = Args::default();
 
     let input = r#"{"identifier":"0100000000000000000000000000000000000000000000000000000000000000","value":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["7e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
 
     let mut invalid_input = input.as_bytes();
 
-    let expected = request_inputs(&mut invalid_input, &mut buf);
-    assert!(expected.is_err())
+    let expected = request_inputs(&args, &mut invalid_input, &mut buf);
+    assert!(expected.await.is_err())
 }
 
-#[test]
-fn check_print_values() {
+#[tokio::test]
+async fn check_print_values() {
     let mut buf = BufWriter::new(Vec::new());
+    let comms = CLIComms {};
+    let args = Args::default();
+
     let signing_share =
         SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
     let mut rng = thread_rng();

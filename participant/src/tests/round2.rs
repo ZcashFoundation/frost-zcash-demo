@@ -12,6 +12,7 @@ use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::round2::print_values_round_2;
 use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
+use participant::{args::Args, comms::cli::CLIComms};
 use rand::thread_rng;
 
 const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
@@ -31,12 +32,13 @@ pub fn nonce_commitment(input: &str) -> NonceCommitment {
     NonceCommitment::deserialize(<[u8; 32]>::from_hex(input).unwrap()).unwrap()
 }
 
-#[test]
-fn check_valid_round_2_inputs() {
+#[tokio::test]
+async fn check_valid_round_2_inputs() {
     // TODO: refactor
 
     // Generate commitments
 
+    let mut comms = CLIComms {};
     let my_signer_commitments = SigningCommitments::new(
         nonce_commitment(MY_HIDING_COMMITMENT),
         nonce_commitment(MY_BINDING_COMMITMENT),
@@ -64,7 +66,7 @@ fn check_valid_round_2_inputs() {
     let input = format!("{}\n", signing_package);
     let mut valid_input = input.as_bytes();
 
-    let round_2_config = round_2_request_inputs(&mut valid_input, &mut buf);
+    let round_2_config = round_2_request_inputs(&mut comms, &mut valid_input, &mut buf).await;
 
     assert!(round_2_config.is_ok());
     assert_eq!(
@@ -75,8 +77,8 @@ fn check_valid_round_2_inputs() {
 
 // TODO: test for invalid inputs
 
-#[test]
-fn check_sign() {
+#[tokio::test]
+async fn check_sign() {
     let key_package = KeyPackage::new(
         Identifier::try_from(1).unwrap(),
         SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
@@ -84,10 +86,6 @@ fn check_sign() {
         VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
         2,
     );
-
-    // let config = Round1Config {
-    //     key_package
-    // };
 
     let mut rng = thread_rng();
 
@@ -119,8 +117,8 @@ fn check_sign() {
     assert!(signature.is_ok()) // TODO: Should be able to test this more specifically when I remove randomness from the test
 }
 
-#[test]
-fn check_print_values_round_2() {
+#[tokio::test]
+async fn check_print_values_round_2() {
     let mut buf = BufWriter::new(Vec::new());
 
     const SIGNATURE_SHARE: &str =

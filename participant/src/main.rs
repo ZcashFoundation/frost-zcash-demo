@@ -1,19 +1,19 @@
-mod cli;
-mod round1;
-mod round2;
-
 #[cfg(all(test, not(feature = "redpallas")))]
 mod tests;
 
-use cli::cli;
+use clap::Parser;
+use participant::args::Args;
+use participant::cli::cli;
 
 use std::io;
 
 // TODO: Update to use exit codes
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
     let mut reader = Box::new(io::stdin().lock());
     let mut logger = io::stdout();
-    cli(&mut reader, &mut logger)?;
+    cli(&args, &mut reader, &mut logger).await?;
 
     Ok(())
 }
