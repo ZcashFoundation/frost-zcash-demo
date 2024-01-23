@@ -66,3 +66,8 @@ pub struct GetSignatureSharesArgs {
 pub struct GetSignatureSharesOutput {
     pub signature_shares: BTreeMap<frost::Identifier, frost::round2::SignatureShare>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct CloseSessionArgs {
+    pub session_id: Uuid,
+}

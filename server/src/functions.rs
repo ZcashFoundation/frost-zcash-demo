@@ -11,10 +11,12 @@ use crate::{
     AppError,
 };
 
+/// Implement the create_new_session API.
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
+    // Create new session object.
     let id = Uuid::new_v4();
     let session = Session {
         identifiers: args.identifiers.iter().cloned().collect(),
@@ -22,6 +24,7 @@ pub(crate) async fn create_new_session(
             commitments: Default::default(),
         },
     };
+    // Save session into global state.
     state.write().unwrap().sessions.insert(id, session);
     let user = CreateNewSessionOutput { session_id: id };
     Ok(Json(user))
@@ -33,6 +36,7 @@ pub(crate) async fn send_commitments(
     State(state): State<SharedState>,
     Json(args): Json<SendCommitmentsArgs>,
 ) -> Result<(), AppError> {
+    // Get the mutex lock to read and write from the state
     let mut state_lock = state.write().unwrap();
 
     let session = state_lock
@@ -48,7 +52,8 @@ pub(crate) async fn send_commitments(
             if !session.identifiers.contains(&args.identifier) {
                 return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
             }
-            // Currently ignoring the possibility of overwriting previous values
+            // Add commitment to map.
+            // Currently ignores the possibility of overwriting previous values
             // (it seems better to ignore overwrites, which could be caused by
             // poor networking connectivity leading to retries)
             commitments.insert(args.identifier, args.commitments);
@@ -144,7 +149,7 @@ pub(crate) async fn get_signing_package(
             randomizer,
         } => Ok(Json(GetSigningPackageOutput {
             signing_package: signing_package.clone(),
-            randomizer: randomizer.clone(),
+            randomizer: *randomizer,
         })),
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -222,4 +227,13 @@ pub(crate) async fn get_signature_shares(
             eyre!("incompatible session state"),
         )),
     }
+}
+
+/// Implement the close_session API.
+pub(crate) async fn close_session(
+    State(state): State<SharedState>,
+    Json(args): Json<CloseSessionArgs>,
+) -> Result<Json<()>, AppError> {
+    state.write().unwrap().sessions.remove(&args.session_id);
+    Ok(Json(()))
 }

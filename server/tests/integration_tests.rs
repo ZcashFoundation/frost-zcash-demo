@@ -1,11 +1,17 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Duration};
 
 use axum_test::TestServer;
 use rand::thread_rng;
-use server::router;
+use server::{args::Args, router};
 
 use reddsa::frost::redpallas as frost;
 
+/// Test the entire FROST signing flow using axum_test.
+/// This is a good example of the overall flow but it's not a good example
+/// of the client code, see the next test for that.
+///
+/// Also note that this simulates multiple clients using loops. In practice,
+/// each client will run independently.
 #[tokio::test]
 async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = thread_rng();
@@ -115,6 +121,63 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     randomized_params
         .randomized_verifying_key()
         .verify(message, &signature)?;
+
+    let res = server
+        .post("/close_session")
+        .json(&server::CloseSessionArgs { session_id })
+        .await;
+    res.assert_status_ok();
+    println!("{}", res.text());
+    let _: () = res.json();
+
+    Ok(())
+}
+
+/// Actually spawn the HTTP server and connect to it using reqwest.
+/// A better example on how to write client code.
+#[tokio::test]
+async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
+    // Create test values
+    let mut rng = thread_rng();
+    let (shares, _pubkeys) =
+        frost::keys::generate_with_dealer(3, 2, frost::keys::IdentifierList::Default, &mut rng)
+            .unwrap();
+    let key_packages: BTreeMap<_, _> = shares
+        .iter()
+        .map(|(identifier, secret_share)| {
+            (
+                *identifier,
+                frost::keys::KeyPackage::try_from(secret_share.clone()).unwrap(),
+            )
+        })
+        .collect();
+
+    // Spawn server for testing
+    tokio::spawn(async move {
+        server::run(&Args {
+            ip: "127.0.0.1".to_string(),
+            port: 2744,
+        })
+        .await
+        .unwrap();
+    });
+
+    // Wait for server to start listening
+    // TODO: this could possibly be not enough, use some retry logic instead
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    // Call create_new_session
+    let client = reqwest::Client::new();
+    let r = client
+        .post("http://127.0.0.1:2744/create_new_session")
+        .json(&server::CreateNewSessionArgs {
+            identifiers: key_packages.keys().copied().collect::<Vec<_>>(),
+        })
+        .send()
+        .await?
+        .json::<server::CreateNewSessionOutput>()
+        .await?;
+    println!("{}", r.session_id);
 
     Ok(())
 }
