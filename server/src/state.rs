@@ -11,30 +11,38 @@ use reddsa::frost::redpallas as frost;
 pub enum SessionState {
     /// Waiting for participants to send their commitments.
     WaitingForCommitments {
-        /// Commitments sent by participants so far.
-        commitments: BTreeMap<frost::Identifier, frost::round1::SigningCommitments>,
+        /// Commitments sent by participants so far, for each message being
+        /// signed.
+        commitments: BTreeMap<frost::Identifier, Vec<frost::round1::SigningCommitments>>,
     },
     /// Commitments have been sent by all participants; ready to be fetched by
     /// the coordinator. Waiting for coordinator to send the SigningPackage.
     CommitmentsReady {
-        /// All commitments sent by participants.
-        commitments: BTreeMap<frost::Identifier, frost::round1::SigningCommitments>,
+        /// All commitments sent by participants, for each message being signed.
+        commitments: BTreeMap<frost::Identifier, Vec<frost::round1::SigningCommitments>>,
     },
     /// SigningPackage ready to be fetched by participants. Waiting for
     /// participants to send their signature shares.
     WaitingForSignatureShares {
-        /// SigningPackage sent by the coordinator to be sent to participants.
-        signing_package: frost::SigningPackage,
-        /// Randomizer sent by coordinator to be sent to participants
+        /// SigningPackage sent by the coordinator to be sent to participants,
+        /// for each message being signed.
+        signing_package: Vec<frost::SigningPackage>,
+        /// Randomizer sent by coordinator to be sent to participants, for each
+        /// message being signed.
         /// (Rerandomized FROST only. TODO: make it optional?)
-        randomizer: frost::round2::Randomizer,
-        /// Signature shares sent by participants so far.
-        signature_shares: BTreeMap<frost::Identifier, frost::round2::SignatureShare>,
+        randomizer: Vec<frost::round2::Randomizer>,
+        /// Auxiliary (optional) message. A context-specific data that is
+        /// supposed to be interpreted by the participants.
+        aux_msg: Vec<u8>,
+        /// Signature shares sent by participants so far, for each message being
+        /// signed.
+        signature_shares: BTreeMap<frost::Identifier, Vec<frost::round2::SignatureShare>>,
     },
     /// SignatureShares have been sent by all participants; ready to be fetched
     /// by the coordinator.
     SignatureSharesReady {
-        signature_shares: BTreeMap<frost::Identifier, frost::round2::SignatureShare>,
+        /// Signature shares sent by participants, for each message being signed.
+        signature_shares: BTreeMap<frost::Identifier, Vec<frost::round2::SignatureShare>>,
     },
 }
 
@@ -50,6 +58,8 @@ impl Default for SessionState {
 pub struct Session {
     /// The set of identifiers for the session.
     pub(crate) identifiers: BTreeSet<frost::Identifier>,
+    /// The number of messages being simultaneously signed.
+    pub(crate) message_count: u8,
     /// The session state.
     pub(crate) state: SessionState,
 }
