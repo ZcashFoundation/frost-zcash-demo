@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Read the contents of a file or from a stdin.
-/// If `object_name` is "-" or a file that does not exist, then it reads from
+/// If `file_path` is "-" or a file that does not exist, then it reads from
 /// stdin.
 /// `object_name` is used for printing prompts and it should describe what
 /// is being read.

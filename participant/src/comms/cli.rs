@@ -7,14 +7,18 @@ use reddsa::frost::redpallas as frost;
 
 use eyre::eyre;
 
-use frost::{keys::PublicKeyPackage, Identifier, SigningPackage};
+use frost::{
+    keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
+    SigningPackage,
+};
 
 use std::{
     error::Error,
     io::{BufRead, Write},
 };
 
-use super::Comms;
+use crate::comms::Comms;
+// use super::Comms;
 
 pub struct CLIComms {}
 
@@ -23,6 +27,8 @@ impl Comms for CLIComms {
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
+        _commitments: SigningCommitments,
+        _identifier: Identifier,
         #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<SigningPackage, Box<dyn Error>> {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
@@ -35,6 +41,13 @@ impl Comms for CLIComms {
         let signing_package: SigningPackage = serde_json::from_str(signing_package_json.trim())?;
 
         Ok(signing_package)
+    }
+
+    async fn send_signature_share(
+        &mut self,
+        _signature_share: SignatureShare,
+    ) -> Result<(), Box<dyn Error>> {
+        Ok(())
     }
 }
 

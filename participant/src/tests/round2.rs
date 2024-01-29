@@ -10,9 +10,9 @@ use frost::{
 };
 use frost_ed25519 as frost;
 use hex::FromHex;
+use participant::comms::cli::CLIComms;
 use participant::round2::print_values_round_2;
 use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
-use participant::{args::Args, comms::cli::CLIComms};
 use rand::thread_rng;
 
 const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
@@ -66,7 +66,14 @@ async fn check_valid_round_2_inputs() {
     let input = format!("{}\n", signing_package);
     let mut valid_input = input.as_bytes();
 
-    let round_2_config = round_2_request_inputs(&mut comms, &mut valid_input, &mut buf).await;
+    let round_2_config = round_2_request_inputs(
+        &mut comms,
+        &mut valid_input,
+        &mut buf,
+        my_signer_commitments,
+        Identifier::try_from(1).unwrap(),
+    )
+    .await;
 
     assert!(round_2_config.is_ok());
     assert_eq!(

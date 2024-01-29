@@ -46,8 +46,6 @@ async fn trusted_dealer_journey() {
     let (shares, pubkeys) =
         trusted_dealer_keygen(&dealer_config, IdentifierList::Default, &mut rng).unwrap();
 
-    // TODO: Store key packages in files
-
     // Coordinator step 1
 
     let num_of_participants = 3;
@@ -72,7 +70,7 @@ async fn trusted_dealer_journey() {
     let mut nonces_map = BTreeMap::new();
     let mut commitments_map = BTreeMap::new();
 
-    for participant_index in 1..=3 as u16 {
+    for participant_index in 1..=3u16 {
         let participant_identifier = Identifier::try_from(participant_index).unwrap();
 
         let share = key_packages[&participant_identifier].signing_share();
@@ -125,19 +123,26 @@ async fn trusted_dealer_journey() {
     let message = "74657374";
     let step_2_input = format!("{}\n", message);
 
-    let signing_package =
-        coordinator::step_2::step_2(&mut step_2_input.as_bytes(), &mut buf, commitments_map)
-            .unwrap();
+    let signing_package = coordinator::step_2::step_2(
+        &mut step_2_input.as_bytes(),
+        &mut buf,
+        commitments_map.clone(),
+    )
+    .await
+    .unwrap();
 
     // Round 2
 
     for participant_index in 1..=3 {
         let participant_identifier = Identifier::try_from(participant_index).unwrap();
+        let signing_commitments = commitments_map[&participant_identifier];
         let round_2_input = format!("{}\n", serde_json::to_string(&signing_package).unwrap());
         let round_2_config = participant_input_round_2(
             &mut participant_comms,
             &mut round_2_input.as_bytes(),
             &mut buf,
+            signing_commitments,
+            participant_identifier,
         )
         .await
         .unwrap();

@@ -131,8 +131,6 @@ async fn check_step_2() {
 
     let message = "74657374";
 
-    
-
     let commitments_input_1 = "{\"header\":{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"},\"identifier\":\"0100000000000000000000000000000000000000000000000000000000000000\",\"signing_share\":\"4ca8a14c31582e92770b23d8b4e5f253d94cbbdc34332cbbb9972f7d0a16a106\",\"commitment\":[\"c0b1eb84bc74624e9196a4ae01d7b784133dd714943001524e33f62ac09fe6df\",\"a4ed252f52e34077e990f70a743a261ff74cbda88173269cc1feeb0616af734b\",\"0fe7ced03a6d5cc4286d050f20fea6dbc14f412a430fc21f92ee2861011fb93c\"]}";
     let commitments_input_3 = "{\"header\":{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"},\"identifier\":\"0300000000000000000000000000000000000000000000000000000000000000\",\"signing_share\":\"4ca8a14c31582e92770b23d8b4e5f253d94cbbdc34332cbbb9972f7d0a16a106\",\"commitment\":[\"c0b1eb84bc74624e9196a4ae01d7b784133dd714943001524e33f62ac09fe6df\",\"a4ed252f52e34077e990f70a743a261ff74cbda88173269cc1feeb0616af734b\",\"0fe7ced03a6d5cc4286d050f20fea6dbc14f412a430fc21f92ee2861011fb93c\"]}";
 

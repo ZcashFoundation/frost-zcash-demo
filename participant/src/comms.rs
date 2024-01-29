@@ -6,18 +6,28 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-use frost::SigningPackage;
-
 use std::{
     error::Error,
     io::{BufRead, Write},
+};
+
+use frost::{
+    round1::SigningCommitments,
+    round2::SignatureShare,
+    serde::{self, Deserialize, Serialize},
+    Identifier, SigningPackage,
 };
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {
+    IdentifiedCommitments {
+        identifier: Identifier,
+        commitments: SigningCommitments,
+    },
     SigningPackage(SigningPackage),
+    SignatureShare(SignatureShare),
 }
 
 #[allow(async_fn_in_trait)]
@@ -26,6 +36,13 @@ pub trait Comms {
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
+        commitments: SigningCommitments,
+        identifier: Identifier,
         #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
     ) -> Result<SigningPackage, Box<dyn Error>>;
+
+    async fn send_signature_share(
+        &mut self,
+        signature_share: SignatureShare,
+    ) -> Result<(), Box<dyn Error>>;
 }

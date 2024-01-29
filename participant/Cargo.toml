@@ -19,4 +19,5 @@ message-io = "0.18"
 
 [features]
 redpallas = []
+sockets = []
 default = []

@@ -8,9 +8,9 @@ use reddsa::frost::redpallas as frost;
 use crate::comms::Comms;
 use frost::{
     keys::KeyPackage,
-    round1::SigningNonces,
+    round1::{SigningCommitments, SigningNonces},
     round2::{self, SignatureShare},
-    Error, SigningPackage,
+    Error, Identifier, SigningPackage,
 };
 use std::io::{BufRead, Write};
 
@@ -27,6 +27,8 @@ pub async fn round_2_request_inputs(
     comms: &mut impl Comms,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
+    commitments: SigningCommitments,
+    identifier: Identifier,
 ) -> Result<Round2Config, Box<dyn std::error::Error>> {
     writeln!(logger, "=== Round 2 ===")?;
 
@@ -34,6 +36,8 @@ pub async fn round_2_request_inputs(
         .get_signing_package(
             input,
             logger,
+            commitments,
+            identifier,
             #[cfg(feature = "redpallas")]
             randomizer,
         )
@@ -71,6 +75,7 @@ pub fn generate_signature(
     let signing_package = config.signing_package;
     #[cfg(not(feature = "redpallas"))]
     let signature = round2::sign(&signing_package, signing_nonces, key_package)?;
+
     #[cfg(feature = "redpallas")]
     let signature = round2::sign(
         &signing_package,

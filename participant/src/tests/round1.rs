@@ -10,7 +10,6 @@ use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::{
     args::Args,
-    comms::cli::CLIComms,
     round1::{print_values, request_inputs, Round1Config},
 };
 
@@ -38,7 +37,6 @@ async fn check_valid_round_1_inputs() {
     };
 
     let mut buf = BufWriter::new(Vec::new());
-    let mut comms = CLIComms {};
     let args = Args {
         key_package: "-".to_string(),
         ip: "0.0.0.0".to_string(),
@@ -58,7 +56,6 @@ async fn check_valid_round_1_inputs() {
 #[tokio::test]
 async fn check_0_input_for_identifier() {
     let mut buf = BufWriter::new(Vec::new());
-    let mut comms = CLIComms {};
     let args = Args::default();
 
     let input = r#"{"identifier":"0000000000000000000000000000000000000000000000000000000000000000","value":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
@@ -77,7 +74,6 @@ async fn check_0_input_for_identifier() {
 #[tokio::test]
 async fn check_invalid_length_signing_share() {
     let mut buf = BufWriter::new(Vec::new());
-    let mut comms = CLIComms {};
     let args = Args::default();
 
     let input = r#"{"identifier":"0100000000000000000000000000000000000000000000000000000000000000","value":"ed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
@@ -99,7 +95,6 @@ async fn check_invalid_round_1_inputs() {
     let input = r#"{"header":{"version":0,"ciphersuite":"FROST-ED25519-SHA512-v1"},"signing_share":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","926d5910e146dccb9148ca39dc7607f4f7123ff1c0ffaf109add1d165c568bf2", "291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"]}"#;
 
     let mut buf = BufWriter::new(Vec::new());
-    let mut comms = CLIComms {};
     let args = Args::default();
 
     let mut valid_input = input.as_bytes();
@@ -117,7 +112,6 @@ async fn check_invalid_round_1_inputs() {
 #[tokio::test]
 async fn check_invalid_length_vss_commitment() {
     let mut buf = BufWriter::new(Vec::new());
-    let mut comms = CLIComms {};
     let args = Args::default();
 
     let input = r#"{"identifier":"0100000000000000000000000000000000000000000000000000000000000000","value":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["7e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
@@ -131,8 +125,6 @@ async fn check_invalid_length_vss_commitment() {
 #[tokio::test]
 async fn check_print_values() {
     let mut buf = BufWriter::new(Vec::new());
-    let comms = CLIComms {};
-    let args = Args::default();
 
     let signing_share =
         SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
