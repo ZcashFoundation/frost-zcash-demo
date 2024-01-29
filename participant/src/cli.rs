@@ -48,7 +48,7 @@ fn request_signature(
     input: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<Signature, Box<dyn std::error::Error>> {
-    writeln!(logger, "The group signature:")?;
+    writeln!(logger, "The group signature (as a \"quoted_string\"):")?;
 
     let mut signature_input = String::new();
 
