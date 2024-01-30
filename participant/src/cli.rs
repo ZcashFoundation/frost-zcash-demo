@@ -1,6 +1,7 @@
 use crate::args::Args;
-use crate::comms::cli::CLIComms;
 
+#[cfg(not(feature = "sockets"))]
+use crate::comms::cli::CLIComms;
 #[cfg(feature = "sockets")]
 use crate::comms::socket::SocketComms;
 
