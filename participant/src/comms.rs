@@ -38,7 +38,6 @@ pub trait Comms {
         output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
     ) -> Result<SigningPackage, Box<dyn Error>>;
 
     async fn send_signature_share(

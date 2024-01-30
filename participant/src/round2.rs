@@ -33,14 +33,7 @@ pub async fn round_2_request_inputs(
     writeln!(logger, "=== Round 2 ===")?;
 
     let signing_package = comms
-        .get_signing_package(
-            input,
-            logger,
-            commitments,
-            identifier,
-            #[cfg(feature = "redpallas")]
-            randomizer,
-        )
+        .get_signing_package(input, logger, commitments, identifier)
         .await?;
 
     #[cfg(feature = "redpallas")]

@@ -29,7 +29,6 @@ impl Comms for CLIComms {
         output: &mut dyn Write,
         _commitments: SigningCommitments,
         _identifier: Identifier,
-        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<SigningPackage, Box<dyn Error>> {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
 

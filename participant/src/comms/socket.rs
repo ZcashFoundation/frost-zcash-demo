@@ -81,7 +81,6 @@ impl Comms for SocketComms {
         _output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<SigningPackage, Box<dyn Error>> {
         // Send Commitments to Coordinator
         let data = serde_json::to_vec(&Message::IdentifiedCommitments {
