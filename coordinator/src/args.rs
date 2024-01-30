@@ -13,6 +13,11 @@ pub struct Args {
     #[arg(short = 'P', long, default_value = "public-key-package.json")]
     pub public_key_package: String,
 
+    /// The message to sign. Can be a file with the raw message, or "-". If "-"
+    /// is specified, then it will be read from standard input as a hex string.
+    #[arg(short = 'm', long, default_value = "-")]
+    pub message: String,
+
     /// Where to write the generated raw bytes signature. If "-", the
     /// human-readable hex-string is printed to stdout.
     #[arg(short = 's', long, default_value = "-")]
