@@ -1,3 +1,6 @@
+#[cfg(all(test, not(feature = "redpallas")))]
+mod tests;
+
 use std::io;
 
 use clap::Parser;

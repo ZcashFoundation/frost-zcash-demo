@@ -1,7 +1,11 @@
 #![cfg(not(feature = "redpallas"))]
 
-use coordinator::args::Args;
-use coordinator::comms::cli::CLIComms;
+use coordinator::args::Args as CoordinatorArgs;
+use coordinator::comms::cli::CLIComms as CoordinatorCLIComms;
+
+use participant::args::Args as ParticipantArgs;
+use participant::comms::cli::CLIComms as ParticipantCLIComms;
+
 use frost_ed25519 as frost;
 
 use frost::keys::IdentifierList;
@@ -26,8 +30,12 @@ async fn trusted_dealer_journey() {
     let mut buf = BufWriter::new(Vec::new());
     let mut rng = thread_rng();
 
-    let args = Args::default();
-    let mut comms = CLIComms {};
+    let coordinator_args = CoordinatorArgs::default();
+    let mut coordinator_comms = CoordinatorCLIComms {};
+
+    // For a CLI test we can use the same CLIComms instance
+    let mut participant_comms = ParticipantCLIComms {};
+    let participant_args = ParticipantArgs::default();
 
     // Trusted dealer
 
@@ -57,10 +65,12 @@ async fn trusted_dealer_journey() {
         key_packages.insert(identifier, key_package);
     }
 
-    let mut nonces_map = HashMap::new();
+    // Round 1
+
+    let mut nonces_map = BTreeMap::new();
     let mut commitments_map = BTreeMap::new();
 
-    for participant_index in 1..=3 {
+    for participant_index in 1..=3u16 {
         let participant_identifier = Identifier::try_from(participant_index).unwrap();
 
         let share = key_packages[&participant_identifier].signing_share();
@@ -70,7 +80,9 @@ async fn trusted_dealer_journey() {
             &serde_json::to_string(&key_packages[&participant_identifier]).unwrap()
         );
         let round_1_config =
-            participant_input_round_1(&mut round_1_input.as_bytes(), &mut buf).unwrap();
+            participant_input_round_1(&participant_args, &mut round_1_input.as_bytes(), &mut buf)
+                .await
+                .unwrap();
 
         assert_eq!(
             round_1_config.key_package,
@@ -95,10 +107,14 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&commitments_map[&participant_id_3]).unwrap(),
     );
 
-    let participants_config =
-        coordinator::step_1::step_1(&args, &mut comms, &mut step_1_input.as_bytes(), &mut buf)
-            .await
-            .unwrap();
+    let participants_config = coordinator::step_1::step_1(
+        &coordinator_args,
+        &mut coordinator_comms,
+        &mut step_1_input.as_bytes(),
+        &mut buf,
+    )
+    .await
+    .unwrap();
 
     // Coordinator step 2
 
@@ -107,23 +123,36 @@ async fn trusted_dealer_journey() {
     let message = "74657374";
     let step_2_input = format!("{}\n", message);
 
-    let signing_package =
-        coordinator::step_2::step_2(&mut step_2_input.as_bytes(), &mut buf, commitments_map)
-            .unwrap();
+    let signing_package = coordinator::step_2::step_2(
+        &mut step_2_input.as_bytes(),
+        &mut buf,
+        commitments_map.clone(),
+    )
+    .await
+    .unwrap();
 
-    // Participants round 2
+    // Round 2
 
-    for participant_identifier in nonces_map.keys() {
+    for participant_index in 1..=3 {
+        let participant_identifier = Identifier::try_from(participant_index).unwrap();
+        let signing_commitments = commitments_map[&participant_identifier];
         let round_2_input = format!("{}\n", serde_json::to_string(&signing_package).unwrap());
-        let round_2_config =
-            participant_input_round_2(&mut round_2_input.as_bytes(), &mut buf).unwrap();
+        let round_2_config = participant_input_round_2(
+            &mut participant_comms,
+            &mut round_2_input.as_bytes(),
+            &mut buf,
+            signing_commitments,
+            participant_identifier,
+        )
+        .await
+        .unwrap();
         let signature = generate_signature(
             round_2_config,
-            &key_packages[participant_identifier],
-            &nonces_map[participant_identifier],
+            &key_packages[&participant_identifier],
+            &nonces_map[&participant_identifier],
         )
         .unwrap();
-        signature_shares.insert(*participant_identifier, signature);
+        signature_shares.insert(participant_identifier, signature);
     }
 
     // coordinator step 3
@@ -135,7 +164,7 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&signature_shares[&participant_id_3]).unwrap()
     );
     let group_signature = coordinator::step_3::step_3(
-        &mut comms,
+        &mut coordinator_comms,
         &mut step_3_input.as_bytes(),
         &mut buf,
         participants_config,

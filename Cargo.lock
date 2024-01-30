@@ -843,13 +843,16 @@ dependencies = [
 name = "participant"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "exitcode",
  "eyre",
  "frost-ed25519",
  "hex",
+ "message-io",
  "rand",
  "reddsa",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
