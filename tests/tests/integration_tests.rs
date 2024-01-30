@@ -33,6 +33,7 @@ async fn trusted_dealer_journey() {
     let coordinator_args = CoordinatorArgs {
         public_key_package: "-".to_string(),
         signature: "-".to_string(),
+        message: "-".to_string(),
         ..Default::default()
     };
     let mut coordinator_comms = CoordinatorCLIComms {};
@@ -136,6 +137,7 @@ async fn trusted_dealer_journey() {
     let step_2_input = format!("{}\n", message);
 
     let signing_package = coordinator::step_2::step_2(
+        &coordinator_args,
         &mut step_2_input.as_bytes(),
         &mut buf,
         commitments_map.clone(),
