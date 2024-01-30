@@ -40,6 +40,7 @@ pub async fn cli(
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
     step_3(
+        args,
         &mut comms,
         reader,
         logger,

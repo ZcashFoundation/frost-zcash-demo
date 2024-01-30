@@ -5,9 +5,12 @@ use reddsa::frost::redpallas as frost;
 
 use frost::{Signature, SigningPackage};
 
-use std::io::{BufRead, Write};
+use std::{
+    fs,
+    io::{BufRead, Write},
+};
 
-use crate::{comms::Comms, step_1::ParticipantsConfig};
+use crate::{args::Args, comms::Comms, step_1::ParticipantsConfig};
 
 #[cfg(feature = "redpallas")]
 pub fn request_randomizer(
@@ -27,6 +30,7 @@ pub fn request_randomizer(
 }
 
 pub async fn step_3(
+    args: &Args,
     comms: &mut impl Comms,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
@@ -44,7 +48,7 @@ pub async fn step_3(
         randomizer,
     )
     .await?;
-    print_signature(logger, group_signature);
+    print_signature(args, logger, group_signature)?;
     Ok(group_signature)
 }
 
@@ -87,11 +91,20 @@ async fn request_inputs_signature_shares(
     Ok(group_signature)
 }
 
-fn print_signature(logger: &mut dyn Write, group_signature: Signature) {
-    writeln!(
-        logger,
-        "Group signature: {}",
-        serde_json::to_string(&group_signature).unwrap()
-    )
-    .unwrap();
+fn print_signature(
+    args: &Args,
+    logger: &mut dyn Write,
+    group_signature: Signature,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if args.signature == "-" {
+        writeln!(
+            logger,
+            "Group signature: {}",
+            serde_json::to_string(&group_signature)?
+        )?;
+    } else {
+        fs::write(&args.signature, group_signature.serialize())?;
+        eprintln!("Raw signature written to {}", &args.signature);
+    };
+    Ok(())
 }
