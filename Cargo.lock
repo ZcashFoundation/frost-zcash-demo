@@ -1292,6 +1292,7 @@ dependencies = [
 name = "trusted-dealer"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "exitcode",
  "frost-ed25519",
  "hex",

@@ -41,7 +41,15 @@ async fn trusted_dealer_journey() {
 
     let dealer_input = "3\n5\n\n";
 
-    let dealer_config = trusted_dealer_input(&mut dealer_input.as_bytes(), &mut buf).unwrap();
+    let dealer_config = trusted_dealer_input(
+        &trusted_dealer::args::Args {
+            cli: true,
+            ..Default::default()
+        },
+        &mut dealer_input.as_bytes(),
+        &mut buf,
+    )
+    .unwrap();
 
     let (shares, pubkeys) =
         trusted_dealer_keygen(&dealer_config, IdentifierList::Default, &mut rng).unwrap();
