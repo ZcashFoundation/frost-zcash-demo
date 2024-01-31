@@ -855,6 +855,7 @@ dependencies = [
 name = "participant"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "exitcode",
  "eyre",

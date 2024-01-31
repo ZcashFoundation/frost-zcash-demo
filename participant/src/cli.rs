@@ -1,8 +1,6 @@
 use crate::args::Args;
 
-#[cfg(not(feature = "sockets"))]
 use crate::comms::cli::CLIComms;
-#[cfg(feature = "sockets")]
 use crate::comms::socket::SocketComms;
 
 use crate::comms::Comms;
@@ -17,11 +15,11 @@ pub async fn cli(
     input: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(not(feature = "sockets"))]
-    let mut comms = CLIComms {};
-
-    #[cfg(feature = "sockets")]
-    let mut comms = SocketComms::new(&args);
+    let mut comms: Box<dyn Comms> = if args.cli {
+        Box::new(CLIComms {})
+    } else {
+        Box::new(SocketComms::new(args))
+    };
 
     // Round 1
 
@@ -38,7 +36,7 @@ pub async fn cli(
     // Round 2 - Sign
 
     let round_2_config = round_2_request_inputs(
-        &mut comms,
+        &mut *comms,
         input,
         logger,
         commitments,

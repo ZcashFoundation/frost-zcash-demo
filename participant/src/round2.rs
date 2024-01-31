@@ -24,7 +24,7 @@ pub struct Round2Config {
 // TODO: refactor to generate config
 // TODO: handle errors
 pub async fn round_2_request_inputs(
-    comms: &mut impl Comms,
+    comms: &mut dyn Comms,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     commitments: SigningCommitments,

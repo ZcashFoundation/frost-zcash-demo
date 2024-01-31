@@ -1,5 +1,6 @@
 //! Command line interface implementation of the Comms trait.
 
+use async_trait::async_trait;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -22,6 +23,7 @@ use crate::comms::Comms;
 
 pub struct CLIComms {}
 
+#[async_trait(?Send)]
 impl Comms for CLIComms {
     async fn get_signing_package(
         &mut self,
