@@ -30,7 +30,12 @@ async fn trusted_dealer_journey() {
     let mut buf = BufWriter::new(Vec::new());
     let mut rng = thread_rng();
 
-    let coordinator_args = CoordinatorArgs::default();
+    let coordinator_args = CoordinatorArgs {
+        public_key_package: "-".to_string(),
+        signature: "-".to_string(),
+        message: "-".to_string(),
+        ..Default::default()
+    };
     let mut coordinator_comms = CoordinatorCLIComms {};
 
     // For a CLI test we can use the same CLIComms instance
@@ -132,6 +137,7 @@ async fn trusted_dealer_journey() {
     let step_2_input = format!("{}\n", message);
 
     let signing_package = coordinator::step_2::step_2(
+        &coordinator_args,
         &mut step_2_input.as_bytes(),
         &mut buf,
         commitments_map.clone(),
@@ -172,6 +178,7 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&signature_shares[&participant_id_3]).unwrap()
     );
     let group_signature = coordinator::step_3::step_3(
+        &coordinator_args,
         &mut coordinator_comms,
         &mut step_3_input.as_bytes(),
         &mut buf,

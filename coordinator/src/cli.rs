@@ -32,7 +32,13 @@ pub async fn cli(
         "=== STEP 2: CHOOSE MESSAGE AND GENERATE COMMITMENT PACKAGE ===\n"
     )?;
 
-    let signing_package = step_2(reader, logger, participants_config.commitments.clone()).await?;
+    let signing_package = step_2(
+        args,
+        reader,
+        logger,
+        participants_config.commitments.clone(),
+    )
+    .await?;
 
     #[cfg(feature = "redpallas")]
     let randomizer = request_randomizer(reader, logger)?;
@@ -40,6 +46,7 @@ pub async fn cli(
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
     step_3(
+        args,
         &mut comms,
         reader,
         logger,
