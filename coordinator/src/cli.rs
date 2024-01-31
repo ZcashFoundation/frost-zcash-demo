@@ -1,10 +1,9 @@
 use std::io::{BufRead, Write};
 
 use crate::args::Args;
-#[cfg(not(feature = "sockets"))]
 use crate::comms::cli::CLIComms;
-#[cfg(feature = "sockets")]
 use crate::comms::socket::SocketComms;
+use crate::comms::Comms;
 use crate::step_1::step_1;
 use crate::step_2::step_2;
 use crate::step_3::step_3;
@@ -19,13 +18,13 @@ pub async fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    #[cfg(not(feature = "sockets"))]
-    let mut comms = CLIComms {};
+    let mut comms: Box<dyn Comms> = if args.cli {
+        Box::new(CLIComms {})
+    } else {
+        Box::new(SocketComms::new(args))
+    };
 
-    #[cfg(feature = "sockets")]
-    let mut comms = SocketComms::new(&args);
-
-    let participants_config = step_1(args, &mut comms, reader, logger).await?;
+    let participants_config = step_1(args, &mut *comms, reader, logger).await?;
 
     writeln!(
         logger,
@@ -47,7 +46,7 @@ pub async fn cli(
 
     step_3(
         args,
-        &mut comms,
+        &mut *comms,
         reader,
         logger,
         participants_config,

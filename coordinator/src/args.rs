@@ -3,6 +3,12 @@ use clap::Parser;
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    /// CLI mode. If enabled, it will prompt for inputs from stdin
+    /// and print values to stdout, ignoring other flags.
+    /// If false, socket communication is enabled.
+    #[arg(long, default_value_t = false)]
+    pub cli: bool,
+
     /// The number of participants. If 0, will prompt for a value.
     #[arg(short = 'n', long, default_value_t = 0)]
     pub num_signers: u16,

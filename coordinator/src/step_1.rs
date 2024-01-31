@@ -21,7 +21,7 @@ pub struct ParticipantsConfig {
 // TODO: needs to include the coordinator's keys!
 pub async fn step_1(
     args: &Args,
-    comms: &mut impl Comms,
+    comms: &mut dyn Comms,
     reader: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
@@ -38,7 +38,7 @@ pub async fn step_1(
 // 3. identifiers for all participants
 async fn read_commitments(
     args: &Args,
-    comms: &mut impl Comms,
+    comms: &mut dyn Comms,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
@@ -50,7 +50,7 @@ async fn read_commitments(
     )?;
     let pub_key_package: PublicKeyPackage = serde_json::from_str(&pub_key_package)?;
 
-    let num_of_participants = if args.num_signers == 0 {
+    let num_of_participants = if args.cli && args.num_signers == 0 {
         writeln!(logger, "The number of participants: ")?;
 
         let mut participants = String::new();

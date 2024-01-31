@@ -31,7 +31,7 @@ pub fn request_randomizer(
 
 pub async fn step_3(
     args: &Args,
-    comms: &mut impl Comms,
+    comms: &mut dyn Comms,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,
@@ -56,7 +56,7 @@ pub async fn step_3(
 // 1. number of signers (TODO: maybe pass this in?)
 // 2. signatures for all signers
 async fn request_inputs_signature_shares(
-    comms: &mut impl Comms,
+    comms: &mut dyn Comms,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
     participants: ParticipantsConfig,

@@ -3,9 +3,10 @@ use clap::Parser;
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// CLI mode. If enabled, it will prompts for inputs from stdin
+    /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
-    #[arg(short = 'i', long, default_value_t = false)]
+    /// If false, socket communication is enabled.
+    #[arg(long, default_value_t = false)]
     pub cli: bool,
 
     /// Where to write the public key package to use. Can be a file path or "-".
