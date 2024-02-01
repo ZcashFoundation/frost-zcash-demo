@@ -38,6 +38,7 @@ async fn check_valid_round_1_inputs() {
 
     let mut buf = BufWriter::new(Vec::new());
     let args = Args {
+        cli: true,
         key_package: "-".to_string(),
         ip: "0.0.0.0".to_string(),
         port: 80,
