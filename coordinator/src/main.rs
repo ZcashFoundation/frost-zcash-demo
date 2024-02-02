@@ -13,12 +13,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut reader = Box::new(io::stdin().lock());
     let mut logger = io::stdout();
-    cli(&args, &mut reader, &mut logger).await?;
+    let r = cli(&args, &mut reader, &mut logger).await;
 
     // Force process to exit; since socket comms spawn a thread, it will keep
     // running forever. Ideally we should join() the thread but this works for
     // now.
-    std::process::exit(0);
+    match r {
+        Ok(_) => std::process::exit(0),
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    }
 }
 
 // Choose participants -> send message to those participants - gen message to send

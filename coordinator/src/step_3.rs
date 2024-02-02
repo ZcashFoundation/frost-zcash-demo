@@ -14,16 +14,24 @@ use crate::{args::Args, comms::Comms, step_1::ParticipantsConfig};
 
 #[cfg(feature = "redpallas")]
 pub fn request_randomizer(
+    args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
 ) -> Result<frost::round2::Randomizer, Box<dyn std::error::Error>> {
-    writeln!(logger, "Enter the randomizer (hex string):")?;
+    let randomizer = if args.randomizer == "-" {
+        writeln!(logger, "Enter the randomizer (hex string):")?;
 
-    let mut randomizer = String::new();
-    input.read_line(&mut randomizer)?;
+        let mut randomizer = String::new();
+        input.read_line(&mut randomizer)?;
+
+        hex::decode(randomizer.trim())?
+    } else {
+        eprintln!("Reading randomizer from {}...", &args.randomizer);
+        fs::read(&args.randomizer)?
+    };
 
     Ok(frost::round2::Randomizer::deserialize(
-        &hex::decode(randomizer.trim())?
+        &randomizer
             .try_into()
             .map_err(|_| frost::Error::MalformedIdentifier)?,
     )?)

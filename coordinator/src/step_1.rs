@@ -50,7 +50,7 @@ async fn read_commitments(
     )?;
     let pub_key_package: PublicKeyPackage = serde_json::from_str(&pub_key_package)?;
 
-    let num_of_participants = if args.cli && args.num_signers == 0 {
+    let num_of_participants = if args.num_signers == 0 {
         writeln!(logger, "The number of participants: ")?;
 
         let mut participants = String::new();

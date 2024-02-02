@@ -19,6 +19,8 @@ use std::{
 };
 
 use crate::comms::Comms;
+
+use super::GenericSigningPackage;
 // use super::Comms;
 
 pub struct CLIComms {}
@@ -31,7 +33,7 @@ impl Comms for CLIComms {
         output: &mut dyn Write,
         _commitments: SigningCommitments,
         _identifier: Identifier,
-    ) -> Result<SigningPackage, Box<dyn Error>> {
+    ) -> Result<GenericSigningPackage, Box<dyn Error>> {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
 
         let mut signing_package_json = String::new();
@@ -41,6 +43,22 @@ impl Comms for CLIComms {
         // TODO: change to return a generic Error and use a better error
         let signing_package: SigningPackage = serde_json::from_str(signing_package_json.trim())?;
 
+        #[cfg(feature = "redpallas")]
+        {
+            writeln!(output, "Enter the randomizer (hex string):")?;
+
+            let mut json = String::new();
+            input.read_line(&mut json).unwrap();
+
+            let randomizer = frost::round2::Randomizer::deserialize(
+                &hex::decode(json.trim())?
+                    .try_into()
+                    .map_err(|_| eyre!("Invalid randomizer"))?,
+            )?;
+            Ok((signing_package, randomizer))
+        }
+
+        #[cfg(not(feature = "redpallas"))]
         Ok(signing_package)
     }
 

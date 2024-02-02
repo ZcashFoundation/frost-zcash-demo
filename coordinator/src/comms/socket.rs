@@ -110,11 +110,19 @@ impl Comms for SocketComms {
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
         signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
+        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
     ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
-        eprintln!("Sending SigningPackage to participants...");
         // Send SigningPackage to all participants
+        eprintln!("Sending SigningPackage to participants...");
+
+        #[cfg(not(feature = "redpallas"))]
         let data = serde_json::to_vec(&Message::SigningPackage(signing_package.clone()))?;
+        #[cfg(feature = "redpallas")]
+        let data = serde_json::to_vec(&Message::SigningPackageAndRandomizer {
+            signing_package: signing_package.clone(),
+            randomizer,
+        })?;
+
         for identifier in signing_package.signing_commitments().keys() {
             let endpoint = self
                 .endpoints
@@ -122,6 +130,7 @@ impl Comms for SocketComms {
                 .ok_or(eyre!("unknown identifier"))?;
             self.handler.network().send(*endpoint, &data);
         }
+
         eprintln!("Waiting for participants to send their SignatureShares...");
         // Read SignatureShare from all participants
         let mut signature_shares = BTreeMap::new();
