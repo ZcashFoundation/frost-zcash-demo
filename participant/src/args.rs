@@ -15,11 +15,11 @@ pub struct Args {
     #[arg(short = 'k', long, default_value = "key-package-1.json")]
     pub key_package: String,
 
-    /// IP to bind to, if using online comms
-    #[arg(short, long, default_value = "0.0.0.0")]
+    /// IP to connect to, if using online comms
+    #[arg(short, long, default_value = "127.0.0.1")]
     pub ip: String,
 
-    /// Port to bind to, if using online comms
+    /// Port to connect to, if using online comms
     #[arg(short, long, default_value_t = 2744)]
     pub port: u16,
 }
