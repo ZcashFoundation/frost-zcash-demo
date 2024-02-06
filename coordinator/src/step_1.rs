@@ -42,13 +42,12 @@ async fn read_commitments(
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
-    let pub_key_package = read_from_file_or_stdin(
+    let out = read_from_file_or_stdin(
         input,
         logger,
         "public key package",
         &args.public_key_package,
     )?;
-    let pub_key_package: PublicKeyPackage = serde_json::from_str(&pub_key_package)?;
 
     let num_of_participants = if args.num_signers == 0 {
         writeln!(logger, "The number of participants: ")?;
