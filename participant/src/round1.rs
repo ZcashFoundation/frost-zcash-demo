@@ -40,17 +40,6 @@ pub async fn request_inputs(
     Ok(Round1Config { key_package })
 }
 
-pub fn generate_nonces_and_commitments(
-    key_package: &KeyPackage,
-    rng: &mut ThreadRng,
-) -> (SigningNonces, SigningCommitments) {
-    let (nonces, commitments) = frost::round1::commit(key_package.signing_share(), rng);
-
-    // TODO: Store nonces
-
-    (nonces, commitments)
-}
-
 pub fn print_values(
     commitments: SigningCommitments,
     logger: &mut dyn Write,
