@@ -36,8 +36,7 @@ pub async fn cli(
         reader,
         logger,
         participants_config.commitments.clone(),
-    )
-    .await?;
+    )?;
 
     #[cfg(feature = "redpallas")]
     let randomizer = request_randomizer(args, reader, logger)?;

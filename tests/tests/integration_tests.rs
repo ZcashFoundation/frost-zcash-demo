@@ -143,7 +143,6 @@ async fn trusted_dealer_journey() {
         &mut buf,
         commitments_map.clone(),
     )
-    .await
     .unwrap();
 
     // Round 2

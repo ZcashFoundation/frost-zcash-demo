@@ -144,6 +144,7 @@ async fn check_step_2() {
         ..
     } = get_helpers();
 
+    let args = Args::default();
     let mut buf = BufWriter::new(Vec::new());
 
     // -- INPUTS --
@@ -163,9 +164,13 @@ async fn check_step_2() {
 
     let expected_signing_package = SigningPackage::new(signing_commitments.clone(), &message);
 
-    let signing_package = step_2(&mut valid_input, &mut buf, signing_commitments.clone())
-        .await
-        .unwrap();
+    let signing_package = step_2(
+        &args,
+        &mut valid_input,
+        &mut buf,
+        signing_commitments.clone(),
+    )
+    .unwrap();
 
     // assert!(&signing_package.await.is_ok());
     assert!(signing_package == expected_signing_package);
@@ -198,6 +203,7 @@ async fn check_step_3() {
 
     let mut comms = CLIComms {};
     let mut buf = BufWriter::new(Vec::new());
+    let args = Args::default();
 
     // keygen output
 
@@ -223,6 +229,7 @@ async fn check_step_3() {
     // step 3 generate signature
 
     step_3(
+        &args,
         &mut comms,
         &mut valid_input,
         &mut buf,
