@@ -16,7 +16,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
+<<<<<<< HEAD
       - uses: dtolnay/rust-toolchain@stable
+=======
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-02-05
+>>>>>>> 0993da9 (pin to older nightly version)
       - run: cargo test
 
   test_redpallas:
@@ -25,7 +31,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
+<<<<<<< HEAD
       - uses: dtolnay/rust-toolchain@stable
+=======
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-02-05
+>>>>>>> 0993da9 (pin to older nightly version)
       - run: cargo test --features redpallas
 
   test_ed25519_sockets:
@@ -34,7 +46,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-02-05
       - run: cargo test --features sockets
 
   clippy:
@@ -45,9 +59,10 @@ jobs:
       - uses: actions/checkout@v4.1.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
           components: rustfmt, clippy
+          toolchain: nightly-2024-02-05
       - name: Run clippy manually without annotations
         run: cargo clippy --all-targets -- -D warnings
 
@@ -62,6 +77,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+          toolchain: nightly-2024-02-05
       - uses: Swatinem/rust-cache@v2
       - name: Run rustfmt
         run: cargo fmt --all -- --check
