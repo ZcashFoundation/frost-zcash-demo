@@ -411,7 +411,9 @@ dependencies = [
  "message-io",
  "rand",
  "reddsa",
+ "reqwest",
  "serde_json",
+ "server",
  "thiserror",
  "tokio",
 ]

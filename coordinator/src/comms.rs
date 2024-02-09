@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod http;
 pub mod socket;
 
 #[cfg(not(feature = "redpallas"))]
