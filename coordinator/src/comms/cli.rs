@@ -7,6 +7,8 @@ use reddsa::frost::redpallas as frost;
 
 use eyre::eyre;
 
+use async_trait::async_trait;
+
 use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
     SigningPackage,
@@ -22,6 +24,7 @@ use super::Comms;
 
 pub struct CLIComms {}
 
+#[async_trait(?Send)]
 impl Comms for CLIComms {
     async fn get_signing_commitments(
         &mut self,

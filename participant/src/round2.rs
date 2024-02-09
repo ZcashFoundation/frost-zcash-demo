@@ -5,11 +5,12 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+use crate::comms::Comms;
 use frost::{
     keys::KeyPackage,
-    round1::SigningNonces,
+    round1::{SigningCommitments, SigningNonces},
     round2::{self, SignatureShare},
-    Error, SigningPackage,
+    Error, Identifier, SigningPackage,
 };
 use std::io::{BufRead, Write};
 
@@ -22,21 +23,18 @@ pub struct Round2Config {
 
 // TODO: refactor to generate config
 // TODO: handle errors
-pub fn round_2_request_inputs(
+pub async fn round_2_request_inputs(
+    comms: &mut dyn Comms,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
+    commitments: SigningCommitments,
+    identifier: Identifier,
 ) -> Result<Round2Config, Box<dyn std::error::Error>> {
     writeln!(logger, "=== Round 2 ===")?;
 
-    writeln!(logger, "Enter the JSON-encoded SigningPackage:")?;
-
-    let mut signing_package_json = String::new();
-
-    input.read_line(&mut signing_package_json)?;
-
-    // TODO: change to return a generic Error and use a better error
-    let signing_package: SigningPackage = serde_json::from_str(signing_package_json.trim())
-        .map_err(|_| Error::MalformedSigningKey)?;
+    let signing_package = comms
+        .get_signing_package(input, logger, commitments, identifier)
+        .await?;
 
     #[cfg(feature = "redpallas")]
     {
@@ -70,6 +68,7 @@ pub fn generate_signature(
     let signing_package = config.signing_package;
     #[cfg(not(feature = "redpallas"))]
     let signature = round2::sign(&signing_package, signing_nonces, key_package)?;
+
     #[cfg(feature = "redpallas")]
     let signature = round2::sign(
         &signing_package,

@@ -1,5 +1,6 @@
 //! Socket implementation of the Comms trait, using message-io.
 
+use async_trait::async_trait;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -36,12 +37,12 @@ impl SocketComms {
     pub fn new(args: &Args) -> Self {
         let (handler, listener) = node::split::<()>();
         let addr = format!("{}:{}", args.ip, args.port);
-        let (tx, rx) = mpsc::channel(100);
+        let (tx, rx) = mpsc::channel(2000);
 
-        handler
+        let _ = handler
             .network()
             .listen(Transport::FramedTcp, addr)
-            .unwrap();
+            .map_err(|e| println!("{}", e));
 
         let socket_comm = Self {
             input_rx: rx,
@@ -62,14 +63,16 @@ impl SocketComms {
             NetEvent::Accepted(_endpoint, _listener) => println!("Client connected"), // Tcp or Ws
             NetEvent::Message(endpoint, data) => {
                 println!("Received: {}", String::from_utf8_lossy(data));
-                // TODO: handle error
-                let _ = input_tx.try_send((endpoint, data.to_vec()));
+                let _ = input_tx
+                    .try_send((endpoint, data.to_vec()))
+                    .map_err(|e| println!("{}", e));
             }
             NetEvent::Disconnected(_endpoint) => println!("Client disconnected"), //Tcp or Ws
         });
     }
 }
 
+#[async_trait(?Send)]
 impl Comms for SocketComms {
     async fn get_signing_commitments(
         &mut self,
@@ -80,6 +83,7 @@ impl Comms for SocketComms {
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
         self.endpoints = BTreeMap::new();
         let mut signing_commitments = BTreeMap::new();
+        eprintln!("Waiting for participants to send their commitments...");
         for _ in 0..num_of_participants {
             let (endpoint, data) = self
                 .input_rx
@@ -108,6 +112,7 @@ impl Comms for SocketComms {
         signing_package: &SigningPackage,
         #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
     ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
+        eprintln!("Sending SigningPackage to participants...");
         // Send SigningPackage to all participants
         let data = serde_json::to_vec(&Message::SigningPackage(signing_package.clone()))?;
         for identifier in signing_package.signing_commitments().keys() {
@@ -117,6 +122,7 @@ impl Comms for SocketComms {
                 .ok_or(eyre!("unknown identifier"))?;
             self.handler.network().send(*endpoint, &data);
         }
+        eprintln!("Waiting for participants to send their SignatureShares...");
         // Read SignatureShare from all participants
         let mut signature_shares = BTreeMap::new();
         for _ in 0..signing_package.signing_commitments().len() {

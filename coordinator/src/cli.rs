@@ -2,6 +2,8 @@ use std::io::{BufRead, Write};
 
 use crate::args::Args;
 use crate::comms::cli::CLIComms;
+use crate::comms::socket::SocketComms;
+use crate::comms::Comms;
 use crate::step_1::step_1;
 use crate::step_2::step_2;
 use crate::step_3::step_3;
@@ -16,16 +18,26 @@ pub async fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let mut comms = CLIComms {};
+    let mut comms: Box<dyn Comms> = if args.cli {
+        Box::new(CLIComms {})
+    } else {
+        Box::new(SocketComms::new(args))
+    };
 
-    let participants_config = step_1(args, &mut comms, reader, logger).await?;
+    let participants_config = step_1(args, &mut *comms, reader, logger).await?;
 
     writeln!(
         logger,
         "=== STEP 2: CHOOSE MESSAGE AND GENERATE COMMITMENT PACKAGE ===\n"
     )?;
 
-    let signing_package = step_2(reader, logger, participants_config.commitments.clone())?;
+    let signing_package = step_2(
+        args,
+        reader,
+        logger,
+        participants_config.commitments.clone(),
+    )
+    .await?;
 
     #[cfg(feature = "redpallas")]
     let randomizer = request_randomizer(reader, logger)?;
@@ -33,7 +45,8 @@ pub async fn cli(
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
     step_3(
-        &mut comms,
+        args,
+        &mut *comms,
         reader,
         logger,
         participants_config,

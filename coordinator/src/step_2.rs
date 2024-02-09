@@ -7,8 +7,11 @@ use frost::{round1::SigningCommitments, Identifier, SigningPackage};
 
 use std::{
     collections::BTreeMap,
+    fs,
     io::{BufRead, Write},
 };
+
+use crate::args::Args;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CommitmentsConfig {
@@ -16,12 +19,13 @@ pub struct CommitmentsConfig {
     pub signer_commitments: BTreeMap<Identifier, SigningCommitments>,
 }
 
-pub fn step_2(
+pub async fn step_2(
+    args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    let signing_package = request_message(input, logger, commitments)?;
+    let signing_package = request_message(args, input, logger, commitments)?;
     print_signing_package(logger, &signing_package);
     Ok(signing_package)
 }
@@ -29,16 +33,21 @@ pub fn step_2(
 // Input required:
 // 1. message
 fn request_message(
+    args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    writeln!(logger, "The message to be signed (hex encoded)")?;
+    let message = if args.cli && args.message == "-" {
+        writeln!(logger, "The message to be signed (hex encoded)")?;
 
-    let mut msg = String::new();
-    input.read_line(&mut msg)?;
+        let mut msg = String::new();
+        input.read_line(&mut msg)?;
 
-    let message = hex::decode(msg.trim())?;
+        hex::decode(msg.trim())?
+    } else {
+        fs::read(&args.message)?
+    };
 
     let signing_package = SigningPackage::new(commitments, &message);
 

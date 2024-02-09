@@ -1,21 +1,19 @@
 pub mod cli;
 pub mod socket;
 
+use async_trait::async_trait;
+
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
 use std::{
-    collections::BTreeMap,
     error::Error,
     io::{BufRead, Write},
 };
 
-use async_trait::async_trait;
-
 use frost::{
-    keys::PublicKeyPackage,
     round1::SigningCommitments,
     round2::SignatureShare,
     serde::{self, Deserialize, Serialize},
@@ -36,19 +34,16 @@ pub enum Message {
 
 #[async_trait(?Send)]
 pub trait Comms {
-    async fn get_signing_commitments(
+    async fn get_signing_package(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        pub_key_package: &PublicKeyPackage,
-        num_of_participants: u16,
-    ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>>;
+        commitments: SigningCommitments,
+        identifier: Identifier,
+    ) -> Result<SigningPackage, Box<dyn Error>>;
 
-    async fn get_signature_shares(
+    async fn send_signature_share(
         &mut self,
-        input: &mut dyn BufRead,
-        output: &mut dyn Write,
-        signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>>;
+        signature_share: SignatureShare,
+    ) -> Result<(), Box<dyn Error>>;
 }

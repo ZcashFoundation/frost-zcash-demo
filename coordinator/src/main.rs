@@ -1,3 +1,6 @@
+#[cfg(all(test, not(feature = "redpallas")))]
+mod tests;
+
 use std::io;
 
 use clap::Parser;
@@ -12,7 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut logger = io::stdout();
     cli(&args, &mut reader, &mut logger).await?;
 
-    Ok(())
+    // Force process to exit; since socket comms spawn a thread, it will keep
+    // running forever. Ideally we should join() the thread but this works for
+    // now.
+    std::process::exit(0);
 }
 
 // Choose participants -> send message to those participants - gen message to send
