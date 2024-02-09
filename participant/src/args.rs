@@ -3,6 +3,12 @@ use clap::Parser;
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    /// CLI mode. If enabled, it will prompt for inputs from stdin
+    /// and print values to stdout, ignoring other flags.
+    /// If false, socket communication is enabled.
+    #[arg(long, default_value_t = false)]
+    pub cli: bool,
+
     /// Public key package to use. Can be a file with a JSON-encoded
     /// package, or "-". If the file does not exist or if "-" is specified,
     /// then it will be read from standard input.

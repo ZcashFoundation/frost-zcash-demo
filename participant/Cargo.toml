@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.77"
 frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = ["frost"] }
 hex = "0.4"
@@ -19,5 +20,4 @@ message-io = "0.18"
 
 [features]
 redpallas = []
-sockets = []
 default = []

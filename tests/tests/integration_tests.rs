@@ -31,6 +31,7 @@ async fn trusted_dealer_journey() {
     let mut rng = thread_rng();
 
     let coordinator_args = CoordinatorArgs {
+        cli: true,
         public_key_package: "-".to_string(),
         signature: "-".to_string(),
         message: "-".to_string(),

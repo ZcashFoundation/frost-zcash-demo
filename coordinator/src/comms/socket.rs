@@ -1,5 +1,6 @@
 //! Socket implementation of the Comms trait, using message-io.
 
+use async_trait::async_trait;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -71,6 +72,7 @@ impl SocketComms {
     }
 }
 
+#[async_trait(?Send)]
 impl Comms for SocketComms {
     async fn get_signing_commitments(
         &mut self,

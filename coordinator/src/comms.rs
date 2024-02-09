@@ -6,18 +6,20 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+use std::{
+    collections::BTreeMap,
+    error::Error,
+    io::{BufRead, Write},
+};
+
+use async_trait::async_trait;
+
 use frost::{
     keys::PublicKeyPackage,
     round1::SigningCommitments,
     round2::SignatureShare,
     serde::{self, Deserialize, Serialize},
     Identifier, SigningPackage,
-};
-
-use std::{
-    collections::BTreeMap,
-    error::Error,
-    io::{BufRead, Write},
 };
 
 #[derive(Serialize, Deserialize)]
@@ -32,7 +34,7 @@ pub enum Message {
     SignatureShare(SignatureShare),
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait(?Send)]
 pub trait Comms {
     async fn get_signing_commitments(
         &mut self,

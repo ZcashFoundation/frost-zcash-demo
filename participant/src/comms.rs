@@ -1,6 +1,8 @@
 pub mod cli;
 pub mod socket;
 
+use async_trait::async_trait;
+
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -30,7 +32,7 @@ pub enum Message {
     SignatureShare(SignatureShare),
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait(?Send)]
 pub trait Comms {
     async fn get_signing_package(
         &mut self,

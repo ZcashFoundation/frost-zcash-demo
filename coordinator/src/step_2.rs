@@ -38,7 +38,7 @@ fn request_message(
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    let message = if args.message == "-" {
+    let message = if args.cli && args.message == "-" {
         writeln!(logger, "The message to be signed (hex encoded)")?;
 
         let mut msg = String::new();
