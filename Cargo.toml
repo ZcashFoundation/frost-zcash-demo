@@ -3,10 +3,16 @@ members = [
     "participant",
     "trusted-dealer",
     "dkg",
-    "coordinator", "tests"
+    "coordinator",
+    "tests",
+    "server",
 ]
-default-members = ["participant",
+default-members = [
+    "participant",
     "trusted-dealer",
     "dkg",
-    "coordinator", "tests"]
+    "coordinator",
+    "tests",
+    "server"
+]
 resolver = "2"
