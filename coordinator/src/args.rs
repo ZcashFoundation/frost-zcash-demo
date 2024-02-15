@@ -14,14 +14,14 @@ pub struct Args {
     pub num_signers: u16,
 
     /// Public key package to use. Can be a file with a JSON-encoded
-    /// package, or "-". If the file does not exist or if "-" is specified,
+    /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
     #[arg(short = 'P', long, default_value = "public-key-package.json")]
     pub public_key_package: String,
 
-    /// The message to sign. Can be a file with the raw message, or "-". If "-"
+    /// The message to sign. Can be a file with the raw message, or "". If ""
     /// is specified, then it will be read from standard input as a hex string.
-    #[arg(short = 'm', long, default_value = "-")]
+    #[arg(short = 'm', long, default_value = "")]
     pub message: String,
 
     /// The randomizer to use. Can be a file with the raw randomizer, or "-". If "-"
@@ -32,7 +32,7 @@ pub struct Args {
 
     /// Where to write the generated raw bytes signature. If "-", the
     /// human-readable hex-string is printed to stdout.
-    #[arg(short = 's', long, default_value = "-")]
+    #[arg(short = 's', long, default_value = "")]
     pub signature: String,
 
     /// IP to bind to, if using online comms
