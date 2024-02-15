@@ -7,7 +7,7 @@ use reddsa::frost::redpallas as frost;
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateNewSessionArgs {
-    pub identifiers: Vec<frost::Identifier>,
+    pub num_signers: u16,
     pub message_count: u8,
 }
 
@@ -23,7 +23,7 @@ pub struct GetSessionInfoArgs {
 
 #[derive(Serialize, Deserialize)]
 pub struct GetSessionInfoOutput {
-    pub identifiers: Vec<frost::Identifier>,
+    pub num_signers: u16,
     pub message_count: u8,
 }
 
