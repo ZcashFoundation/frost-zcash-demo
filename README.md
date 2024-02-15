@@ -94,7 +94,7 @@ cargo run --bin participant -- -i 127.0.0.1 -p 2744 -k key-package-1.json
 It will connect to the Coordinator using the given IP and port (replace as
 needed), using the specified key package (again replace as needed).
 
-When two participants run, the Coordinator should complete the protocol and
+Once two participants are running, the Coordinator should complete the protocol and
 write the signature to specified file.
 
 
