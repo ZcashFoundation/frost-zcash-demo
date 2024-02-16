@@ -9,6 +9,11 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
+    /// HTTP mode. If enabled, it will use HTTP communication with a
+    /// FROST server.
+    #[arg(long, default_value_t = false)]
+    pub http: bool,
+
     /// The number of participants. If 0, will prompt for a value.
     #[arg(short = 'n', long, default_value_t = 0)]
     pub num_signers: u16,

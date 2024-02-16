@@ -7,11 +7,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 use eyre::eyre;
-use message_io::{
-    network::{Endpoint, NetEvent, Transport},
-    node::{self, NodeHandler, NodeListener},
-};
-use tokio::sync::mpsc::{self, Receiver, Sender};
+use server::Uuid;
 
 use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
@@ -22,24 +18,26 @@ use std::{
     collections::BTreeMap,
     error::Error,
     io::{BufRead, Write},
+    time::Duration,
 };
 
-use super::{Comms, Message};
+use super::Comms;
 use crate::args::Args;
 
 pub struct HTTPComms {
     client: reqwest::Client,
     host_port: String,
+    session_id: Option<Uuid>,
 }
 
 impl HTTPComms {
     pub fn new(args: &Args) -> Self {
         let client = reqwest::Client::new();
-        let http_comm = Self {
+        Self {
             client,
-            host_port: format!("{}:{}"),
-        };
-        http_comm
+            host_port: format!("http://{}:{}", args.ip, args.port),
+            session_id: None,
+        }
     }
 }
 
@@ -50,13 +48,13 @@ impl Comms for HTTPComms {
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
         _pub_key_package: &PublicKeyPackage,
-        num_of_participants: u16,
+        num_signers: u16,
     ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
             .json(&server::CreateNewSessionArgs {
-                identifiers: key_packages.keys().copied().collect::<Vec<_>>(),
+                num_signers,
                 message_count: 1,
             })
             .send()
@@ -64,27 +62,36 @@ impl Comms for HTTPComms {
             .json::<server::CreateNewSessionOutput>()
             .await?;
 
-        let mut signing_commitments = BTreeMap::new();
-        eprintln!("Waiting for participants to send their commitments...");
-        for _ in 0..num_of_participants {
-            let (endpoint, data) = self
-                .input_rx
-                .recv()
-                .await
-                .ok_or(eyre!("Did not receive all commitments"))?;
-            let message: Message = serde_json::from_slice(&data)?;
-            if let Message::IdentifiedCommitments {
-                identifier,
-                commitments,
-            } = message
-            {
-                self.endpoints.insert(identifier, endpoint);
-                signing_commitments.insert(identifier, commitments);
+        eprintln!(
+            "Send the following session ID to participants: {}",
+            r.session_id
+        );
+        self.session_id = Some(r.session_id);
+        eprint!("Waiting for participants to send their commitments...");
+
+        let r = loop {
+            let r = self
+                .client
+                .post(format!("{}/get_commitments", self.host_port))
+                .json(&server::CreateNewSessionArgs {
+                    num_signers,
+                    message_count: 1,
+                })
+                .send()
+                .await?;
+            if r.status() != 200 {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                eprint!(".");
             } else {
-                Err(eyre!("Expected IdentifiedCommitments message"))?;
+                break r.json::<server::GetCommitmentsOutput>().await?;
             }
-        }
-        Ok(signing_commitments)
+        };
+        eprintln!();
+
+        Ok(r.commitments
+            .first()
+            .ok_or(eyre!("empty commitments"))
+            .cloned()?)
     }
 
     async fn get_signature_shares(
@@ -97,43 +104,46 @@ impl Comms for HTTPComms {
         // Send SigningPackage to all participants
         eprintln!("Sending SigningPackage to participants...");
 
-        #[cfg(not(feature = "redpallas"))]
-        let data = serde_json::to_vec(&Message::SigningPackage(signing_package.clone()))?;
-        #[cfg(feature = "redpallas")]
-        let data = serde_json::to_vec(&Message::SigningPackageAndRandomizer {
-            signing_package: signing_package.clone(),
-            randomizer,
-        })?;
-
-        for identifier in signing_package.signing_commitments().keys() {
-            let endpoint = self
-                .endpoints
-                .get(identifier)
-                .ok_or(eyre!("unknown identifier"))?;
-            self.handler.network().send(*endpoint, &data);
-        }
+        let _r = self
+            .client
+            .post(format!("{}/send_signing_package", self.host_port))
+            .json(&server::SendSigningPackageArgs {
+                aux_msg: Default::default(),
+                session_id: self.session_id.unwrap(),
+                signing_package: vec![signing_package.clone()],
+                #[cfg(not(feature = "redpallas"))]
+                randomizer: Vec::new(),
+                #[cfg(feature = "redpallas")]
+                randomizer: vec![randomizer],
+            })
+            .send()
+            .await?
+            .bytes()
+            .await?;
 
         eprintln!("Waiting for participants to send their SignatureShares...");
-        // Read SignatureShare from all participants
-        let mut signature_shares = BTreeMap::new();
-        for _ in 0..signing_package.signing_commitments().len() {
-            let (endpoint, data) = self
-                .input_rx
-                .recv()
-                .await
-                .ok_or(eyre!("Did not receive all commitments"))?;
-            let message: Message = serde_json::from_slice(&data)?;
-            if let Message::SignatureShare(signature_share) = message {
-                let identifier = self
-                    .endpoints
-                    .iter()
-                    .find_map(|(i, e)| if *e == endpoint { Some(i) } else { None })
-                    .ok_or(eyre!("Unknown participant"))?;
-                signature_shares.insert(*identifier, signature_share);
+
+        let r = loop {
+            let r = self
+                .client
+                .post(format!("{}/get_signature_shares", self.host_port))
+                .json(&server::GetSignatureSharesArgs {
+                    session_id: self.session_id.unwrap(),
+                })
+                .send()
+                .await?;
+            if r.status() != 200 {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                eprint!(".");
             } else {
-                Err(eyre!("Expected IdentifiedCommitments message"))?;
+                break r.json::<server::GetSignatureSharesOutput>().await?;
             }
-        }
-        Ok(signature_shares)
+        };
+        eprintln!();
+
+        Ok(r.signature_shares
+            .first()
+            .ok_or(eyre!("empty signature shares"))?
+            .clone())
     }
 }
