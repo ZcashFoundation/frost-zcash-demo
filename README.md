@@ -1,12 +1,17 @@
 # Zcash Foundation FROST Demos
 
-This will be part of a set of demos and a proof of concept application that uses the FROST libraries and reference implementation. The purpose of these demos is to:
+This repository contains a set of command line demos that uses the [ZF
+FROST](https://frost.zfnd.org/) libraries and reference implementation. Their
+purpose is to:
 
 1. identify gaps in our documentation
 2. provide usage examples for developer facing documentation
 3. provide reference implementations for developers wanting to use FROST in a “real world” scenario.
 
-This demo uses the (Ed25519, SHA-512) ciphersuite. The crate can be found [here](https://crates.io/crates/frost-ed25519).
+The demos use the [Ed25519](https://crates.io/crates/frost-ed25519) ciphersuite
+by default, but they can also use the
+[RedPallas](https://github.com/ZcashFoundation/reddsa/) ciphersuite which is
+compatible with Zcash.
 
 ## About FROST (Flexible Round-Optimised Schnorr Threshold signatures)
 
@@ -19,6 +24,7 @@ signing operations while employing a novel technique to protect against forgery 
 ## Projects
 
 This repo contains 4 projects:
+
 1. [Trusted Dealer](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/trusted-dealer)
 2. [DKG](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/dkg)
 3. [Coordinator](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/coordinator)
@@ -46,15 +52,54 @@ and in separate terminals:
 4. Run `cargo run --bin coordinator`
 5. Run `cargo run --bin participants`. Do this in separate terminals for separate participants.
 
-## Developer Information
+The demos support two communication mechanisms. By using the `--cli` flag, they
+will print JSON objects to the terminal, and participants will need to copy &
+paste objects and send them amongst themselves to complete the protocol.
 
-### Pre-commit checks
+Without the `--cli` flag, the demos will use socket communications. The
+coordinator will act as the server and the participants will be clients. See
+example below.
 
-1. Run `cargo make all`
+## Socket communication example
 
-### Coverage
+Create 3 key shares with threshold 2 using trusted dealer:
 
-Test coverage checks are performed in the pipeline. This is configured here: `.github/workflows/coverage.yaml`
-To run these locally:
-1. Install coverage tool by running `cargo install cargo-llvm-cov`
-2. Run `cargo make cov` (you may be asked if you want to install `llvm-tools-preview`, if so type `Y`)
+```
+cargo run --bin trusted-dealer -- -t 2 -n 3
+```
+
+The key packages will be written to files. Securely send the partipant's key
+packages to them (or just proceed if you are running everything locally for
+testing).
+
+Start a signing run as the coordinator:
+
+```
+cargo run --bin coordinator -- -i 0.0.0.0 -p 2744 -n 2 -m message.raw -s sig.raw
+```
+
+This will start a server listening for connections to any IP using port 2744.
+(These are the default values so feel free to omit them.) The protocol will run
+with 2 participants, signing the message inside `message.raw` (replace as
+appropriate). The signature will be written to `sig.raw`. The program will keep
+running while it waits for the participants to connect to it.
+
+Each participant should then run (or run in different terminals if you're
+testing locally):
+
+```
+cargo run --bin participant -- -i 127.0.0.1 -p 2744 -k key-package-1.json
+```
+
+It will connect to the Coordinator using the given IP and port (replace as
+needed), using the specified key package (again replace as needed).
+
+Once two participants are running, the Coordinator should complete the protocol and
+write the signature to specified file.
+
+
+## Curve selection
+
+Currently the demo supports curve Ed25519 and RedPallas. To use RedPallas, pass
+`--feature redpallas` to all commands. When it's enabled, it will automatically
+switch to Rerandomized FROST and it can be used to sign Zcash transactions.
