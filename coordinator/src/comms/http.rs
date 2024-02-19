@@ -73,9 +73,8 @@ impl Comms for HTTPComms {
             let r = self
                 .client
                 .post(format!("{}/get_commitments", self.host_port))
-                .json(&server::CreateNewSessionArgs {
-                    num_signers,
-                    message_count: 1,
+                .json(&server::GetCommitmentsArgs {
+                    session_id: r.session_id,
                 })
                 .send()
                 .await?;
