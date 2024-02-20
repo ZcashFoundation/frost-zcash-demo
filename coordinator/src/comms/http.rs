@@ -1,6 +1,7 @@
 //! HTTP implementation of the Comms trait.
 
 use async_trait::async_trait;
+
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -110,8 +111,6 @@ impl Comms for HTTPComms {
                 aux_msg: Default::default(),
                 session_id: self.session_id.unwrap(),
                 signing_package: vec![signing_package.clone()],
-                #[cfg(not(feature = "redpallas"))]
-                randomizer: Vec::new(),
                 #[cfg(feature = "redpallas")]
                 randomizer: vec![randomizer],
             })

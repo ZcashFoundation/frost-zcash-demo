@@ -4,6 +4,9 @@ use axum_test::TestServer;
 use rand::thread_rng;
 use server::{args::Args, router};
 
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
 /// Test the entire FROST signing flow using axum_test.
@@ -110,6 +113,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         .enumerate()
         .map(|(i, msg)| frost::SigningPackage::new(commitments[i].clone(), msg))
         .collect::<Vec<_>>();
+    #[cfg(feature = "redpallas")]
     let randomized_params = signing_packages
         .iter()
         .map(|p| frost::RandomizedParams::new(pubkeys.verifying_key(), p, &mut rng))
@@ -121,6 +125,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         .json(&server::SendSigningPackageArgs {
             session_id,
             signing_package: signing_packages.clone(),
+            #[cfg(feature = "redpallas")]
             randomizer: randomized_params.iter().map(|p| *p.randomizer()).collect(),
             aux_msg: aux_msg.to_owned(),
         })
@@ -141,6 +146,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         let r: server::GetSigningPackageOutput = res.json();
 
         // Generate SignatureShares for each SigningPackage
+        #[cfg(feature = "redpallas")]
         let signature_share = r
             .signing_package
             .iter()
@@ -153,6 +159,16 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
                     key_package,
                     *randomizer,
                 )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        #[cfg(not(feature = "redpallas"))]
+        let signature_share = r
+            .signing_package
+            .iter()
+            .enumerate()
+            .map(|(i, signing_package)| {
+                frost::round2::sign(signing_package, &nonces_map[identifier][i], key_package)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -177,10 +193,17 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     let r: server::GetSignatureSharesOutput = res.json();
 
     // Generate the final Signature for each message
+    #[cfg(feature = "redpallas")]
     let signatures = signing_packages
         .iter()
         .enumerate()
         .map(|(i, p)| frost::aggregate(p, &r.signature_shares[i], &pubkeys, &randomized_params[i]))
+        .collect::<Result<Vec<_>, _>>()?;
+    #[cfg(not(feature = "redpallas"))]
+    let signatures = signing_packages
+        .iter()
+        .enumerate()
+        .map(|(i, p)| frost::aggregate(p, &r.signature_shares[i], &pubkeys))
         .collect::<Result<Vec<_>, _>>()?;
 
     // Close the session
@@ -191,9 +214,14 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     res.assert_status_ok();
 
     // Verify signatures to test if they were generated correctly
+    #[cfg(feature = "redpallas")]
     for (i, p) in randomized_params.iter().enumerate() {
         p.randomized_verifying_key()
             .verify(messages[i], &signatures[i])?;
+    }
+    #[cfg(not(feature = "redpallas"))]
+    for (i, m) in messages.iter().enumerate() {
+        pubkeys.verifying_key().verify(m, &signatures[i])?;
     }
 
     Ok(())

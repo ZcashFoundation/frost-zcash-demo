@@ -158,9 +158,14 @@ pub(crate) async fn send_signing_package(
 
     match &mut session.state {
         SessionState::CommitmentsReady { commitments } => {
-            if args.signing_package.len() != session.message_count as usize
-                || args.randomizer.len() != session.message_count as usize
-            {
+            if args.signing_package.len() != session.message_count as usize {
+                return Err(AppError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    eyre!("wrong number of inputs"),
+                ));
+            }
+            #[cfg(feature = "redpallas")]
+            if args.randomizer.len() != session.message_count as usize {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     eyre!("wrong number of inputs"),
@@ -170,6 +175,7 @@ pub(crate) async fn send_signing_package(
                 identifiers: commitments.keys().cloned().collect(),
                 signing_package: args.signing_package,
                 signature_shares: Default::default(),
+                #[cfg(feature = "redpallas")]
                 randomizer: args.randomizer,
                 aux_msg: args.aux_msg,
             };
@@ -202,10 +208,12 @@ pub(crate) async fn get_signing_package(
             identifiers: _,
             signing_package,
             signature_shares: _,
+            #[cfg(feature = "redpallas")]
             randomizer,
             aux_msg,
         } => Ok(Json(GetSigningPackageOutput {
             signing_package: signing_package.clone(),
+            #[cfg(feature = "redpallas")]
             randomizer: randomizer.clone(),
             aux_msg: aux_msg.clone(),
         })),
@@ -238,7 +246,8 @@ pub(crate) async fn send_signature_share(
             identifiers,
             signing_package: _,
             signature_shares,
-            randomizer: _,
+            #[cfg(feature = "redpallas")]
+                randomizer: _,
             aux_msg: _,
         } => {
             if !identifiers.contains(&args.identifier) {

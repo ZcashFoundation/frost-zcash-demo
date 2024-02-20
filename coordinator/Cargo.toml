@@ -23,5 +23,5 @@ tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
 
 [features]
-redpallas = []
+redpallas = ["server/redpallas"]
 default = []
