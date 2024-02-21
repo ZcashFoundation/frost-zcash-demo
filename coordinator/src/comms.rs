@@ -30,7 +30,13 @@ pub enum Message {
         identifier: Identifier,
         commitments: SigningCommitments,
     },
+    #[cfg(not(feature = "redpallas"))]
     SigningPackage(SigningPackage),
+    #[cfg(feature = "redpallas")]
+    SigningPackageAndRandomizer {
+        signing_package: SigningPackage,
+        randomizer: frost::round2::Randomizer,
+    },
     SignatureShare(SignatureShare),
 }
 

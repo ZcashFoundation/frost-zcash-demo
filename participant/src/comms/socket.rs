@@ -13,14 +13,14 @@ use message_io::{
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
-use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier, SigningPackage};
+use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
 
 use std::{
     error::Error,
     io::{BufRead, Write},
 };
 
-use super::{Comms, Message};
+use super::{Comms, GenericSigningPackage, Message};
 use crate::args::Args;
 
 pub struct SocketComms {
@@ -83,7 +83,7 @@ impl Comms for SocketComms {
         _output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-    ) -> Result<SigningPackage, Box<dyn Error>> {
+    ) -> Result<GenericSigningPackage, Box<dyn Error>> {
         // Send Commitments to Coordinator
         let data = serde_json::to_vec(&Message::IdentifiedCommitments {
             identifier,
@@ -99,8 +99,19 @@ impl Comms for SocketComms {
             .ok_or(eyre!("Did not receive signing package!"))?;
 
         let message: Message = serde_json::from_slice(&data)?;
+        #[cfg(not(feature = "redpallas"))]
         if let Message::SigningPackage(signing_package) = message {
             Ok(signing_package)
+        } else {
+            Err(eyre!("Expected SigningPackage message"))?
+        }
+        #[cfg(feature = "redpallas")]
+        if let Message::SigningPackageAndRandomizer {
+            signing_package,
+            randomizer,
+        } = message
+        {
+            Ok((signing_package, randomizer))
         } else {
             Err(eyre!("Expected SigningPackage message"))?
         }

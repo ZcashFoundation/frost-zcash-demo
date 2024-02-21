@@ -1,5 +1,3 @@
-#[cfg(feature = "redpallas")]
-use frost::FieldError;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -32,32 +30,20 @@ pub async fn round_2_request_inputs(
 ) -> Result<Round2Config, Box<dyn std::error::Error>> {
     writeln!(logger, "=== Round 2 ===")?;
 
-    let signing_package = comms
+    let r = comms
         .get_signing_package(input, logger, commitments, identifier)
         .await?;
 
     #[cfg(feature = "redpallas")]
     {
-        writeln!(logger, "Enter the randomizer (hex string):")?;
-
-        let mut json = String::new();
-
-        input.read_line(&mut json).unwrap();
-
-        let randomizer = frost::round2::Randomizer::deserialize(
-            &hex::decode(json.trim())
-                .map_err(|_| Error::FieldError(FieldError::MalformedScalar))?
-                .try_into()
-                .map_err(|_| Error::FieldError(FieldError::MalformedScalar))?,
-        )?;
         Ok(Round2Config {
-            signing_package,
-            randomizer,
+            signing_package: r.0,
+            randomizer: r.1,
         })
     }
 
     #[cfg(not(feature = "redpallas"))]
-    Ok(Round2Config { signing_package })
+    Ok(Round2Config { signing_package: r })
 }
 
 pub fn generate_signature(

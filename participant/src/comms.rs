@@ -17,7 +17,7 @@ use frost::{
     round1::SigningCommitments,
     round2::SignatureShare,
     serde::{self, Deserialize, Serialize},
-    Identifier, SigningPackage,
+    Identifier,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -28,9 +28,20 @@ pub enum Message {
         identifier: Identifier,
         commitments: SigningCommitments,
     },
-    SigningPackage(SigningPackage),
+    #[cfg(not(feature = "redpallas"))]
+    SigningPackage(frost::SigningPackage),
+    #[cfg(feature = "redpallas")]
+    SigningPackageAndRandomizer {
+        signing_package: frost::SigningPackage,
+        randomizer: frost::round2::Randomizer,
+    },
     SignatureShare(SignatureShare),
 }
+
+#[cfg(not(feature = "redpallas"))]
+pub type GenericSigningPackage = frost::SigningPackage;
+#[cfg(feature = "redpallas")]
+pub type GenericSigningPackage = (frost::SigningPackage, frost::round2::Randomizer);
 
 #[async_trait(?Send)]
 pub trait Comms {
@@ -40,7 +51,7 @@ pub trait Comms {
         output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-    ) -> Result<SigningPackage, Box<dyn Error>>;
+    ) -> Result<GenericSigningPackage, Box<dyn Error>>;
 
     async fn send_signature_share(
         &mut self,
