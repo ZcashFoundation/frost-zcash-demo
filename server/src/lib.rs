@@ -2,6 +2,7 @@ pub mod args;
 mod functions;
 mod state;
 mod types;
+use tower_http::trace::TraceLayer;
 pub use types::*;
 
 use args::Args;
@@ -37,6 +38,7 @@ pub fn router() -> Router {
             post(functions::get_signature_shares),
         )
         .route("/close_session", post(functions::close_session))
+        .layer(TraceLayer::new_for_http())
         .with_state(shared_state)
 }
 
@@ -52,6 +54,7 @@ pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
 /// An error. Wraps a StatusCode which is returned by the server when the
 /// error happens during a API call, and a generic eyre::Report.
 // TODO: create an enum with specific errors
+#[derive(Debug)]
 pub struct AppError(StatusCode, eyre::Report);
 
 impl IntoResponse for AppError {

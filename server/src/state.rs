@@ -8,6 +8,8 @@ use uuid::Uuid;
 use reddsa::frost::redpallas as frost;
 
 /// The current state of the server, and the required data for the state.
+#[derive(derivative::Derivative)]
+#[derivative(Debug)]
 pub enum SessionState {
     /// Waiting for participants to send their commitments.
     WaitingForCommitments {
@@ -33,6 +35,7 @@ pub enum SessionState {
         /// Randomizer sent by coordinator to be sent to participants, for each
         /// message being signed.
         /// (Rerandomized FROST only. TODO: make it optional?)
+        #[derivative(Debug = "ignore")]
         randomizer: Vec<frost::round2::Randomizer>,
         /// Auxiliary (optional) message. A context-specific data that is
         /// supposed to be interpreted by the participants.
@@ -58,6 +61,7 @@ impl Default for SessionState {
 }
 
 /// A particular signing session.
+#[derive(Debug)]
 pub struct Session {
     /// The number of signers in the session.
     pub(crate) num_signers: u16,
@@ -70,7 +74,7 @@ pub struct Session {
 }
 
 /// The global state of the server.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct AppState {
     /// Mapping of signing sessions by UUID.
     pub(crate) sessions: HashMap<Uuid, Session>,

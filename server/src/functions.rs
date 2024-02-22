@@ -12,10 +12,12 @@ use crate::{
 };
 
 /// Implement the create_new_session API.
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
+    tracing::info!("create_new_session");
     if args.message_count == 0 {
         return Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -38,6 +40,7 @@ pub(crate) async fn create_new_session(
 }
 
 /// Implement the get_session_info API
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     Json(args): Json<GetSessionInfoArgs>,
@@ -57,6 +60,7 @@ pub(crate) async fn get_session_info(
 
 /// Implement the send_commitments API
 // TODO: get identifier from channel rather from arguments
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_commitments(
     State(state): State<SharedState>,
     Json(args): Json<SendCommitmentsArgs>,
@@ -103,6 +107,7 @@ pub(crate) async fn send_commitments(
 }
 
 /// Implement the get_commitments API
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_commitments(
     State(state): State<SharedState>,
     Json(args): Json<GetCommitmentsArgs>,
@@ -136,6 +141,7 @@ pub(crate) async fn get_commitments(
 }
 
 /// Implement the send_signing_package API
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_signing_package(
     State(state): State<SharedState>,
     Json(args): Json<SendSigningPackageArgs>,
@@ -179,6 +185,7 @@ pub(crate) async fn send_signing_package(
 }
 
 /// Implement the get_signing_package API
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_signing_package(
     State(state): State<SharedState>,
     Json(args): Json<GetSigningPackageArgs>,
@@ -211,6 +218,7 @@ pub(crate) async fn get_signing_package(
 
 /// Implement the send_signature_share API
 // TODO: get identifier from channel rather from arguments
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_signature_share(
     State(state): State<SharedState>,
     Json(args): Json<SendSignatureShareArgs>,
@@ -264,6 +272,7 @@ pub(crate) async fn send_signature_share(
 }
 
 /// Implement the get_signature_shares API
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_signature_shares(
     State(state): State<SharedState>,
     Json(args): Json<GetSignatureSharesArgs>,
@@ -299,6 +308,7 @@ pub(crate) async fn get_signature_shares(
 }
 
 /// Implement the close_session API.
+#[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn close_session(
     State(state): State<SharedState>,
     Json(args): Json<CloseSessionArgs>,
