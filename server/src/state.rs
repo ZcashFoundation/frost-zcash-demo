@@ -24,6 +24,9 @@ pub enum SessionState {
     /// SigningPackage ready to be fetched by participants. Waiting for
     /// participants to send their signature shares.
     WaitingForSignatureShares {
+        /// Identifiers of the participants that sent commitments in the
+        /// previous state.
+        identifiers: BTreeSet<frost::Identifier>,
         /// SigningPackage sent by the coordinator to be sent to participants,
         /// for each message being signed.
         signing_package: Vec<frost::SigningPackage>,
@@ -56,8 +59,10 @@ impl Default for SessionState {
 
 /// A particular signing session.
 pub struct Session {
+    /// The number of signers in the session.
+    pub(crate) num_signers: u16,
     /// The set of identifiers for the session.
-    pub(crate) identifiers: BTreeSet<frost::Identifier>,
+    // pub(crate) identifiers: BTreeSet<frost::Identifier>,
     /// The number of messages being simultaneously signed.
     pub(crate) message_count: u8,
     /// The session state.

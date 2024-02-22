@@ -25,7 +25,7 @@ pub(crate) async fn create_new_session(
     // Create new session object.
     let id = Uuid::new_v4();
     let session = Session {
-        identifiers: args.identifiers.iter().cloned().collect(),
+        num_signers: args.num_signers,
         message_count: args.message_count,
         state: SessionState::WaitingForCommitments {
             commitments: Default::default(),
@@ -50,7 +50,7 @@ pub(crate) async fn get_session_info(
     ))?;
 
     Ok(Json(GetSessionInfoOutput {
-        identifiers: session.identifiers.iter().copied().collect(),
+        num_signers: session.num_signers,
         message_count: session.message_count,
     }))
 }
@@ -74,9 +74,6 @@ pub(crate) async fn send_commitments(
 
     match &mut session.state {
         SessionState::WaitingForCommitments { commitments } => {
-            if !session.identifiers.contains(&args.identifier) {
-                return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
-            }
             if args.commitments.len() != session.message_count as usize {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -89,7 +86,7 @@ pub(crate) async fn send_commitments(
             // poor networking connectivity leading to retries)
             commitments.insert(args.identifier, args.commitments);
             // If complete, advance to next state
-            if commitments.keys().cloned().collect::<BTreeSet<_>>() == session.identifiers {
+            if commitments.len() == session.num_signers as usize {
                 session.state = SessionState::CommitmentsReady {
                     commitments: commitments.clone(),
                 }
@@ -154,7 +151,7 @@ pub(crate) async fn send_signing_package(
         ))?;
 
     match &mut session.state {
-        SessionState::CommitmentsReady { .. } => {
+        SessionState::CommitmentsReady { commitments } => {
             if args.signing_package.len() != session.message_count as usize
                 || args.randomizer.len() != session.message_count as usize
             {
@@ -164,6 +161,7 @@ pub(crate) async fn send_signing_package(
                 ));
             }
             session.state = SessionState::WaitingForSignatureShares {
+                identifiers: commitments.keys().cloned().collect(),
                 signing_package: args.signing_package,
                 signature_shares: Default::default(),
                 randomizer: args.randomizer,
@@ -194,6 +192,7 @@ pub(crate) async fn get_signing_package(
 
     match &session.state {
         SessionState::WaitingForSignatureShares {
+            identifiers: _,
             signing_package,
             signature_shares: _,
             randomizer,
@@ -228,12 +227,13 @@ pub(crate) async fn send_signature_share(
 
     match &mut session.state {
         SessionState::WaitingForSignatureShares {
+            identifiers,
             signing_package: _,
             signature_shares,
             randomizer: _,
             aux_msg: _,
         } => {
-            if !session.identifiers.contains(&args.identifier) {
+            if !identifiers.contains(&args.identifier) {
                 return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
             }
             if args.signature_share.len() != session.message_count as usize {
@@ -247,7 +247,7 @@ pub(crate) async fn send_signature_share(
             // poor networking connectivity leading to retries)
             signature_shares.insert(args.identifier, args.signature_share);
             // If complete, advance to next state
-            if signature_shares.keys().cloned().collect::<BTreeSet<_>>() == session.identifiers {
+            if signature_shares.keys().cloned().collect::<BTreeSet<_>>() == *identifiers {
                 session.state = SessionState::SignatureSharesReady {
                     signature_shares: signature_shares.clone(),
                 };

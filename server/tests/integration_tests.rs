@@ -38,7 +38,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     let res = server
         .post("/create_new_session")
         .json(&server::CreateNewSessionArgs {
-            identifiers: key_packages.keys().copied().collect::<Vec<_>>(),
+            num_signers: 2,
             message_count: 2,
         })
         .await;
@@ -51,7 +51,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
 
     // Map to store the SigningNonces (for each message, for each participant)
     let mut nonces_map = BTreeMap::<_, _>::new();
-    for (identifier, key_package) in key_packages.iter() {
+    for (identifier, key_package) in key_packages.iter().take(2) {
         // As participant `identifier`
 
         // Get the number of messages (the participants wouldn't know without
@@ -85,7 +85,9 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
                 commitments: commitments_vec,
             })
             .await;
-        res.assert_status_ok();
+        if res.status_code() != 200 {
+            panic!("status code: {}; error: {}", res.status_code(), res.text());
+        }
     }
 
     // As the coordinator, get the commitments
@@ -127,7 +129,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
 
     // As each participant, get SigningPackages and generate the SignatureShares
     // for each.
-    for (identifier, key_package) in key_packages.iter() {
+    for (identifier, key_package) in key_packages.iter().take(2) {
         // As participant `identifier`
 
         // Get SigningPackages
@@ -201,21 +203,6 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
 /// A better example on how to write client code.
 #[tokio::test]
 async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
-    // Create test values
-    let mut rng = thread_rng();
-    let (shares, _pubkeys) =
-        frost::keys::generate_with_dealer(3, 2, frost::keys::IdentifierList::Default, &mut rng)
-            .unwrap();
-    let key_packages: BTreeMap<_, _> = shares
-        .iter()
-        .map(|(identifier, secret_share)| {
-            (
-                *identifier,
-                frost::keys::KeyPackage::try_from(secret_share.clone()).unwrap(),
-            )
-        })
-        .collect();
-
     // Spawn server for testing
     tokio::spawn(async move {
         server::run(&Args {
@@ -235,7 +222,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let r = client
         .post("http://127.0.0.1:2744/create_new_session")
         .json(&server::CreateNewSessionArgs {
-            identifiers: key_packages.keys().copied().collect::<Vec<_>>(),
+            num_signers: 2,
             message_count: 1,
         })
         .send()
