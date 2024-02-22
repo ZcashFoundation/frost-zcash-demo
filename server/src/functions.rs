@@ -16,10 +16,17 @@ pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
+    if args.message_count == 0 {
+        return Err(AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("invalid message_count"),
+        ));
+    }
     // Create new session object.
     let id = Uuid::new_v4();
     let session = Session {
         identifiers: args.identifiers.iter().cloned().collect(),
+        message_count: args.message_count,
         state: SessionState::WaitingForCommitments {
             commitments: Default::default(),
         },
@@ -28,6 +35,24 @@ pub(crate) async fn create_new_session(
     state.write().unwrap().sessions.insert(id, session);
     let user = CreateNewSessionOutput { session_id: id };
     Ok(Json(user))
+}
+
+/// Implement the get_session_info API
+pub(crate) async fn get_session_info(
+    State(state): State<SharedState>,
+    Json(args): Json<GetSessionInfoArgs>,
+) -> Result<Json<GetSessionInfoOutput>, AppError> {
+    let state_lock = state.read().unwrap();
+
+    let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
+        StatusCode::NOT_FOUND,
+        eyre!("session ID not found"),
+    ))?;
+
+    Ok(Json(GetSessionInfoOutput {
+        identifiers: session.identifiers.iter().copied().collect(),
+        message_count: session.message_count,
+    }))
 }
 
 /// Implement the send_commitments API
@@ -51,6 +76,12 @@ pub(crate) async fn send_commitments(
         SessionState::WaitingForCommitments { commitments } => {
             if !session.identifiers.contains(&args.identifier) {
                 return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
+            }
+            if args.commitments.len() != session.message_count as usize {
+                return Err(AppError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    eyre!("wrong number of commitments"),
+                ));
             }
             // Add commitment to map.
             // Currently ignores the possibility of overwriting previous values
@@ -88,7 +119,17 @@ pub(crate) async fn get_commitments(
 
     match &session.state {
         SessionState::CommitmentsReady { commitments } => Ok(Json(GetCommitmentsOutput {
-            commitments: commitments.clone(),
+            // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
+            // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
+            // it easier for the coordinator to build the SigningPackages.
+            commitments: (0..session.message_count)
+                .map(|i| {
+                    commitments
+                        .iter()
+                        .map(|(id, c)| (*id, c[i as usize]))
+                        .collect()
+                })
+                .collect(),
         })),
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -114,10 +155,19 @@ pub(crate) async fn send_signing_package(
 
     match &mut session.state {
         SessionState::CommitmentsReady { .. } => {
+            if args.signing_package.len() != session.message_count as usize
+                || args.randomizer.len() != session.message_count as usize
+            {
+                return Err(AppError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    eyre!("wrong number of inputs"),
+                ));
+            }
             session.state = SessionState::WaitingForSignatureShares {
                 signing_package: args.signing_package,
                 signature_shares: Default::default(),
                 randomizer: args.randomizer,
+                aux_msg: args.aux_msg,
             };
         }
         _ => {
@@ -147,9 +197,11 @@ pub(crate) async fn get_signing_package(
             signing_package,
             signature_shares: _,
             randomizer,
+            aux_msg,
         } => Ok(Json(GetSigningPackageOutput {
             signing_package: signing_package.clone(),
-            randomizer: *randomizer,
+            randomizer: randomizer.clone(),
+            aux_msg: aux_msg.clone(),
         })),
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -179,9 +231,16 @@ pub(crate) async fn send_signature_share(
             signing_package: _,
             signature_shares,
             randomizer: _,
+            aux_msg: _,
         } => {
             if !session.identifiers.contains(&args.identifier) {
                 return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
+            }
+            if args.signature_share.len() != session.message_count as usize {
+                return Err(AppError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    eyre!("wrong number of signature shares"),
+                ));
             }
             // Currently ignoring the possibility of overwriting previous values
             // (it seems better to ignore overwrites, which could be caused by
@@ -219,7 +278,17 @@ pub(crate) async fn get_signature_shares(
     match &session.state {
         SessionState::SignatureSharesReady { signature_shares } => {
             Ok(Json(GetSignatureSharesOutput {
-                signature_shares: signature_shares.clone(),
+                // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
+                // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
+                // it easier for the coordinator to build the SigningPackages.
+                signature_shares: (0..session.message_count)
+                    .map(|i| {
+                        signature_shares
+                            .iter()
+                            .map(|(id, s)| (*id, s[i as usize]))
+                            .collect()
+                    })
+                    .collect(),
             }))
         }
         _ => Err(AppError(

@@ -20,6 +20,7 @@ pub fn router() -> Router {
     let shared_state = state::SharedState::default();
     Router::new()
         .route("/create_new_session", post(functions::create_new_session))
+        .route("/get_session_info", post(functions::get_session_info))
         .route("/send_commitments", post(functions::send_commitments))
         .route("/get_commitments", post(functions::get_commitments))
         .route(
