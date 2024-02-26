@@ -29,8 +29,9 @@ pub struct Args {
     #[arg(short = 'm', long, default_value = "-")]
     pub message: String,
 
-    /// The randomizer to use. Can be a file with the raw randomizer, or "-". If "-"
-    /// is specified, then it will be read from standard input as a hex string.
+    /// The randomizer to use. Can be a file with the raw randomizer, empty, or
+    /// "-". If empty, a random one will be generated. If "-" is specified, then
+    /// it will be read from standard input as a hex string.
     #[cfg(feature = "redpallas")]
     #[arg(short = 'r', long, default_value = "-")]
     pub randomizer: String,

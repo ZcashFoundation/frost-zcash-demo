@@ -43,7 +43,7 @@ pub async fn cli(
     .await?;
 
     #[cfg(feature = "redpallas")]
-    let randomizer = request_randomizer(args, reader, logger)?;
+    let randomizer = request_randomizer(args, reader, logger, &signing_package)?;
 
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 

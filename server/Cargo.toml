@@ -26,8 +26,10 @@ uuid = { version = "1.6.1", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
 axum-test = "14.2.2"
+coordinator = { path = "../coordinator" }
 reqwest = { version = "0.11.23", features = ["json"] }
+regex = "1.10.3"
 
 [features]
-redpallas = []
+redpallas = ["coordinator/redpallas"]
 default = []
