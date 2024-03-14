@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.77"
-frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+frost-ed25519 = { version = "1.0.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = ["frost"] }
 hex = "0.4"
 rand = "0.8"

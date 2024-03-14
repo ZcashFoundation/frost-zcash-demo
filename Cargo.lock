@@ -474,9 +474,9 @@ dependencies = [
 
 [[package]]
 name = "curve25519-dalek"
-version = "4.1.1"
+version = "4.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e89b8c6a2e4b1f45971ad09761aafb85514a84744b67a95e32c3cc1352d1f65c"
+checksum = "0a677b8922c94e01bdbb12126b0bc852f00447528dee1782229af9c720c3f348"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -691,9 +691,9 @@ dependencies = [
 
 [[package]]
 name = "frost-core"
-version = "1.0.0-rc.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eae732628620e7e52b3146df2eef3636f321b63dfba6e92b3b67147e0c5b2bb2"
+checksum = "45d6280625f1603d160df24b23e4984a6a7286f41455ae606823d0104c32e834"
 dependencies = [
  "byteorder",
  "const-crc32",
@@ -713,9 +713,9 @@ dependencies = [
 
 [[package]]
 name = "frost-ed25519"
-version = "1.0.0-rc.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc013ae54f8da9f6eed495c797e0e3948cf69b3784ac306f8616cdd697ae5372"
+checksum = "b359e465bc1024663fd6cb68c3eda44d00c151246419857885f2bf267f1168ea"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -727,9 +727,9 @@ dependencies = [
 
 [[package]]
 name = "frost-rerandomized"
-version = "1.0.0-rc.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abc9f0445f27262bd1e1d4754ad8ce7ac03c8d079704e6c696f5e40bab85d1e2"
+checksum = "52c58f58ea009000db490efd9a3936d0035647a2b00c7ba8f3868c2ed0306b0b"
 dependencies = [
  "derive-getters",
  "document-features",
