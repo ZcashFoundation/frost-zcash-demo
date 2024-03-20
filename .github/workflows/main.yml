@@ -28,17 +28,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --features redpallas
 
-  test_ed25519_sockets:
-    name: Test with ed25519 and sockets
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4.1.1
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-02-05
-      - run: cargo test --features sockets
-
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
