@@ -32,9 +32,9 @@ async fn trusted_dealer_journey() {
 
     let coordinator_args = CoordinatorArgs {
         cli: true,
-        public_key_package: "-".to_string(),
-        signature: "-".to_string(),
-        message: "-".to_string(),
+        public_key_package: "".to_string(),
+        signature: "".to_string(),
+        message: "".to_string(),
         ..Default::default()
     };
     let mut coordinator_comms = CoordinatorCLIComms {};

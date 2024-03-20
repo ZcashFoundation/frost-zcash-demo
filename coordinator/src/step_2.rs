@@ -19,7 +19,7 @@ pub struct CommitmentsConfig {
     pub signer_commitments: BTreeMap<Identifier, SigningCommitments>,
 }
 
-pub async fn step_2(
+pub fn step_2(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
