@@ -16,13 +16,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
-<<<<<<< HEAD
       - uses: dtolnay/rust-toolchain@stable
-=======
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-02-05
->>>>>>> 0993da9 (pin to older nightly version)
       - run: cargo test
 
   test_redpallas:
@@ -31,13 +25,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
-<<<<<<< HEAD
       - uses: dtolnay/rust-toolchain@stable
-=======
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-02-05
->>>>>>> 0993da9 (pin to older nightly version)
       - run: cargo test --features redpallas
 
   test_ed25519_sockets:
