@@ -19,7 +19,7 @@ pub struct CommitmentsConfig {
     pub signer_commitments: BTreeMap<Identifier, SigningCommitments>,
 }
 
-pub async fn step_2(
+pub fn step_2(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
@@ -38,7 +38,7 @@ fn request_message(
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier, SigningCommitments>,
 ) -> Result<SigningPackage, Box<dyn std::error::Error>> {
-    let message = if args.message == "-" {
+    let message = if args.message.is_empty() {
         writeln!(logger, "The message to be signed (hex encoded)")?;
 
         let mut msg = String::new();

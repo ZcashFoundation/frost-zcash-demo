@@ -64,9 +64,7 @@ impl SocketComms {
             } // Tcp or Ws
             NetEvent::Message(endpoint, data) => {
                 println!("Received: {}", String::from_utf8_lossy(data));
-                let _ = input_tx
-                    .try_send((endpoint, data.to_vec()))
-                    .map_err(|e| println!("{}", e));
+                input_tx.try_send((endpoint, data.to_vec())).unwrap();
             }
             NetEvent::Disconnected(endpoint) => {
                 println!("Disconnected from server at {}", endpoint)

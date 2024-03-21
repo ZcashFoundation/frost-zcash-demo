@@ -109,7 +109,7 @@ fn print_signature(
     logger: &mut dyn Write,
     group_signature: Signature,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if args.signature == "-" {
+    if args.signature.is_empty() {
         writeln!(
             logger,
             "Group signature: {}",

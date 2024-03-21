@@ -10,7 +10,7 @@ pub struct Args {
     pub cli: bool,
 
     /// Public key package to use. Can be a file with a JSON-encoded
-    /// package, or "-". If the file does not exist or if "-" is specified,
+    /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
     #[arg(short = 'k', long, default_value = "key-package-1.json")]
     pub key_package: String,
