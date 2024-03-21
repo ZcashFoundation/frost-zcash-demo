@@ -42,7 +42,7 @@ impl SocketComms {
         let _ = handler
             .network()
             .listen(Transport::FramedTcp, addr)
-            .map_err(|e| println!("{}", e));
+            .unwrap();
 
         let socket_comm = Self {
             input_rx: rx,
@@ -63,9 +63,7 @@ impl SocketComms {
             NetEvent::Accepted(_endpoint, _listener) => println!("Client connected"), // Tcp or Ws
             NetEvent::Message(endpoint, data) => {
                 println!("Received: {}", String::from_utf8_lossy(data));
-                let _ = input_tx
-                    .try_send((endpoint, data.to_vec()))
-                    .map_err(|e| println!("{}", e));
+                input_tx.try_send((endpoint, data.to_vec())).unwrap();
             }
             NetEvent::Disconnected(_endpoint) => println!("Client disconnected"), //Tcp or Ws
         });
