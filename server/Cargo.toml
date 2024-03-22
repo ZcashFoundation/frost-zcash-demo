@@ -10,6 +10,7 @@ axum = "0.7.3"
 clap = { version = "4.5.2", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
 rand = "0.8"
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = [
     "frost",
@@ -24,5 +25,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.6.1", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
-axum-test = "14.4.0"
+axum-test = "14.2.2"
+coordinator = { path = "../coordinator" }
 reqwest = { version = "0.11.26", features = ["json"] }
+regex = "1.10.3"
+
+[features]
+redpallas = ["coordinator/redpallas"]
+default = []

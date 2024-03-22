@@ -9,6 +9,11 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
+    /// HTTP mode. If enabled, it will use HTTP communication with a
+    /// FROST server.
+    #[arg(long, default_value_t = false)]
+    pub http: bool,
+
     /// The number of participants. If 0, will prompt for a value.
     #[arg(short = 'n', long, default_value_t = 0)]
     pub num_signers: u16,
@@ -24,8 +29,9 @@ pub struct Args {
     #[arg(short = 'm', long, default_value = "")]
     pub message: String,
 
-    /// The randomizer to use. Can be a file with the raw randomizer, or "-". If "-"
-    /// is specified, then it will be read from standard input as a hex string.
+    /// The randomizer to use. Can be a file with the raw randomizer, empty, or
+    /// "-". If empty, a random one will be generated. If "-" is specified, then
+    /// it will be read from standard input as a hex string.
     #[cfg(feature = "redpallas")]
     #[arg(short = 'r', long, default_value = "")]
     pub randomizer: String,

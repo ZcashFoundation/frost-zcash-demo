@@ -3,9 +3,12 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use uuid::Uuid;
-
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
+
+use uuid::Uuid;
 
 /// The current state of the server, and the required data for the state.
 #[derive(derivative::Derivative)]
@@ -35,7 +38,8 @@ pub enum SessionState {
         /// Randomizer sent by coordinator to be sent to participants, for each
         /// message being signed.
         /// (Rerandomized FROST only. TODO: make it optional?)
-        #[derivative(Debug = "ignore")]
+        #[cfg(feature = "redpallas")]
+        #[cfg_attr(feature = "redpallas", derivative(Debug = "ignore"))]
         randomizer: Vec<frost::round2::Randomizer>,
         /// Auxiliary (optional) message. A context-specific data that is
         /// supposed to be interpreted by the participants.

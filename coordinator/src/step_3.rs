@@ -17,7 +17,12 @@ pub fn request_randomizer(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
+    signing_package: &SigningPackage,
 ) -> Result<frost::round2::Randomizer, Box<dyn std::error::Error>> {
+    if args.randomizer.is_empty() {
+        let rng = rand::thread_rng();
+        return Ok(frost::round2::Randomizer::new(rng, signing_package)?);
+    };
     let randomizer = if args.randomizer == "-" {
         writeln!(logger, "Enter the randomizer (hex string):")?;
 

@@ -2,6 +2,7 @@ use std::io::{BufRead, Write};
 
 use crate::args::Args;
 use crate::comms::cli::CLIComms;
+use crate::comms::http::HTTPComms;
 use crate::comms::socket::SocketComms;
 use crate::comms::Comms;
 use crate::step_1::step_1;
@@ -20,6 +21,8 @@ pub async fn cli(
 
     let mut comms: Box<dyn Comms> = if args.cli {
         Box::new(CLIComms {})
+    } else if args.http {
+        Box::new(HTTPComms::new(args))
     } else {
         Box::new(SocketComms::new(args))
     };
@@ -39,7 +42,7 @@ pub async fn cli(
     )?;
 
     #[cfg(feature = "redpallas")]
-    let randomizer = request_randomizer(args, reader, logger)?;
+    let randomizer = request_randomizer(args, reader, logger, &signing_package)?;
 
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 

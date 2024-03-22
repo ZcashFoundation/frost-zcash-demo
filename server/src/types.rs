@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+pub use uuid::Uuid;
 
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,7 +53,8 @@ pub struct SendSigningPackageArgs {
     pub session_id: Uuid,
     pub signing_package: Vec<frost::SigningPackage>,
     pub aux_msg: Vec<u8>,
-    #[derivative(Debug = "ignore")]
+    #[cfg(feature = "redpallas")]
+    #[cfg_attr(feature = "redpallas", derivative(Debug = "ignore"))]
     pub randomizer: Vec<frost::round2::Randomizer>,
 }
 
@@ -63,7 +67,8 @@ pub struct GetSigningPackageArgs {
 #[derivative(Debug)]
 pub struct GetSigningPackageOutput {
     pub signing_package: Vec<frost::SigningPackage>,
-    #[derivative(Debug = "ignore")]
+    #[cfg(feature = "redpallas")]
+    #[cfg_attr(feature = "redpallas", derivative(Debug = "ignore"))]
     pub randomizer: Vec<frost::round2::Randomizer>,
     pub aux_msg: Vec<u8>,
 }
