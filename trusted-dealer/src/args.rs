@@ -5,7 +5,7 @@ use clap::Parser;
 pub struct Args {
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
-    /// If false, socket communication is enabled.
+    /// If false, it will be non-interactive.
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
