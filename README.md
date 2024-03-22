@@ -52,9 +52,10 @@ and in separate terminals:
 4. Run `cargo run --bin coordinator`
 5. Run `cargo run --bin participants`. Do this in separate terminals for separate participants.
 
-The demos support two communication mechanisms. By using the `--cli` flag, they
-will print JSON objects to the terminal, and participants will need to copy &
-paste objects and send them amongst themselves to complete the protocol.
+The demos support two communication mechanisms. By using the `--cli` flag (e.g.
+`cargo run --bin dkg -- --cli`), they will print JSON objects to the terminal,
+and participants will need to copy & paste objects and send them amongst
+themselves to complete the protocol.
 
 Without the `--cli` flag, the demos will use socket communications. The
 coordinator will act as the server and the participants will be clients. See
