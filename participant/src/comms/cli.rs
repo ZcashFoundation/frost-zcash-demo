@@ -13,6 +13,7 @@ use frost::{
     SigningPackage,
 };
 
+use server::Uuid;
 use std::{
     error::Error,
     io::{BufRead, Write},
@@ -33,6 +34,7 @@ impl Comms for CLIComms {
         output: &mut dyn Write,
         _commitments: SigningCommitments,
         _identifier: Identifier,
+        _session_id: Uuid,
     ) -> Result<GenericSigningPackage, Box<dyn Error>> {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
 
@@ -64,6 +66,7 @@ impl Comms for CLIComms {
 
     async fn send_signature_share(
         &mut self,
+        _identifier: Identifier,
         _signature_share: SignatureShare,
     ) -> Result<(), Box<dyn Error>> {
         Ok(())

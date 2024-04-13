@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod http;
 pub mod socket;
 
 use async_trait::async_trait;
@@ -19,6 +20,8 @@ use frost::{
     serde::{self, Deserialize, Serialize},
     Identifier,
 };
+
+use server::Uuid;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
@@ -51,10 +54,12 @@ pub trait Comms {
         output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
+        session_id: Uuid,
     ) -> Result<GenericSigningPackage, Box<dyn Error>>;
 
     async fn send_signature_share(
         &mut self,
+        identifier: Identifier,
         signature_share: SignatureShare,
     ) -> Result<(), Box<dyn Error>>;
 }

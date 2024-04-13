@@ -14,6 +14,7 @@ use participant::comms::cli::CLIComms;
 use participant::round2::print_values_round_2;
 use participant::round2::{generate_signature, round_2_request_inputs, Round2Config};
 use rand::thread_rng;
+use server::Uuid;
 
 const PUBLIC_KEY: &str = "adf6ab1f882d04988eadfaa52fb175bf37b6247785d7380fde3fb9d68032470d";
 const GROUP_PUBLIC_KEY: &str = "087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e";
@@ -72,6 +73,7 @@ async fn check_valid_round_2_inputs() {
         &mut buf,
         my_signer_commitments,
         Identifier::try_from(1).unwrap(),
+        Uuid::nil(),
     )
     .await;
 

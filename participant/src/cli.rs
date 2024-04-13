@@ -1,9 +1,11 @@
 use crate::args::Args;
 
 use crate::comms::cli::CLIComms;
+use crate::comms::http::HTTPComms;
 use crate::comms::socket::SocketComms;
 
 use crate::comms::Comms;
+use server::Uuid;
 
 use crate::round1::{generate_nonces_and_commitments, print_values, request_inputs};
 use crate::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
@@ -17,6 +19,8 @@ pub async fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut comms: Box<dyn Comms> = if args.cli {
         Box::new(CLIComms {})
+    } else if args.http {
+        Box::new(HTTPComms::new(args))
     } else {
         Box::new(SocketComms::new(args))
     };
@@ -35,17 +39,22 @@ pub async fn cli(
 
     // Round 2 - Sign
 
+    let session_id = Uuid::parse_str(&args.session_id)?;
+
     let round_2_config = round_2_request_inputs(
         &mut *comms,
         input,
         logger,
         commitments,
         *key_package.identifier(),
+        session_id,
     )
     .await?;
     let signature = generate_signature(round_2_config, &key_package, &nonces)?;
 
-    comms.send_signature_share(signature).await?;
+    comms
+        .send_signature_share(*key_package.identifier(), signature)
+        .await?;
 
     print_values_round_2(signature, logger)?;
 
