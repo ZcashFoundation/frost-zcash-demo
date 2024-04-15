@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.3"
+axum = "0.7.5"
 clap = { version = "4.5.4", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
