@@ -69,7 +69,6 @@ impl Comms for HTTPComms {
 
         // Receive SigningPackage from Coordinator
 
-        // let sp : Response = r::borrow(&self);
         let r = loop {
             let r = self
                 .client
@@ -86,10 +85,26 @@ impl Comms for HTTPComms {
             eprintln!("Signing package received");
         };
 
-        Ok(r.signing_package
+        #[cfg(feature = "redpallas")]
+        let signing_package = (
+            r.signing_package
+                .first()
+                .ok_or(eyre!("missing signing package"))
+                .cloned()?,
+            r.randomizer
+                .first()
+                .ok_or(eyre!("missing randomizer"))
+                .cloned()?,
+        );
+
+        #[cfg(not(feature = "redpallas"))]
+        let signing_package = r
+            .signing_package
             .first()
             .ok_or(eyre!("missing signing package"))
-            .cloned()?)
+            .cloned()?;
+
+        Ok(signing_package)
     }
 
     async fn send_signature_share(
@@ -108,13 +123,9 @@ impl Comms for HTTPComms {
                 identifier,
                 session_id: self.session_id,
                 signature_share: vec![signature_share],
-                #[cfg(feature = "redpallas")]
-                randomizer: vec![randomizer],
             })
             .send()
             .await?;
-        // .bytes()
-        // .await?;
 
         Ok(())
     }
