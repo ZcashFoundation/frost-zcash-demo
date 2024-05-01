@@ -80,9 +80,9 @@ impl Comms for HTTPComms {
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 eprint!(".");
             } else {
+                eprintln!("\nSigning package received");
                 break r.json::<server::GetSigningPackageOutput>().await?;
             }
-            eprintln!("Signing package received");
         };
 
         #[cfg(feature = "redpallas")]
