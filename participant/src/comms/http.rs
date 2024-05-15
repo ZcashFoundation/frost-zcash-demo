@@ -9,7 +9,6 @@ use reddsa::frost::redpallas as frost;
 use eyre::eyre;
 
 use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
-use reqwest::Response;
 
 use super::{Comms, GenericSigningPackage};
 
@@ -49,21 +48,17 @@ impl Comms for HTTPComms {
         _output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-        session_id: Uuid,
     ) -> Result<GenericSigningPackage, Box<dyn Error>> {
         // Send Commitments to Server
-        let r = self
-            .client
+        self.client
             .post(format!("{}/send_commitments", self.host_port))
             .json(&server::SendCommitmentsArgs {
-                session_id,
+                session_id: self.session_id,
                 identifier,
                 commitments: vec![commitments],
             })
             .send()
             .await?;
-
-        println!("commitments: {:?}", Response::text(r).await.unwrap());
 
         eprint!("Waiting for coordinator to send signing package...");
 
@@ -73,7 +68,9 @@ impl Comms for HTTPComms {
             let r = self
                 .client
                 .post(format!("{}/get_signing_package", self.host_port))
-                .json(&server::GetSigningPackageArgs { session_id })
+                .json(&server::GetSigningPackageArgs {
+                    session_id: self.session_id,
+                })
                 .send()
                 .await?;
             if r.status() != 200 {

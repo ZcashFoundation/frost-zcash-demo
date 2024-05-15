@@ -25,8 +25,6 @@ use participant::{
     round1::request_inputs as participant_input_round_1, round2::generate_signature,
 };
 
-use server::Uuid;
-
 #[tokio::test]
 async fn trusted_dealer_journey() {
     let mut buf = BufWriter::new(Vec::new());
@@ -159,7 +157,6 @@ async fn trusted_dealer_journey() {
             &mut buf,
             signing_commitments,
             participant_identifier,
-            Uuid::nil(),
         )
         .await
         .unwrap();

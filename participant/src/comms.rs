@@ -21,8 +21,6 @@ use frost::{
     Identifier,
 };
 
-use server::Uuid;
-
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
 #[allow(clippy::large_enum_variant)]
@@ -54,7 +52,6 @@ pub trait Comms {
         output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-        session_id: Uuid,
     ) -> Result<GenericSigningPackage, Box<dyn Error>>;
 
     async fn send_signature_share(

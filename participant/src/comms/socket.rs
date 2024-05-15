@@ -15,7 +15,6 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
 
-use server::Uuid;
 use std::{
     error::Error,
     io::{BufRead, Write},
@@ -82,7 +81,6 @@ impl Comms for SocketComms {
         _output: &mut dyn Write,
         commitments: SigningCommitments,
         identifier: Identifier,
-        _session_id: Uuid,
     ) -> Result<GenericSigningPackage, Box<dyn Error>> {
         // Send Commitments to Coordinator
         let data = serde_json::to_vec(&Message::IdentifiedCommitments {

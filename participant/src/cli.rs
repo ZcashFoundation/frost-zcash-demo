@@ -5,7 +5,6 @@ use crate::comms::http::HTTPComms;
 use crate::comms::socket::SocketComms;
 
 use crate::comms::Comms;
-use server::Uuid;
 
 use crate::round1::{generate_nonces_and_commitments, print_values, request_inputs};
 use crate::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
@@ -39,15 +38,12 @@ pub async fn cli(
 
     // Round 2 - Sign
 
-    let session_id = Uuid::parse_str(&args.session_id)?;
-
     let round_2_config = round_2_request_inputs(
         &mut *comms,
         input,
         logger,
         commitments,
         *key_package.identifier(),
-        session_id,
     )
     .await?;
     let signature = generate_signature(round_2_config, &key_package, &nonces)?;

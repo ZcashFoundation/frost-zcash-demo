@@ -2,7 +2,6 @@
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
-use server::Uuid;
 
 use crate::comms::Comms;
 use frost::{
@@ -28,12 +27,11 @@ pub async fn round_2_request_inputs(
     logger: &mut dyn Write,
     commitments: SigningCommitments,
     identifier: Identifier,
-    session_id: Uuid,
 ) -> Result<Round2Config, Box<dyn std::error::Error>> {
     writeln!(logger, "=== Round 2 ===")?;
 
     let r = comms
-        .get_signing_package(input, logger, commitments, identifier, session_id)
+        .get_signing_package(input, logger, commitments, identifier)
         .await?;
 
     #[cfg(feature = "redpallas")]
