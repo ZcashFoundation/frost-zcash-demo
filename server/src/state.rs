@@ -1,14 +1,16 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
-
 use uuid::Uuid;
+
+use crate::{
+    SerializedIdentifier, SerializedSignatureShare, SerializedSigningCommitments,
+    SerializedSigningPackage,
+};
+
+use crate::SerializedRandomizer;
 
 /// The current state of the server, and the required data for the state.
 #[derive(derivative::Derivative)]
@@ -18,41 +20,39 @@ pub enum SessionState {
     WaitingForCommitments {
         /// Commitments sent by participants so far, for each message being
         /// signed.
-        commitments: BTreeMap<frost::Identifier, Vec<frost::round1::SigningCommitments>>,
+        commitments: HashMap<SerializedIdentifier, Vec<SerializedSigningCommitments>>,
     },
     /// Commitments have been sent by all participants; ready to be fetched by
     /// the coordinator. Waiting for coordinator to send the SigningPackage.
     CommitmentsReady {
         /// All commitments sent by participants, for each message being signed.
-        commitments: BTreeMap<frost::Identifier, Vec<frost::round1::SigningCommitments>>,
+        commitments: HashMap<SerializedIdentifier, Vec<SerializedSigningCommitments>>,
     },
     /// SigningPackage ready to be fetched by participants. Waiting for
     /// participants to send their signature shares.
     WaitingForSignatureShares {
         /// Identifiers of the participants that sent commitments in the
         /// previous state.
-        identifiers: BTreeSet<frost::Identifier>,
+        identifiers: HashSet<SerializedIdentifier>,
         /// SigningPackage sent by the coordinator to be sent to participants,
         /// for each message being signed.
-        signing_package: Vec<frost::SigningPackage>,
+        signing_package: Vec<SerializedSigningPackage>,
         /// Randomizer sent by coordinator to be sent to participants, for each
-        /// message being signed.
-        /// (Rerandomized FROST only. TODO: make it optional?)
-        #[cfg(feature = "redpallas")]
-        #[cfg_attr(feature = "redpallas", derivative(Debug = "ignore"))]
-        randomizer: Vec<frost::round2::Randomizer>,
+        /// message being signed. Can be empty if not being used.
+        #[derivative(Debug = "ignore")]
+        randomizer: Vec<SerializedRandomizer>,
         /// Auxiliary (optional) message. A context-specific data that is
         /// supposed to be interpreted by the participants.
         aux_msg: Vec<u8>,
         /// Signature shares sent by participants so far, for each message being
         /// signed.
-        signature_shares: BTreeMap<frost::Identifier, Vec<frost::round2::SignatureShare>>,
+        signature_shares: HashMap<SerializedIdentifier, Vec<SerializedSignatureShare>>,
     },
     /// SignatureShares have been sent by all participants; ready to be fetched
     /// by the coordinator.
     SignatureSharesReady {
         /// Signature shares sent by participants, for each message being signed.
-        signature_shares: BTreeMap<frost::Identifier, Vec<frost::round2::SignatureShare>>,
+        signature_shares: HashMap<SerializedIdentifier, Vec<SerializedSignatureShare>>,
     },
 }
 
@@ -70,7 +70,7 @@ pub struct Session {
     /// The number of signers in the session.
     pub(crate) num_signers: u16,
     /// The set of identifiers for the session.
-    // pub(crate) identifiers: BTreeSet<frost::Identifier>,
+    // pub(crate) identifiers: BTreeSet<SerializedIdentifier>,
     /// The number of messages being simultaneously signed.
     pub(crate) message_count: u8,
     /// The session state.

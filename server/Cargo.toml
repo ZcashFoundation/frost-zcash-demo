@@ -10,13 +10,11 @@ axum = "0.7.5"
 clap = { version = "4.5.4", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
-frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+frost-core = { version = "1.0.0-rc.0", features = ["serde"] }
+frost-rerandomized = { version = "1.0.0-rc.0", features = ["serde"] }
 rand = "0.8"
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = [
-    "frost",
-    "serde",
-] }
 serde = { version = "1.0", features = ["derive"] }
+serdect = { version = "0.2.0" }
 serde_json = "1.0.116"
 tokio = { version = "1.37", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["trace"] }
@@ -26,10 +24,13 @@ uuid = { version = "1.6.1", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
 axum-test = "14.9.0"
-coordinator = { path = "../coordinator" }
+frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = [
+    "frost",
+    "serde",
+] }
 reqwest = { version = "0.12.4", features = ["json"] }
 regex = "1.10.4"
 
 [features]
-redpallas = ["coordinator/redpallas"]
 default = []

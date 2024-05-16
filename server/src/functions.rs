@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 use axum::{extract::State, http::StatusCode, Json};
 
@@ -107,7 +107,7 @@ pub(crate) async fn send_commitments(
 }
 
 /// Implement the get_commitments API
-#[tracing::instrument(ret, err(Debug))]
+// #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_commitments(
     State(state): State<SharedState>,
     Json(args): Json<GetCommitmentsArgs>,
@@ -128,7 +128,7 @@ pub(crate) async fn get_commitments(
                 .map(|i| {
                     commitments
                         .iter()
-                        .map(|(id, c)| (*id, c[i as usize]))
+                        .map(|(id, c)| (id.clone(), c[i as usize].clone()))
                         .collect()
                 })
                 .collect(),
@@ -164,8 +164,9 @@ pub(crate) async fn send_signing_package(
                     eyre!("wrong number of inputs"),
                 ));
             }
-            #[cfg(feature = "redpallas")]
-            if args.randomizer.len() != session.message_count as usize {
+            if args.randomizer.len() != session.message_count as usize
+                && !args.randomizer.is_empty()
+            {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     eyre!("wrong number of inputs"),
@@ -175,7 +176,6 @@ pub(crate) async fn send_signing_package(
                 identifiers: commitments.keys().cloned().collect(),
                 signing_package: args.signing_package,
                 signature_shares: Default::default(),
-                #[cfg(feature = "redpallas")]
                 randomizer: args.randomizer,
                 aux_msg: args.aux_msg,
             };
@@ -208,12 +208,10 @@ pub(crate) async fn get_signing_package(
             identifiers: _,
             signing_package,
             signature_shares: _,
-            #[cfg(feature = "redpallas")]
             randomizer,
             aux_msg,
         } => Ok(Json(GetSigningPackageOutput {
             signing_package: signing_package.clone(),
-            #[cfg(feature = "redpallas")]
             randomizer: randomizer.clone(),
             aux_msg: aux_msg.clone(),
         })),
@@ -246,8 +244,7 @@ pub(crate) async fn send_signature_share(
             identifiers,
             signing_package: _,
             signature_shares,
-            #[cfg(feature = "redpallas")]
-                randomizer: _,
+            randomizer: _,
             aux_msg: _,
         } => {
             if !identifiers.contains(&args.identifier) {
@@ -264,7 +261,7 @@ pub(crate) async fn send_signature_share(
             // poor networking connectivity leading to retries)
             signature_shares.insert(args.identifier, args.signature_share);
             // If complete, advance to next state
-            if signature_shares.keys().cloned().collect::<BTreeSet<_>>() == *identifiers {
+            if signature_shares.keys().cloned().collect::<HashSet<_>>() == *identifiers {
                 session.state = SessionState::SignatureSharesReady {
                     signature_shares: signature_shares.clone(),
                 };
@@ -303,7 +300,7 @@ pub(crate) async fn get_signature_shares(
                     .map(|i| {
                         signature_shares
                             .iter()
-                            .map(|(id, s)| (*id, s[i as usize]))
+                            .map(|(id, s)| (id.clone(), s[i as usize].clone()))
                             .collect()
                     })
                     .collect(),

@@ -2,12 +2,19 @@ use std::{collections::BTreeMap, time::Duration};
 
 use axum_test::TestServer;
 use rand::thread_rng;
-use server::{args::Args, router};
+use server::{args::Args, router, SerializedSignatureShare, SerializedSigningPackage};
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core as frost;
+
+#[tokio::test]
+async fn test_main_router_ed25519() -> Result<(), Box<dyn std::error::Error>> {
+    test_main_router::<frost_ed25519::Ed25519Sha512>(false).await
+}
+
+#[tokio::test]
+async fn test_main_router_redpallas() -> Result<(), Box<dyn std::error::Error>> {
+    test_main_router::<reddsa::frost::redpallas::PallasBlake2b512>(true).await
+}
 
 /// Test the entire FROST signing flow using axum_test.
 /// This is a good example of the overall flow but it's not a good example
@@ -15,13 +22,20 @@ use reddsa::frost::redpallas as frost;
 ///
 /// Also note that this simulates multiple clients using loops. In practice,
 /// each client will run independently.
-#[tokio::test]
-async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_main_router<
+    C: frost_core::Ciphersuite + frost_rerandomized::RandomizedCiphersuite + 'static,
+>(
+    rerandomized: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Create key shares
     let mut rng = thread_rng();
-    let (shares, pubkeys) =
-        frost::keys::generate_with_dealer(3, 2, frost::keys::IdentifierList::Default, &mut rng)
-            .unwrap();
+    let (shares, pubkeys) = frost::keys::generate_with_dealer(
+        3,
+        2,
+        frost::keys::IdentifierList::<C>::Default,
+        &mut rng,
+    )
+    .unwrap();
     let key_packages: BTreeMap<_, _> = shares
         .iter()
         .map(|(identifier, secret_share)| {
@@ -73,7 +87,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
             let (nonces, commitments) =
                 frost::round1::commit(key_package.signing_share(), &mut rng);
             nonces_vec.push(nonces);
-            commitments_vec.push(commitments);
+            commitments_vec.push((&commitments).try_into()?);
         }
 
         // Store nonces for later use
@@ -83,7 +97,7 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         let res = server
             .post("/send_commitments")
             .json(&server::SendCommitmentsArgs {
-                identifier: *identifier,
+                identifier: (*identifier).into(),
                 session_id,
                 commitments: commitments_vec,
             })
@@ -100,7 +114,16 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         .await;
     res.assert_status_ok();
     let r: server::GetCommitmentsOutput = res.json();
-    let commitments = r.commitments;
+    // Deserialize commitments in the response
+    let commitments = r
+        .commitments
+        .iter()
+        .map(|m| {
+            m.iter()
+                .map(|(i, c)| Ok((i.try_into()?, c.try_into()?)))
+                .collect::<Result<BTreeMap<_, _>, Box<dyn std::error::Error>>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     // As the coordinator, choose messages and create one SigningPackage
     // and one RandomizedParams for each.
@@ -113,10 +136,11 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         .enumerate()
         .map(|(i, msg)| frost::SigningPackage::new(commitments[i].clone(), msg))
         .collect::<Vec<_>>();
-    #[cfg(feature = "redpallas")]
+
+    // Will not be used if rerandomized == false but we generate anyway for simplicity
     let randomized_params = signing_packages
         .iter()
-        .map(|p| frost::RandomizedParams::new(pubkeys.verifying_key(), p, &mut rng))
+        .map(|p| frost_rerandomized::RandomizedParams::new(pubkeys.verifying_key(), p, &mut rng))
         .collect::<Result<Vec<_>, _>>()?;
 
     // As the coordinator, send the SigningPackages to the server
@@ -124,9 +148,18 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         .post("/send_signing_package")
         .json(&server::SendSigningPackageArgs {
             session_id,
-            signing_package: signing_packages.clone(),
-            #[cfg(feature = "redpallas")]
-            randomizer: randomized_params.iter().map(|p| *p.randomizer()).collect(),
+            signing_package: signing_packages
+                .iter()
+                .map(std::convert::TryInto::<SerializedSigningPackage>::try_into)
+                .collect::<Result<_, _>>()?,
+            randomizer: if rerandomized {
+                randomized_params
+                    .iter()
+                    .map(|p| (*p.randomizer()).into())
+                    .collect()
+            } else {
+                Vec::new()
+            },
             aux_msg: aux_msg.to_owned(),
         })
         .await;
@@ -146,39 +179,44 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         let r: server::GetSigningPackageOutput = res.json();
 
         // Generate SignatureShares for each SigningPackage
-        #[cfg(feature = "redpallas")]
-        let signature_share = r
-            .signing_package
-            .iter()
-            .zip(r.randomizer.iter())
-            .enumerate()
-            .map(|(i, (signing_package, randomizer))| {
-                frost::round2::sign(
-                    signing_package,
-                    &nonces_map[identifier][i],
-                    key_package,
-                    *randomizer,
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        #[cfg(not(feature = "redpallas"))]
-        let signature_share = r
-            .signing_package
-            .iter()
-            .enumerate()
-            .map(|(i, signing_package)| {
-                frost::round2::sign(signing_package, &nonces_map[identifier][i], key_package)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let signature_share = if rerandomized {
+            r.signing_package
+                .iter()
+                .zip(r.randomizer.iter())
+                .enumerate()
+                .map(|(i, (signing_package, randomizer))| {
+                    frost_rerandomized::sign(
+                        &signing_package.try_into()?,
+                        &nonces_map[identifier][i],
+                        key_package,
+                        randomizer.try_into()?,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            r.signing_package
+                .iter()
+                .enumerate()
+                .map(|(i, signing_package)| {
+                    frost::round2::sign(
+                        &signing_package.try_into()?,
+                        &nonces_map[identifier][i],
+                        key_package,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        };
 
         // Send SignatureShares to the server
         let res = server
             .post("/send_signature_share")
             .json(&server::SendSignatureShareArgs {
-                identifier: *identifier,
+                identifier: (*identifier).into(),
                 session_id,
-                signature_share,
+                signature_share: signature_share
+                    .iter()
+                    .map(|s| std::convert::Into::<SerializedSignatureShare>::into(*s))
+                    .collect(),
             })
             .await;
         res.assert_status_ok();
@@ -192,19 +230,37 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     res.assert_status_ok();
     let r: server::GetSignatureSharesOutput = res.json();
 
+    let signature_shares = r
+        .signature_shares
+        .iter()
+        .map(|m| {
+            m.iter()
+                .map(|(i, s)| Ok((i.try_into()?, s.try_into()?)))
+                .collect::<Result<BTreeMap<_, _>, Box<dyn std::error::Error>>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     // Generate the final Signature for each message
-    #[cfg(feature = "redpallas")]
-    let signatures = signing_packages
-        .iter()
-        .enumerate()
-        .map(|(i, p)| frost::aggregate(p, &r.signature_shares[i], &pubkeys, &randomized_params[i]))
-        .collect::<Result<Vec<_>, _>>()?;
-    #[cfg(not(feature = "redpallas"))]
-    let signatures = signing_packages
-        .iter()
-        .enumerate()
-        .map(|(i, p)| frost::aggregate(p, &r.signature_shares[i], &pubkeys))
-        .collect::<Result<Vec<_>, _>>()?;
+    let signatures = if rerandomized {
+        signing_packages
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                frost_rerandomized::aggregate(
+                    p,
+                    &signature_shares[i],
+                    &pubkeys,
+                    &randomized_params[i],
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        signing_packages
+            .iter()
+            .enumerate()
+            .map(|(i, p)| frost::aggregate(p, &signature_shares[i], &pubkeys))
+            .collect::<Result<Vec<_>, _>>()?
+    };
 
     // Close the session
     let res = server
@@ -214,14 +270,15 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
     res.assert_status_ok();
 
     // Verify signatures to test if they were generated correctly
-    #[cfg(feature = "redpallas")]
-    for (i, p) in randomized_params.iter().enumerate() {
-        p.randomized_verifying_key()
-            .verify(messages[i], &signatures[i])?;
-    }
-    #[cfg(not(feature = "redpallas"))]
-    for (i, m) in messages.iter().enumerate() {
-        pubkeys.verifying_key().verify(m, &signatures[i])?;
+    if rerandomized {
+        for (i, p) in randomized_params.iter().enumerate() {
+            p.randomized_verifying_key()
+                .verify(messages[i], &signatures[i])?;
+        }
+    } else {
+        for (i, m) in messages.iter().enumerate() {
+            pubkeys.verifying_key().verify(m, &signatures[i])?;
+        }
     }
 
     Ok(())

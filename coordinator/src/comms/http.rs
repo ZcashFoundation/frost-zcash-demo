@@ -88,10 +88,15 @@ impl Comms for HTTPComms {
         };
         eprintln!();
 
-        Ok(r.commitments
+        let commitments = r
+            .commitments
             .first()
-            .ok_or(eyre!("empty commitments"))
-            .cloned()?)
+            .ok_or(eyre!("empty commitments"))?
+            .iter()
+            .map(|(i, c)| Ok((i.try_into()?, c.try_into()?)))
+            .collect::<Result<_, Box<dyn Error>>>()?;
+
+        Ok(commitments)
     }
 
     async fn get_signature_shares(
@@ -110,9 +115,11 @@ impl Comms for HTTPComms {
             .json(&server::SendSigningPackageArgs {
                 aux_msg: Default::default(),
                 session_id: self.session_id.unwrap(),
-                signing_package: vec![signing_package.clone()],
+                signing_package: vec![signing_package.try_into()?],
                 #[cfg(feature = "redpallas")]
-                randomizer: vec![randomizer],
+                randomizer: vec![randomizer.into()],
+                #[cfg(not(feature = "redpallas"))]
+                randomizer: vec![],
             })
             .send()
             .await?
@@ -139,9 +146,14 @@ impl Comms for HTTPComms {
         };
         eprintln!();
 
-        Ok(r.signature_shares
+        let signature_shares = r
+            .signature_shares
             .first()
-            .ok_or(eyre!("empty signature shares"))?
-            .clone())
+            .ok_or(eyre!("empty signature_shares"))?
+            .iter()
+            .map(|(i, c)| Ok((i.try_into()?, c.try_into()?)))
+            .collect::<Result<_, Box<dyn Error>>>()?;
+
+        Ok(signature_shares)
     }
 }
