@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use frost::Identifier;
 use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
 
@@ -75,8 +76,8 @@ pub struct GetSigningPackageOutput {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendSignatureShareArgs {
+    pub identifier: Identifier,
     pub session_id: Uuid,
-    pub identifier: frost::Identifier,
     pub signature_share: Vec<frost::round2::SignatureShare>,
 }
 

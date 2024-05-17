@@ -9,6 +9,11 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
+    /// HTTP mode. If enabled, it will use HTTP communication with a
+    /// FROST server.
+    #[arg(long, default_value_t = false)]
+    pub http: bool,
+
     /// Public key package to use. Can be a file with a JSON-encoded
     /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
@@ -22,4 +27,8 @@ pub struct Args {
     /// Port to connect to, if using online comms
     #[arg(short, long, default_value_t = 2744)]
     pub port: u16,
+
+    /// Optional Session ID
+    #[arg(short, long, default_value = "")]
+    pub session_id: String,
 }

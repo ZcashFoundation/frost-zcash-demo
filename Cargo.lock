@@ -1378,7 +1378,9 @@ dependencies = [
  "message-io",
  "rand",
  "reddsa",
+ "reqwest",
  "serde_json",
+ "server",
  "tokio",
 ]
 
@@ -2074,6 +2076,7 @@ dependencies = [
  "rand",
  "reddsa",
  "serde_json",
+ "server",
  "tokio",
  "trusted-dealer",
 ]

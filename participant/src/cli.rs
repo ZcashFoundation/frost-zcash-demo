@@ -1,6 +1,7 @@
 use crate::args::Args;
 
 use crate::comms::cli::CLIComms;
+use crate::comms::http::HTTPComms;
 use crate::comms::socket::SocketComms;
 
 use crate::comms::Comms;
@@ -17,6 +18,8 @@ pub async fn cli(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut comms: Box<dyn Comms> = if args.cli {
         Box::new(CLIComms {})
+    } else if args.http {
+        Box::new(HTTPComms::new(args))
     } else {
         Box::new(SocketComms::new(args))
     };
@@ -45,7 +48,9 @@ pub async fn cli(
     .await?;
     let signature = generate_signature(round_2_config, &key_package, &nonces)?;
 
-    comms.send_signature_share(signature).await?;
+    comms
+        .send_signature_share(*key_package.identifier(), signature)
+        .await?;
 
     print_values_round_2(signature, logger)?;
 

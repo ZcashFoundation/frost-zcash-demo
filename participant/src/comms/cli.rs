@@ -64,6 +64,7 @@ impl Comms for CLIComms {
 
     async fn send_signature_share(
         &mut self,
+        _identifier: Identifier,
         _signature_share: SignatureShare,
     ) -> Result<(), Box<dyn Error>> {
         Ok(())

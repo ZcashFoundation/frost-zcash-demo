@@ -117,6 +117,7 @@ impl Comms for SocketComms {
 
     async fn send_signature_share(
         &mut self,
+        _identifier: Identifier,
         signature_share: SignatureShare,
     ) -> Result<(), Box<dyn Error>> {
         // Send signature shares to Coordinator

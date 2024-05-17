@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod http;
 pub mod socket;
 
 use async_trait::async_trait;
@@ -55,6 +56,7 @@ pub trait Comms {
 
     async fn send_signature_share(
         &mut self,
+        identifier: Identifier,
         signature_share: SignatureShare,
     ) -> Result<(), Box<dyn Error>>;
 }

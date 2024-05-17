@@ -176,8 +176,8 @@ async fn test_main_router() -> Result<(), Box<dyn std::error::Error>> {
         let res = server
             .post("/send_signature_share")
             .json(&server::SendSignatureShareArgs {
-                session_id,
                 identifier: *identifier,
+                session_id,
                 signature_share,
             })
             .await;

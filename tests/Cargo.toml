@@ -18,6 +18,7 @@ dkg = { path = "../dkg"}
 trusted-dealer = { path = "../trusted-dealer"}
 participant = { path = "../participant"}
 coordinator = { path = "../coordinator"}
+server = { path = "../server"}
 rand = "0.8"
 
 [features]
