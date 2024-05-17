@@ -19,10 +19,6 @@ pub struct Config {
     pub identifier: Identifier,
 }
 
-pub trait Logger {
-    fn log(&mut self, value: String);
-}
-
 fn validate_inputs(config: &Config) -> Result<(), Error> {
     if config.min_signers < 2 {
         return Err(Error::InvalidMinSigners);
