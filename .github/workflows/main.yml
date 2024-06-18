@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.1.4
+      - uses: actions/checkout@v4.1.6
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
 
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.1.4
+      - uses: actions/checkout@v4.1.6
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --features redpallas
 
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.1.4
+      - uses: actions/checkout@v4.1.6
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.1.4
+      - uses: actions/checkout@v4.1.6
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
@@ -61,8 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4.1.4
-      - uses: reviewdog/action-actionlint@v1.44.0
+      - uses: actions/checkout@v4.1.6
+      - uses: reviewdog/action-actionlint@v1.46.0
         with:
           level: warning
           fail_on_error: false
