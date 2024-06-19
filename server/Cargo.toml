@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.5"
-clap = { version = "4.5.4", features = ["derive"] }
+clap = { version = "4.5.7", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "1.0.0-rc.0", features = ["serde"] }
