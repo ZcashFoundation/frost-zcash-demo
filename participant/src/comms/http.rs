@@ -54,8 +54,8 @@ impl Comms for HTTPComms {
             .post(format!("{}/send_commitments", self.host_port))
             .json(&server::SendCommitmentsArgs {
                 session_id: self.session_id,
-                identifier,
-                commitments: vec![commitments],
+                identifier: identifier.into(),
+                commitments: vec![(&commitments).try_into()?],
             })
             .send()
             .await?;
@@ -83,23 +83,23 @@ impl Comms for HTTPComms {
         };
 
         #[cfg(feature = "redpallas")]
-        let signing_package = (
-            r.signing_package
+        let signing_package = {
+            let signing_package = r
+                .signing_package
                 .first()
-                .ok_or(eyre!("missing signing package"))
-                .cloned()?,
-            r.randomizer
-                .first()
-                .ok_or(eyre!("missing randomizer"))
-                .cloned()?,
-        );
+                .ok_or(eyre!("missing signing package"))?;
+            let randomizer = r.randomizer.first().ok_or(eyre!("missing randomizer"))?;
+            (signing_package.try_into()?, randomizer.try_into()?)
+        };
 
         #[cfg(not(feature = "redpallas"))]
-        let signing_package = r
-            .signing_package
-            .first()
-            .ok_or(eyre!("missing signing package"))
-            .cloned()?;
+        let signing_package = {
+            let signing_package = r
+                .signing_package
+                .first()
+                .ok_or(eyre!("missing signing package"))?;
+            signing_package.try_into()?
+        };
 
         Ok(signing_package)
     }
@@ -117,9 +117,9 @@ impl Comms for HTTPComms {
             .client
             .post(format!("{}/send_signature_share", self.host_port))
             .json(&server::SendSignatureShareArgs {
-                identifier,
+                identifier: identifier.into(),
                 session_id: self.session_id,
-                signature_share: vec![signature_share],
+                signature_share: vec![signature_share.into()],
             })
             .send()
             .await?;
