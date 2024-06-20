@@ -23,7 +23,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.6.1", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
-axum-test = "14.10.0"
+axum-test = "15.2.0"
 frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = [
     "frost",
