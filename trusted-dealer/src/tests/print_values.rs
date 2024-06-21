@@ -1,8 +1,7 @@
-#![cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
 
 use frost::keys::{IdentifierList, PublicKeyPackage, SecretShare};
 use frost::Identifier;
-use frost_ed25519 as frost;
 use itertools::Itertools;
 use rand::thread_rng;
 use std::collections::BTreeMap;

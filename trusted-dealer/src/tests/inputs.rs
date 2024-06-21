@@ -1,9 +1,8 @@
-#![cfg(not(feature = "redpallas"))]
-
 use std::io::BufWriter;
 
-use frost::Error;
 use frost_ed25519 as frost;
+
+use frost::Error;
 use trusted_dealer::inputs::{request_inputs, Config};
 
 #[test]
