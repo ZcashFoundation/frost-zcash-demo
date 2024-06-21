@@ -1,10 +1,9 @@
-#![cfg(not(feature = "redpallas"))]
-
 mod helpers;
+
+use frost_ed25519 as frost;
 
 use frost::aggregate;
 use frost::keys::IdentifierList;
-use frost_ed25519 as frost;
 use helpers::signature_gen::{key_package, round_1, round_2};
 use rand::thread_rng;
 use trusted_dealer::inputs::Config;
