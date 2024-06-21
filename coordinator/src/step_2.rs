@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use frost::{round1::SigningCommitments, Identifier, SigningPackage};
 
@@ -14,17 +11,17 @@ use std::{
 use crate::args::Args;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct CommitmentsConfig {
+pub struct CommitmentsConfig<C: Ciphersuite> {
     pub message: Vec<u8>,
-    pub signer_commitments: BTreeMap<Identifier, SigningCommitments>,
+    pub signer_commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
 }
 
-pub fn step_2(
+pub fn step_2<C: Ciphersuite>(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-    commitments: BTreeMap<Identifier, SigningCommitments>,
-) -> Result<SigningPackage, Box<dyn std::error::Error>> {
+    commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
+) -> Result<SigningPackage<C>, Box<dyn std::error::Error>> {
     let signing_package = request_message(args, input, logger, commitments)?;
     print_signing_package(logger, &signing_package);
     Ok(signing_package)
@@ -32,12 +29,12 @@ pub fn step_2(
 
 // Input required:
 // 1. message
-fn request_message(
+fn request_message<C: Ciphersuite>(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-    commitments: BTreeMap<Identifier, SigningCommitments>,
-) -> Result<SigningPackage, Box<dyn std::error::Error>> {
+    commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
+) -> Result<SigningPackage<C>, Box<dyn std::error::Error>> {
     let message = if args.message.is_empty() {
         writeln!(logger, "The message to be signed (hex encoded)")?;
 
@@ -55,7 +52,10 @@ fn request_message(
     Ok(signing_package)
 }
 
-fn print_signing_package(logger: &mut dyn Write, signing_package: &SigningPackage) {
+fn print_signing_package<C: Ciphersuite>(
+    logger: &mut dyn Write,
+    signing_package: &SigningPackage<C>,
+) {
     writeln!(
         logger,
         "Signing Package:\n{}",

@@ -1,10 +1,10 @@
 //! Socket implementation of the Comms trait, using message-io.
 
 use async_trait::async_trait;
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+
+use frost_core as frost;
+
+use frost_core::Ciphersuite;
 
 use eyre::eyre;
 use message_io::{
@@ -22,18 +22,20 @@ use std::{
     collections::BTreeMap,
     error::Error,
     io::{BufRead, Write},
+    marker::PhantomData,
 };
 
 use super::{Comms, Message};
 use crate::args::Args;
 
-pub struct SocketComms {
+pub struct SocketComms<C: Ciphersuite> {
     input_rx: Receiver<(Endpoint, Vec<u8>)>,
-    endpoints: BTreeMap<Identifier, Endpoint>,
+    endpoints: BTreeMap<Identifier<C>, Endpoint>,
     handler: NodeHandler<()>,
+    _phantom: PhantomData<C>,
 }
 
-impl SocketComms {
+impl<C: Ciphersuite> SocketComms<C> {
     pub fn new(args: &Args) -> Self {
         let (handler, listener) = node::split::<()>();
         let addr = format!("{}:{}", args.ip, args.port);
@@ -48,6 +50,7 @@ impl SocketComms {
             input_rx: rx,
             endpoints: BTreeMap::new(),
             handler,
+            _phantom: Default::default(),
         };
 
         // TODO: save handle
@@ -71,14 +74,14 @@ impl SocketComms {
 }
 
 #[async_trait(?Send)]
-impl Comms for SocketComms {
+impl<C: Ciphersuite> Comms<C> for SocketComms<C> {
     async fn get_signing_commitments(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        _pub_key_package: &PublicKeyPackage,
+        _pub_key_package: &PublicKeyPackage<C>,
         num_of_participants: u16,
-    ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
+    ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
         self.endpoints = BTreeMap::new();
         let mut signing_commitments = BTreeMap::new();
         eprintln!("Waiting for participants to send their commitments...");
@@ -88,7 +91,7 @@ impl Comms for SocketComms {
                 .recv()
                 .await
                 .ok_or(eyre!("Did not receive all commitments"))?;
-            let message: Message = serde_json::from_slice(&data)?;
+            let message: Message<C> = serde_json::from_slice(&data)?;
             if let Message::IdentifiedCommitments {
                 identifier,
                 commitments,
@@ -107,15 +110,12 @@ impl Comms for SocketComms {
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
+        signing_package: &SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
+    ) -> Result<BTreeMap<Identifier<C>, SignatureShare<C>>, Box<dyn Error>> {
         // Send SigningPackage to all participants
         eprintln!("Sending SigningPackage to participants...");
 
-        #[cfg(not(feature = "redpallas"))]
-        let data = serde_json::to_vec(&Message::SigningPackage(signing_package.clone()))?;
-        #[cfg(feature = "redpallas")]
         let data = serde_json::to_vec(&Message::SigningPackageAndRandomizer {
             signing_package: signing_package.clone(),
             randomizer,
@@ -138,7 +138,7 @@ impl Comms for SocketComms {
                 .recv()
                 .await
                 .ok_or(eyre!("Did not receive all commitments"))?;
-            let message: Message = serde_json::from_slice(&data)?;
+            let message: Message<C> = serde_json::from_slice(&data)?;
             if let Message::SignatureShare(signature_share) = message {
                 let identifier = self
                     .endpoints

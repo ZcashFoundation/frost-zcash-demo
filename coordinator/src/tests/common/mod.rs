@@ -1,4 +1,4 @@
-#[cfg(test)]
+#![cfg(test)]
 
 pub struct Helpers {
     pub participant_id_1: String,

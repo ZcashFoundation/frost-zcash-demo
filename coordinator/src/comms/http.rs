@@ -2,10 +2,9 @@
 
 use async_trait::async_trait;
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core as frost;
+
+use frost_core::Ciphersuite;
 
 use eyre::eyre;
 use server::Uuid;
@@ -19,38 +18,41 @@ use std::{
     collections::BTreeMap,
     error::Error,
     io::{BufRead, Write},
+    marker::PhantomData,
     time::Duration,
 };
 
 use super::Comms;
 use crate::args::Args;
 
-pub struct HTTPComms {
+pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
+    _phantom: PhantomData<C>,
 }
 
-impl HTTPComms {
+impl<C: Ciphersuite> HTTPComms<C> {
     pub fn new(args: &Args) -> Self {
         let client = reqwest::Client::new();
         Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
+            _phantom: Default::default(),
         }
     }
 }
 
 #[async_trait(?Send)]
-impl Comms for HTTPComms {
+impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
     async fn get_signing_commitments(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        _pub_key_package: &PublicKeyPackage,
+        _pub_key_package: &PublicKeyPackage<C>,
         num_signers: u16,
-    ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
+    ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
@@ -103,9 +105,9 @@ impl Comms for HTTPComms {
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
+        signing_package: &SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
+    ) -> Result<BTreeMap<Identifier<C>, SignatureShare<C>>, Box<dyn Error>> {
         // Send SigningPackage to all participants
         eprintln!("Sending SigningPackage to participants...");
 
@@ -116,10 +118,7 @@ impl Comms for HTTPComms {
                 aux_msg: Default::default(),
                 session_id: self.session_id.unwrap(),
                 signing_package: vec![signing_package.try_into()?],
-                #[cfg(feature = "redpallas")]
-                randomizer: vec![randomizer.into()],
-                #[cfg(not(feature = "redpallas"))]
-                randomizer: vec![],
+                randomizer: randomizer.map(|r| vec![r.into()]).unwrap_or_default(),
             })
             .send()
             .await?

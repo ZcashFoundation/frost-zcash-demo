@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use frost::{keys::PublicKeyPackage, round1::SigningCommitments, Identifier};
 
@@ -13,18 +10,18 @@ use std::{
 use crate::{args::Args, comms::Comms, input::read_from_file_or_stdin};
 
 #[derive(PartialEq, Debug)]
-pub struct ParticipantsConfig {
-    pub commitments: BTreeMap<Identifier, SigningCommitments>,
-    pub pub_key_package: PublicKeyPackage,
+pub struct ParticipantsConfig<C: Ciphersuite> {
+    pub commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
+    pub pub_key_package: PublicKeyPackage<C>,
 }
 
 // TODO: needs to include the coordinator's keys!
-pub async fn step_1(
+pub async fn step_1<C: Ciphersuite>(
     args: &Args,
-    comms: &mut dyn Comms,
+    comms: &mut dyn Comms<C>,
     reader: &mut dyn BufRead,
     logger: &mut dyn Write,
-) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
+) -> Result<ParticipantsConfig<C>, Box<dyn std::error::Error>> {
     let participants = read_commitments(args, comms, reader, logger).await?;
     print_participants(logger, &participants.commitments);
     Ok(participants)
@@ -36,12 +33,12 @@ pub async fn step_1(
 // 1. public key package
 // 2. number of participants
 // 3. identifiers for all participants
-async fn read_commitments(
+async fn read_commitments<C: Ciphersuite>(
     args: &Args,
-    comms: &mut dyn Comms,
+    comms: &mut dyn Comms<C>,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
-) -> Result<ParticipantsConfig, Box<dyn std::error::Error>> {
+) -> Result<ParticipantsConfig<C>, Box<dyn std::error::Error>> {
     let out = read_from_file_or_stdin(
         input,
         logger,
@@ -49,7 +46,7 @@ async fn read_commitments(
         &args.public_key_package,
     )?;
 
-    let pub_key_package: PublicKeyPackage = serde_json::from_str(&out)?;
+    let pub_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
 
     let num_of_participants = if args.num_signers == 0 {
         writeln!(logger, "The number of participants: ")?;
@@ -71,9 +68,9 @@ async fn read_commitments(
     })
 }
 
-pub fn print_participants(
+pub fn print_participants<C: Ciphersuite>(
     logger: &mut dyn Write,
-    participants: &BTreeMap<Identifier, SigningCommitments>,
+    participants: &BTreeMap<Identifier<C>, SigningCommitments<C>>,
 ) {
     writeln!(logger, "Selected participants: ",).unwrap();
 
@@ -82,15 +79,14 @@ pub fn print_participants(
     }
 }
 
-#[cfg(all(test, not(feature = "redpallas")))]
+#[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
 
-    use frost::{
+    use frost_ed25519::{
         keys::{PublicKeyPackage, VerifyingShare},
         Error, Identifier, VerifyingKey,
     };
-    use frost_ed25519 as frost;
     use hex::FromHex;
 
     use crate::comms::cli::validate;

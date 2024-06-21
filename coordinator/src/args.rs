@@ -3,6 +3,9 @@ use clap::Parser;
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[arg(short = 'C', long, default_value = "ed25519")]
+    pub ciphersuite: String,
+
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
     /// If false, socket communication is enabled.
@@ -32,7 +35,6 @@ pub struct Args {
     /// The randomizer to use. Can be a file with the raw randomizer, empty, or
     /// "-". If empty, a random one will be generated. If "-" is specified, then
     /// it will be read from standard input as a hex string.
-    #[cfg(feature = "redpallas")]
     #[arg(short = 'r', long, default_value = "")]
     pub randomizer: String,
 
