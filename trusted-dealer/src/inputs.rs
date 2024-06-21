@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use frost::keys::{PublicKeyPackage, SecretShare};
 use frost::Error;
@@ -20,23 +17,23 @@ pub struct Config {
     pub secret: Vec<u8>,
 }
 
-fn validate_inputs(config: &Config) -> Result<(), Error> {
+fn validate_inputs<C: Ciphersuite>(config: &Config) -> Result<(), Error<C>> {
     if config.min_signers < 2 {
-        return Err(Error::InvalidMinSigners);
+        return Err(Error::<C>::InvalidMinSigners);
     }
 
     if config.max_signers < 2 {
-        return Err(Error::InvalidMaxSigners);
+        return Err(Error::<C>::InvalidMaxSigners);
     }
 
     if config.min_signers > config.max_signers {
-        return Err(Error::InvalidMinSigners);
+        return Err(Error::<C>::InvalidMinSigners);
     }
 
     Ok(())
 }
 
-pub fn request_inputs(
+pub fn request_inputs<C: Ciphersuite + 'static>(
     args: &Args,
     input: &mut impl BufRead,
     logger: &mut impl Write,
@@ -50,7 +47,7 @@ pub fn request_inputs(
         let min_signers = min
             .trim()
             .parse::<u16>()
-            .map_err(|_| Error::InvalidMinSigners)?;
+            .map_err(|_| Error::<C>::InvalidMinSigners)?;
 
         writeln!(logger, "The maximum number of signers: ")?;
 
@@ -59,7 +56,7 @@ pub fn request_inputs(
         let max_signers = max
             .trim()
             .parse::<u16>()
-            .map_err(|_| Error::InvalidMaxSigners)?;
+            .map_err(|_| Error::<C>::InvalidMaxSigners)?;
 
         writeln!(
             logger,
@@ -68,7 +65,8 @@ pub fn request_inputs(
 
         let mut secret_input = String::new();
         input.read_line(&mut secret_input)?;
-        let secret = hex::decode(secret_input.trim()).map_err(|_| Error::MalformedSigningKey)?;
+        let secret =
+            hex::decode(secret_input.trim()).map_err(|_| Error::<C>::MalformedSigningKey)?;
 
         Config {
             min_signers,
@@ -77,7 +75,7 @@ pub fn request_inputs(
         }
     } else {
         let secret = hex::decode(args.key.clone().unwrap_or("".to_string()))
-            .map_err(|_| Error::MalformedSigningKey)?;
+            .map_err(|_| Error::<C>::MalformedSigningKey)?;
         eprintln!(
             "Generating {} shares with threshold {}...",
             args.num_signers, args.threshold
@@ -89,15 +87,15 @@ pub fn request_inputs(
         }
     };
 
-    validate_inputs(&config)?;
+    validate_inputs::<C>(&config)?;
 
     Ok(config)
 }
 
-pub fn print_values(
+pub fn print_values<C: Ciphersuite>(
     args: &Args,
-    keys: &BTreeMap<Identifier, SecretShare>,
-    pubkeys: &PublicKeyPackage,
+    keys: &BTreeMap<Identifier<C>, SecretShare<C>>,
+    pubkeys: &PublicKeyPackage<C>,
     logger: &mut dyn Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if args.cli {
