@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use rand::thread_rng;
 use std::collections::BTreeMap;
@@ -9,11 +6,11 @@ use std::io::{BufRead, Write};
 
 use crate::inputs::{read_round1_package, read_round2_package, request_inputs};
 
-pub fn cli(
+pub fn cli<C: Ciphersuite + 'static>(
     reader: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config = request_inputs(reader, logger)?;
+    let config = request_inputs::<C>(reader, logger)?;
 
     let rng = thread_rng();
 
