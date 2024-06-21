@@ -1,4 +1,3 @@
-#[cfg(all(test, not(feature = "redpallas")))]
 mod tests;
 
 use std::io;
@@ -13,7 +12,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut reader = Box::new(io::stdin().lock());
     let mut logger = io::stdout();
-    let r = cli(&args, &mut reader, &mut logger).await;
+    let r = if args.ciphersuite == "ed25519" {
+        cli::<frost_ed25519::Ed25519Sha512>(&args, &mut reader, &mut logger).await
+    } else if args.ciphersuite == "redpallas" {
+        cli::<reddsa::frost::redpallas::PallasBlake2b512>(&args, &mut reader, &mut logger).await
+    } else {
+        panic!("invalid ciphersuite");
+    };
 
     // Force process to exit; since socket comms spawn a thread, it will keep
     // running forever. Ideally we should join() the thread but this works for

@@ -2,10 +2,7 @@ pub mod cli;
 pub mod http;
 pub mod socket;
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use std::{
     collections::BTreeMap,
@@ -25,37 +22,35 @@ use frost::{
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
+#[serde(bound = "C: Ciphersuite")]
 #[allow(clippy::large_enum_variant)]
-pub enum Message {
+pub enum Message<C: Ciphersuite> {
     IdentifiedCommitments {
-        identifier: Identifier,
-        commitments: SigningCommitments,
+        identifier: Identifier<C>,
+        commitments: SigningCommitments<C>,
     },
-    #[cfg(not(feature = "redpallas"))]
-    SigningPackage(SigningPackage),
-    #[cfg(feature = "redpallas")]
     SigningPackageAndRandomizer {
-        signing_package: SigningPackage,
-        randomizer: frost::round2::Randomizer,
+        signing_package: SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
     },
-    SignatureShare(SignatureShare),
+    SignatureShare(SignatureShare<C>),
 }
 
 #[async_trait(?Send)]
-pub trait Comms {
+pub trait Comms<C: Ciphersuite> {
     async fn get_signing_commitments(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        pub_key_package: &PublicKeyPackage,
+        pub_key_package: &PublicKeyPackage<C>,
         num_of_participants: u16,
-    ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>>;
+    ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>>;
 
     async fn get_signature_shares(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] randomizer: frost::round2::Randomizer,
-    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>>;
+        signing_package: &SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
+    ) -> Result<BTreeMap<Identifier<C>, SignatureShare<C>>, Box<dyn Error>>;
 }

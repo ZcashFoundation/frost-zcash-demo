@@ -1,9 +1,8 @@
 //! Command line interface implementation of the Comms trait.
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core as frost;
+
+use frost_core::Ciphersuite;
 
 use eyre::eyre;
 
@@ -18,23 +17,49 @@ use std::{
     collections::BTreeMap,
     error::Error,
     io::{BufRead, Write},
+    marker::PhantomData,
 };
 
 use super::Comms;
 
-pub struct CLIComms {}
+pub struct CLIComms<C: Ciphersuite> {
+    _phantom: PhantomData<C>,
+}
+
+impl<C> CLIComms<C>
+where
+    C: Ciphersuite,
+{
+    pub fn new() -> Self {
+        Self {
+            _phantom: Default::default(),
+        }
+    }
+}
+
+impl<C> Default for CLIComms<C>
+where
+    C: Ciphersuite,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[async_trait(?Send)]
-impl Comms for CLIComms {
+impl<C> Comms<C> for CLIComms<C>
+where
+    C: Ciphersuite + 'static,
+{
     async fn get_signing_commitments(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        pub_key_package: &PublicKeyPackage,
+        pub_key_package: &PublicKeyPackage<C>,
         num_of_participants: u16,
-    ) -> Result<BTreeMap<Identifier, SigningCommitments>, Box<dyn Error>> {
+    ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
         let mut participants_list = Vec::new();
-        let mut commitments_list: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
+        let mut commitments_list: BTreeMap<Identifier<C>, SigningCommitments<C>> = BTreeMap::new();
 
         for i in 1..=num_of_participants {
             writeln!(output, "Identifier for participant {:?} (hex encoded): ", i)?;
@@ -60,10 +85,13 @@ impl Comms for CLIComms {
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        signing_package: &SigningPackage,
-        #[cfg(feature = "redpallas")] _randomizer: frost::round2::Randomizer,
-    ) -> Result<BTreeMap<Identifier, SignatureShare>, Box<dyn Error>> {
-        let mut signatures_list: BTreeMap<Identifier, SignatureShare> = BTreeMap::new();
+        signing_package: &SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
+    ) -> Result<BTreeMap<Identifier<C>, SignatureShare<C>>, Box<dyn Error>> {
+        if randomizer.is_some() {
+            panic!("rerandomized not supported");
+        }
+        let mut signatures_list: BTreeMap<Identifier<C>, SignatureShare<C>> = BTreeMap::new();
         for p in signing_package.signing_commitments().keys() {
             writeln!(
                 output,
@@ -80,20 +108,22 @@ impl Comms for CLIComms {
     }
 }
 
-pub fn read_identifier(input: &mut dyn BufRead) -> Result<Identifier, Box<dyn Error>> {
+pub fn read_identifier<C: Ciphersuite + 'static>(
+    input: &mut dyn BufRead,
+) -> Result<Identifier<C>, Box<dyn Error>> {
     let mut identifier_input = String::new();
     input.read_line(&mut identifier_input)?;
     let bytes = hex::decode(identifier_input.trim())?;
     let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::deserialize(&serialization)?;
+    let identifier = Identifier::<C>::deserialize(&serialization)?;
     Ok(identifier)
 }
 
-pub fn validate(
-    id: Identifier,
-    key_package: &PublicKeyPackage,
-    id_list: &[Identifier],
-) -> Result<(), frost::Error> {
+pub fn validate<C: Ciphersuite>(
+    id: Identifier<C>,
+    key_package: &PublicKeyPackage<C>,
+    id_list: &[Identifier<C>],
+) -> Result<(), frost::Error<C>> {
     if !key_package.verifying_shares().contains_key(&id) {
         return Err(frost::Error::MalformedIdentifier);
     }; // TODO: Error is actually that the identifier does not exist

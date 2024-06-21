@@ -1,4 +1,5 @@
-#[cfg(test)]
+#![cfg(test)]
+
 use coordinator::{
     args::Args,
     comms::cli::CLIComms,
@@ -96,7 +97,7 @@ async fn check_step_1() {
         ..
     } = get_helpers();
 
-    let mut comms = CLIComms {};
+    let mut comms = CLIComms::new();
     let args = Args::default();
     let mut buf = BufWriter::new(Vec::new());
 
@@ -201,7 +202,7 @@ async fn check_step_3() {
         ..
     } = get_helpers();
 
-    let mut comms = CLIComms {};
+    let mut comms = CLIComms::new();
     let mut buf = BufWriter::new(Vec::new());
     let args = Args::default();
 
@@ -235,6 +236,7 @@ async fn check_step_3() {
         &mut buf,
         participants_config,
         &signing_package,
+        None,
     )
     .await
     .unwrap();

@@ -1,5 +1,7 @@
 use std::io::{BufRead, Write};
 
+use frost_rerandomized::RandomizedCiphersuite;
+
 use crate::args::Args;
 use crate::comms::cli::CLIComms;
 use crate::comms::http::HTTPComms;
@@ -7,20 +9,18 @@ use crate::comms::socket::SocketComms;
 use crate::comms::Comms;
 use crate::step_1::step_1;
 use crate::step_2::step_2;
+use crate::step_3::request_randomizer;
 use crate::step_3::step_3;
 
-#[cfg(feature = "redpallas")]
-use crate::step_3::request_randomizer;
-
-pub async fn cli(
+pub async fn cli<C: RandomizedCiphersuite + 'static>(
     args: &Args,
     reader: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let mut comms: Box<dyn Comms> = if args.cli {
-        Box::new(CLIComms {})
+    let mut comms: Box<dyn Comms<C>> = if args.cli {
+        Box::new(CLIComms::new())
     } else if args.http {
         Box::new(HTTPComms::new(args))
     } else {
@@ -41,8 +41,11 @@ pub async fn cli(
         participants_config.commitments.clone(),
     )?;
 
-    #[cfg(feature = "redpallas")]
-    let randomizer = request_randomizer(args, reader, logger, &signing_package)?;
+    let randomizer = if args.ciphersuite == "redpallas" {
+        Some(request_randomizer(args, reader, logger, &signing_package)?)
+    } else {
+        None
+    };
 
     writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
@@ -53,7 +56,6 @@ pub async fn cli(
         logger,
         participants_config,
         &signing_package,
-        #[cfg(feature = "redpallas")]
         randomizer,
     )
     .await?;
