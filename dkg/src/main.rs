@@ -1,17 +1,20 @@
-mod cli;
-mod inputs;
-
-#[cfg(test)]
-mod tests;
-
 use std::io;
 
-use cli::cli;
+use clap::Parser;
+
+use dkg::{args::Args, cli::cli};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
     let mut reader = Box::new(io::stdin().lock());
     let mut logger = io::stdout();
-    cli(&mut reader, &mut logger)?;
+
+    if args.ciphersuite == "ed25519" {
+        cli::<frost_ed25519::Ed25519Sha512>(&mut reader, &mut logger)?;
+    } else if args.ciphersuite == "redpallas" {
+        cli::<reddsa::frost::redpallas::PallasBlake2b512>(&mut reader, &mut logger)?;
+    }
 
     Ok(())
 }

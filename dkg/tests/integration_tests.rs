@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use dkg::cli::cli;
 
@@ -32,8 +29,13 @@ fn read_line(mut reader: impl BufRead) -> Result<String, std::io::Error> {
 // where in the function it's getting stuck and check if the test at that point
 // is correct.
 #[test]
-#[allow(clippy::needless_range_loop)]
 fn check_dkg() {
+    check_dkg_for_ciphersuite::<frost_ed25519::Ed25519Sha512>();
+    check_dkg_for_ciphersuite::<reddsa::frost::redpallas::PallasBlake2b512>();
+}
+
+#[allow(clippy::needless_range_loop)]
+fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static>() {
     let mut input_writers = Vec::new();
     let mut output_readers = Vec::new();
     let mut join_handles = Vec::new();
@@ -44,7 +46,7 @@ fn check_dkg() {
         let (mut input_reader, input_writer) = pipe::pipe();
         let (output_reader, mut output_writer) = pipe::pipe();
         join_handles.push(thread::spawn(move || {
-            cli(&mut input_reader, &mut output_writer).unwrap()
+            cli::<C>(&mut input_reader, &mut output_writer).unwrap()
         }));
         input_writers.push(input_writer);
         output_readers.push(output_reader);
@@ -117,7 +119,7 @@ fn check_dkg() {
             );
 
             // Write j's identifier
-            let jid: Identifier = ((j + 1) as u16).try_into().unwrap();
+            let jid: Identifier<C> = ((j + 1) as u16).try_into().unwrap();
             writeln!(&mut input_writers[i], "{}", hex::encode(jid.serialize())).unwrap();
 
             assert_eq!(
@@ -186,7 +188,7 @@ fn check_dkg() {
             );
 
             // Write j's identifier
-            let jid: Identifier = ((j + 1) as u16).try_into().unwrap();
+            let jid: Identifier<C> = ((j + 1) as u16).try_into().unwrap();
             writeln!(&mut input_writers[i], "{}", hex::encode(jid.serialize())).unwrap();
 
             assert_eq!(
@@ -195,7 +197,7 @@ fn check_dkg() {
             );
 
             // Write j's package sent to i
-            let iid: Identifier = ((i + 1) as u16).try_into().unwrap();
+            let iid: Identifier<C> = ((i + 1) as u16).try_into().unwrap();
             let iids = hex::encode(iid.serialize());
             let s = round2_packages.get(&j).expect("j").get(&iids).expect("i");
             write!(&mut input_writers[i], "{}", s).unwrap();
@@ -215,7 +217,7 @@ fn check_dkg() {
 
         // Read key package
         let key_package_json = read_line(&mut output_readers[i]).unwrap();
-        let _key_package: KeyPackage = serde_json::from_str(&key_package_json).unwrap();
+        let _key_package: KeyPackage<C> = serde_json::from_str(&key_package_json).unwrap();
 
         assert_eq!(read_line(&mut output_readers[i]).unwrap(), "\n");
         assert_eq!(
@@ -226,7 +228,7 @@ fn check_dkg() {
 
         // Read public key package
         let public_key_package_json = read_line(&mut output_readers[i]).unwrap();
-        let public_key_package: PublicKeyPackage =
+        let public_key_package: PublicKeyPackage<C> =
             serde_json::from_str(&public_key_package_json).unwrap();
         public_key_packages.insert(i, public_key_package);
     }

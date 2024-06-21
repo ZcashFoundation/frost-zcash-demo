@@ -562,8 +562,10 @@ dependencies = [
 name = "dkg"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "exitcode",
  "eyre",
+ "frost-core",
  "frost-ed25519",
  "hex",
  "itertools 0.13.0",

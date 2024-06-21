@@ -1,5 +1,3 @@
-#![cfg(not(feature = "redpallas"))]
-
 use std::io::BufWriter;
 
 use crate::inputs::{request_inputs, Config};
@@ -8,7 +6,7 @@ use frost_ed25519 as frost;
 
 #[test]
 fn check_valid_input_for_signers() {
-    let config = Config {
+    let config = Config::<frost_ed25519::Ed25519Sha512> {
         min_signers: 2,
         max_signers: 3,
         identifier: 1u16.try_into().unwrap(),
@@ -25,7 +23,8 @@ fn check_valid_input_for_signers() {
 fn return_error_if_min_participant_greater_than_max_participant() {
     let mut invalid_input = "4\n3\n1\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -37,7 +36,8 @@ fn return_error_if_min_participant_greater_than_max_participant() {
 fn return_error_if_min_participant_is_less_than_2() {
     let mut invalid_input = "1\n3\n1\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -49,7 +49,8 @@ fn return_error_if_min_participant_is_less_than_2() {
 fn return_error_if_max_participant_is_less_than_2() {
     let mut invalid_input = "2\n1\n1\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -61,7 +62,8 @@ fn return_error_if_max_participant_is_less_than_2() {
 fn return_error_if_invalid_min_signers_input() {
     let mut invalid_input = "hello\n6\n1\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -73,7 +75,8 @@ fn return_error_if_invalid_min_signers_input() {
 fn return_error_if_invalid_max_signers_input() {
     let mut invalid_input = "4\nworld\n1\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -85,7 +88,8 @@ fn return_error_if_invalid_max_signers_input() {
 fn return_malformed_identifier_error_if_identifier_invalid() {
     let mut invalid_input = "4\n6\nasecret\n".as_bytes();
     let mut buf = BufWriter::new(Vec::new());
-    let expected = request_inputs(&mut invalid_input, &mut buf).unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&mut invalid_input, &mut buf).unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
