@@ -20,5 +20,4 @@ exitcode = "1.1.2"
 pipe = "0.4.0"
 
 [features]
-redpallas = []
 default = []

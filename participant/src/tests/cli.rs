@@ -21,7 +21,8 @@ async fn check_cli() {
         key_package, signing_package, group_signature
     );
 
-    let signature = cli(&args, &mut input.as_bytes(), &mut buf).await;
+    let signature =
+        cli::<frost_ed25519::Ed25519Sha512>(&args, &mut input.as_bytes(), &mut buf).await;
     assert!(
         signature.is_ok(),
         "invalid signature: {}",

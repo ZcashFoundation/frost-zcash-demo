@@ -10,23 +10,14 @@ on:
 
 jobs:
 
-  test_ed25519:
-    name: Test with ed25519
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4.1.7
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
-
-  test_redpallas:
-    name: Test with redpallas
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4.1.7
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --features redpallas
 
   clippy:
     name: Clippy

@@ -22,6 +22,7 @@ use std::{
 
 use super::Comms;
 
+#[derive(Default)]
 pub struct CLIComms<C: Ciphersuite> {
     _phantom: PhantomData<C>,
 }
@@ -34,15 +35,6 @@ where
         Self {
             _phantom: Default::default(),
         }
-    }
-}
-
-impl<C> Default for CLIComms<C>
-where
-    C: Ciphersuite,
-{
-    fn default() -> Self {
-        Self::new()
     }
 }
 

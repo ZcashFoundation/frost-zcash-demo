@@ -1,12 +1,14 @@
+#![cfg(test)]
+
 use std::io::BufWriter;
 
-#[cfg(test)]
+use frost_ed25519 as frost;
+
 use frost::Identifier;
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
     round1, Error, VerifyingKey,
 };
-use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::{
     args::Args,
@@ -38,6 +40,7 @@ async fn check_valid_round_1_inputs() {
 
     let mut buf = BufWriter::new(Vec::new());
     let args = Args {
+        ciphersuite: "ed25519".to_string(),
         cli: true,
         key_package: "-".to_string(),
         ip: "0.0.0.0".to_string(),
@@ -63,9 +66,10 @@ async fn check_0_input_for_identifier() {
     let input = r#"{"identifier":"0000000000000000000000000000000000000000000000000000000000000000","value":"ceed7dd148a1a1ec2e65b50ecab6a7c453ccbd38c397c3506a540b7cf0dd9104","commitment":["087e22f970daf6ac5b07b55bd7fc0af6dea199ab847dc34fc92a6f8641a1bb8e","291bb78d7e4ef124f5aa6a36cbcf8c276e70fbb4e208212e916d762fc42c1bbc"],"ciphersuite":"FROST(Ed25519, SHA-512)"}"#;
     let mut invalid_input = input.as_bytes();
 
-    let expected = request_inputs(&args, &mut invalid_input, &mut buf)
-        .await
-        .unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&args, &mut invalid_input, &mut buf)
+            .await
+            .unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -82,9 +86,10 @@ async fn check_invalid_length_signing_share() {
 
     let mut invalid_input = input.as_bytes();
 
-    let expected = request_inputs(&args, &mut invalid_input, &mut buf)
-        .await
-        .unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&args, &mut invalid_input, &mut buf)
+            .await
+            .unwrap_err();
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
@@ -101,9 +106,10 @@ async fn check_invalid_round_1_inputs() {
 
     let mut valid_input = input.as_bytes();
 
-    let expected = request_inputs(&args, &mut valid_input, &mut buf)
-        .await
-        .unwrap_err();
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&args, &mut valid_input, &mut buf)
+            .await
+            .unwrap_err();
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
         Error::InvalidSecretShare
@@ -120,7 +126,8 @@ async fn check_invalid_length_vss_commitment() {
 
     let mut invalid_input = input.as_bytes();
 
-    let expected = request_inputs(&args, &mut invalid_input, &mut buf);
+    let expected =
+        request_inputs::<frost_ed25519::Ed25519Sha512>(&args, &mut invalid_input, &mut buf);
     assert!(expected.await.is_err())
 }
 

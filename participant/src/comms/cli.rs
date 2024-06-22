@@ -1,10 +1,10 @@
 //! Command line interface implementation of the Comms trait.
 
+use frost_core as frost;
+
+use frost_core::Ciphersuite;
+
 use async_trait::async_trait;
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
 
 use eyre::eyre;
 
@@ -16,24 +16,46 @@ use frost::{
 use std::{
     error::Error,
     io::{BufRead, Write},
+    marker::PhantomData,
 };
 
 use crate::comms::Comms;
 
-use super::GenericSigningPackage;
-// use super::Comms;
+#[derive(Default)]
+pub struct CLIComms<C: Ciphersuite> {
+    _phantom: PhantomData<C>,
+}
 
-pub struct CLIComms {}
+impl<C> CLIComms<C>
+where
+    C: Ciphersuite,
+{
+    pub fn new() -> Self {
+        Self {
+            _phantom: Default::default(),
+        }
+    }
+}
 
 #[async_trait(?Send)]
-impl Comms for CLIComms {
+impl<C> Comms<C> for CLIComms<C>
+where
+    C: Ciphersuite + 'static,
+{
     async fn get_signing_package(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        _commitments: SigningCommitments,
-        _identifier: Identifier,
-    ) -> Result<GenericSigningPackage, Box<dyn Error>> {
+        _commitments: SigningCommitments<C>,
+        _identifier: Identifier<C>,
+        rerandomized: bool,
+    ) -> Result<
+        (
+            frost::SigningPackage<C>,
+            Option<frost_rerandomized::Randomizer<C>>,
+        ),
+        Box<dyn Error>,
+    > {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
 
         let mut signing_package_json = String::new();
@@ -41,50 +63,50 @@ impl Comms for CLIComms {
         input.read_line(&mut signing_package_json)?;
 
         // TODO: change to return a generic Error and use a better error
-        let signing_package: SigningPackage = serde_json::from_str(signing_package_json.trim())?;
+        let signing_package: SigningPackage<C> = serde_json::from_str(signing_package_json.trim())?;
 
-        #[cfg(feature = "redpallas")]
-        {
+        if rerandomized {
             writeln!(output, "Enter the randomizer (hex string):")?;
 
             let mut json = String::new();
             input.read_line(&mut json).unwrap();
 
-            let randomizer = frost::round2::Randomizer::deserialize(
+            let randomizer = frost_rerandomized::Randomizer::<C>::deserialize(
                 &hex::decode(json.trim())?
                     .try_into()
                     .map_err(|_| eyre!("Invalid randomizer"))?,
             )?;
-            Ok((signing_package, randomizer))
+            Ok((signing_package, Some(randomizer)))
+        } else {
+            Ok((signing_package, None))
         }
-
-        #[cfg(not(feature = "redpallas"))]
-        Ok(signing_package)
     }
 
     async fn send_signature_share(
         &mut self,
-        _identifier: Identifier,
-        _signature_share: SignatureShare,
+        _identifier: Identifier<C>,
+        _signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
 
-pub fn read_identifier(input: &mut dyn BufRead) -> Result<Identifier, Box<dyn Error>> {
+pub fn read_identifier<C: Ciphersuite + 'static>(
+    input: &mut dyn BufRead,
+) -> Result<Identifier<C>, Box<dyn Error>> {
     let mut identifier_input = String::new();
     input.read_line(&mut identifier_input)?;
     let bytes = hex::decode(identifier_input.trim())?;
     let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::deserialize(&serialization)?;
+    let identifier = Identifier::<C>::deserialize(&serialization)?;
     Ok(identifier)
 }
 
-pub fn validate(
-    id: Identifier,
-    key_package: &PublicKeyPackage,
-    id_list: &[Identifier],
-) -> Result<(), frost::Error> {
+pub fn validate<C: Ciphersuite>(
+    id: Identifier<C>,
+    key_package: &PublicKeyPackage<C>,
+    id_list: &[Identifier<C>],
+) -> Result<(), frost::Error<C>> {
     if !key_package.verifying_shares().contains_key(&id) {
         return Err(frost::Error::MalformedIdentifier);
     }; // TODO: Error is actually that the identifier does not exist

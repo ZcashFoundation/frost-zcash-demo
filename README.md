@@ -52,14 +52,15 @@ and in separate terminals:
 4. Run `cargo run --bin coordinator`
 5. Run `cargo run --bin participants`. Do this in separate terminals for separate participants.
 
-The demos support two communication mechanisms. By using the `--cli` flag (e.g.
+The demos support three communication mechanisms. By using the `--cli` flag (e.g.
 `cargo run --bin dkg -- --cli`), they will print JSON objects to the terminal,
 and participants will need to copy & paste objects and send them amongst
 themselves to complete the protocol.
 
 Without the `--cli` flag, the demos will use socket communications. The
-coordinator will act as the server and the participants will be clients. See
-example below.
+coordinator will act as the server and the participants will be clients. With
+the `--http` flag, the demos will use socket communications, using a server (in
+the `server` crate) to coordinate communications. See examples below.
 
 ## Socket communication example
 
@@ -98,9 +99,13 @@ needed), using the specified key package (again replace as needed).
 Once two participants are running, the Coordinator should complete the protocol and
 write the signature to specified file.
 
+## Socket communication with server example
+
+See the [Ywallet demo tutorial](https://frost.zfnd.org/zcash/ywallet-demo.html).
+
 
 ## Curve selection
 
 Currently the demo supports curve Ed25519 and RedPallas. To use RedPallas, pass
-`--feature redpallas` to all commands. When it's enabled, it will automatically
+`-C redpallas` to all commands (after `--`). When it's enabled, it will automatically
 switch to Rerandomized FROST and it can be used to sign Zcash transactions.
