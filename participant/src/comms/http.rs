@@ -1,54 +1,68 @@
 //! HTTP implementation of the Comms trait.
 
 use async_trait::async_trait;
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+
+use frost_core::{self as frost, Ciphersuite};
 
 use eyre::eyre;
 
 use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
 
-use super::{Comms, GenericSigningPackage};
+use super::Comms;
 
 use std::io::{BufRead, Write};
 
 use std::error::Error;
 
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use crate::args::Args;
 
-pub struct HTTPComms {
+pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Uuid,
+    _phantom: PhantomData<C>,
 }
 
 use server::Uuid;
 
 // TODO: Improve error handling for invalid session id
-impl HTTPComms {
+impl<C> HTTPComms<C>
+where
+    C: Ciphersuite,
+{
     pub fn new(args: &Args) -> Self {
         let client = reqwest::Client::new();
         Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: Uuid::parse_str(&args.session_id).expect("invalid session id"),
+            _phantom: Default::default(),
         }
     }
 }
 
 #[async_trait(?Send)]
-impl Comms for HTTPComms {
+impl<C> Comms<C> for HTTPComms<C>
+where
+    C: Ciphersuite + 'static,
+{
     async fn get_signing_package(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        commitments: SigningCommitments,
-        identifier: Identifier,
-    ) -> Result<GenericSigningPackage, Box<dyn Error>> {
+        commitments: SigningCommitments<C>,
+        identifier: Identifier<C>,
+        rerandomized: bool,
+    ) -> Result<
+        (
+            frost::SigningPackage<C>,
+            Option<frost_rerandomized::Randomizer<C>>,
+        ),
+        Box<dyn Error>,
+    > {
         // Send Commitments to Server
         self.client
             .post(format!("{}/send_commitments", self.host_port))
@@ -82,23 +96,19 @@ impl Comms for HTTPComms {
             }
         };
 
-        #[cfg(feature = "redpallas")]
-        let signing_package = {
+        let signing_package = if rerandomized {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
             let randomizer = r.randomizer.first().ok_or(eyre!("missing randomizer"))?;
-            (signing_package.try_into()?, randomizer.try_into()?)
-        };
-
-        #[cfg(not(feature = "redpallas"))]
-        let signing_package = {
+            (signing_package.try_into()?, Some(randomizer.try_into()?))
+        } else {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
-            signing_package.try_into()?
+            (signing_package.try_into()?, None)
         };
 
         Ok(signing_package)
@@ -106,8 +116,8 @@ impl Comms for HTTPComms {
 
     async fn send_signature_share(
         &mut self,
-        identifier: Identifier,
-        signature_share: SignatureShare,
+        identifier: Identifier<C>,
+        signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>> {
         // Send signature share to Coordinator
 

@@ -22,5 +22,4 @@ server = { path = "../server"}
 rand = "0.8"
 
 [features]
-redpallas = []
 default = []

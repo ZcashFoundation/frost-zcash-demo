@@ -1,10 +1,8 @@
 //! Socket implementation of the Comms trait, using message-io.
 
 use async_trait::async_trait;
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+
+use frost_core::{self as frost, Ciphersuite};
 
 use eyre::eyre;
 use message_io::{
@@ -18,18 +16,23 @@ use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
 use std::{
     error::Error,
     io::{BufRead, Write},
+    marker::PhantomData,
 };
 
-use super::{Comms, GenericSigningPackage, Message};
+use super::{Comms, Message};
 use crate::args::Args;
 
-pub struct SocketComms {
+pub struct SocketComms<C: Ciphersuite> {
     input_rx: Receiver<(Endpoint, Vec<u8>)>,
     endpoint: Endpoint,
     handler: NodeHandler<()>,
+    _phantom: PhantomData<C>,
 }
 
-impl SocketComms {
+impl<C> SocketComms<C>
+where
+    C: Ciphersuite,
+{
     pub fn new(args: &Args) -> Self {
         let (handler, listener) = node::split::<()>();
         let addr = format!("{}:{}", args.ip, args.port);
@@ -44,6 +47,7 @@ impl SocketComms {
             input_rx: rx,
             endpoint,
             handler,
+            _phantom: Default::default(),
         };
 
         // TODO: save handle
@@ -74,16 +78,26 @@ impl SocketComms {
 }
 
 #[async_trait(?Send)]
-impl Comms for SocketComms {
+impl<C> Comms<C> for SocketComms<C>
+where
+    C: Ciphersuite + 'static,
+{
     async fn get_signing_package(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
-        commitments: SigningCommitments,
-        identifier: Identifier,
-    ) -> Result<GenericSigningPackage, Box<dyn Error>> {
+        commitments: SigningCommitments<C>,
+        identifier: Identifier<C>,
+        _rerandomized: bool,
+    ) -> Result<
+        (
+            frost::SigningPackage<C>,
+            Option<frost_rerandomized::Randomizer<C>>,
+        ),
+        Box<dyn Error>,
+    > {
         // Send Commitments to Coordinator
-        let data = serde_json::to_vec(&Message::IdentifiedCommitments {
+        let data = serde_json::to_vec(&Message::<C>::IdentifiedCommitments {
             identifier,
             commitments,
         })?;
@@ -96,14 +110,7 @@ impl Comms for SocketComms {
             .await
             .ok_or(eyre!("Did not receive signing package!"))?;
 
-        let message: Message = serde_json::from_slice(&data)?;
-        #[cfg(not(feature = "redpallas"))]
-        if let Message::SigningPackage(signing_package) = message {
-            Ok(signing_package)
-        } else {
-            Err(eyre!("Expected SigningPackage message"))?
-        }
-        #[cfg(feature = "redpallas")]
+        let message: Message<C> = serde_json::from_slice(&data)?;
         if let Message::SigningPackageAndRandomizer {
             signing_package,
             randomizer,
@@ -117,8 +124,8 @@ impl Comms for SocketComms {
 
     async fn send_signature_share(
         &mut self,
-        _identifier: Identifier,
-        signature_share: SignatureShare,
+        _identifier: Identifier<C>,
+        signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>> {
         // Send signature shares to Coordinator
         let data = serde_json::to_vec(&Message::SignatureShare(signature_share))?;

@@ -1,5 +1,3 @@
-#![cfg(not(feature = "redpallas"))]
-
 use coordinator::args::Args as CoordinatorArgs;
 use coordinator::comms::cli::CLIComms as CoordinatorCLIComms;
 
@@ -37,17 +35,17 @@ async fn trusted_dealer_journey() {
         message: "".to_string(),
         ..Default::default()
     };
-    let mut coordinator_comms = CoordinatorCLIComms {};
+    let mut coordinator_comms = CoordinatorCLIComms::new();
 
     // For a CLI test we can use the same CLIComms instance
-    let mut participant_comms = ParticipantCLIComms {};
+    let mut participant_comms = ParticipantCLIComms::new();
     let participant_args = ParticipantArgs::default();
 
     // Trusted dealer
 
     let dealer_input = "3\n5\n\n";
 
-    let dealer_config = trusted_dealer_input(
+    let dealer_config = trusted_dealer_input::<frost_ed25519::Ed25519Sha512>(
         &trusted_dealer::args::Args {
             cli: true,
             ..Default::default()
@@ -157,6 +155,7 @@ async fn trusted_dealer_journey() {
             &mut buf,
             signing_commitments,
             participant_identifier,
+            false,
         )
         .await
         .unwrap();
@@ -184,6 +183,7 @@ async fn trusted_dealer_journey() {
         &mut buf,
         participants_config,
         &signing_package,
+        None,
     )
     .await
     .unwrap();

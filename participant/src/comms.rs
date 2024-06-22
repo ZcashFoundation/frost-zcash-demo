@@ -4,10 +4,7 @@ pub mod socket;
 
 use async_trait::async_trait;
 
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use std::{
     error::Error,
@@ -23,40 +20,40 @@ use frost::{
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "self::serde")]
+#[serde(bound = "C: Ciphersuite")]
 #[allow(clippy::large_enum_variant)]
-pub enum Message {
+pub enum Message<C: Ciphersuite> {
     IdentifiedCommitments {
-        identifier: Identifier,
-        commitments: SigningCommitments,
+        identifier: Identifier<C>,
+        commitments: SigningCommitments<C>,
     },
-    #[cfg(not(feature = "redpallas"))]
-    SigningPackage(frost::SigningPackage),
-    #[cfg(feature = "redpallas")]
     SigningPackageAndRandomizer {
-        signing_package: frost::SigningPackage,
-        randomizer: frost::round2::Randomizer,
+        signing_package: frost::SigningPackage<C>,
+        randomizer: Option<frost_rerandomized::Randomizer<C>>,
     },
-    SignatureShare(SignatureShare),
+    SignatureShare(SignatureShare<C>),
 }
 
-#[cfg(not(feature = "redpallas"))]
-pub type GenericSigningPackage = frost::SigningPackage;
-#[cfg(feature = "redpallas")]
-pub type GenericSigningPackage = (frost::SigningPackage, frost::round2::Randomizer);
-
 #[async_trait(?Send)]
-pub trait Comms {
+pub trait Comms<C: Ciphersuite> {
     async fn get_signing_package(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
-        commitments: SigningCommitments,
-        identifier: Identifier,
-    ) -> Result<GenericSigningPackage, Box<dyn Error>>;
+        commitments: SigningCommitments<C>,
+        identifier: Identifier<C>,
+        rerandomized: bool,
+    ) -> Result<
+        (
+            frost::SigningPackage<C>,
+            Option<frost_rerandomized::Randomizer<C>>,
+        ),
+        Box<dyn Error>,
+    >;
 
     async fn send_signature_share(
         &mut self,
-        identifier: Identifier,
-        signature_share: SignatureShare,
+        identifier: Identifier<C>,
+        signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>>;
 }

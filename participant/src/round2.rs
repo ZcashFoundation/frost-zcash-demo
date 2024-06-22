@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use crate::comms::Comms;
 use frost::{
@@ -13,60 +10,50 @@ use frost::{
 use std::io::{BufRead, Write};
 
 #[derive(Clone)]
-pub struct Round2Config {
-    pub signing_package: SigningPackage,
-    #[cfg(feature = "redpallas")]
-    pub randomizer: frost::round2::Randomizer,
+pub struct Round2Config<C: Ciphersuite> {
+    pub signing_package: SigningPackage<C>,
+    pub randomizer: Option<frost_rerandomized::Randomizer<C>>,
 }
 
 // TODO: refactor to generate config
 // TODO: handle errors
-pub async fn round_2_request_inputs(
-    comms: &mut dyn Comms,
+pub async fn round_2_request_inputs<C: Ciphersuite>(
+    comms: &mut dyn Comms<C>,
     input: &mut impl BufRead,
     logger: &mut dyn Write,
-    commitments: SigningCommitments,
-    identifier: Identifier,
-) -> Result<Round2Config, Box<dyn std::error::Error>> {
+    commitments: SigningCommitments<C>,
+    identifier: Identifier<C>,
+    rerandomized: bool,
+) -> Result<Round2Config<C>, Box<dyn std::error::Error>> {
     writeln!(logger, "=== Round 2 ===")?;
 
     let r = comms
-        .get_signing_package(input, logger, commitments, identifier)
+        .get_signing_package(input, logger, commitments, identifier, rerandomized)
         .await?;
 
-    #[cfg(feature = "redpallas")]
-    {
-        Ok(Round2Config {
-            signing_package: r.0,
-            randomizer: r.1,
-        })
-    }
-
-    #[cfg(not(feature = "redpallas"))]
-    Ok(Round2Config { signing_package: r })
+    Ok(Round2Config {
+        signing_package: r.0,
+        randomizer: r.1,
+    })
 }
 
-pub fn generate_signature(
-    config: Round2Config,
-    key_package: &KeyPackage,
-    signing_nonces: &SigningNonces,
-) -> Result<SignatureShare, Error> {
+pub fn generate_signature<C: frost_rerandomized::RandomizedCiphersuite>(
+    config: Round2Config<C>,
+    key_package: &KeyPackage<C>,
+    signing_nonces: &SigningNonces<C>,
+) -> Result<SignatureShare<C>, Error<C>> {
     let signing_package = config.signing_package;
-    #[cfg(not(feature = "redpallas"))]
-    let signature = round2::sign(&signing_package, signing_nonces, key_package)?;
 
-    #[cfg(feature = "redpallas")]
-    let signature = round2::sign(
-        &signing_package,
-        signing_nonces,
-        key_package,
-        config.randomizer,
-    )?;
+    let signature = if let Some(randomizer) = config.randomizer {
+        frost_rerandomized::sign::<C>(&signing_package, signing_nonces, key_package, randomizer)?
+    } else {
+        round2::sign(&signing_package, signing_nonces, key_package)?
+    };
     Ok(signature)
 }
 
-pub fn print_values_round_2(
-    signature: SignatureShare,
+pub fn print_values_round_2<C: Ciphersuite>(
+    signature: SignatureShare<C>,
     logger: &mut dyn Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "Please send the following to the Coordinator")?;

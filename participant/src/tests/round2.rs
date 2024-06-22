@@ -1,6 +1,9 @@
+#![cfg(test)]
+
 use std::{collections::BTreeMap, io::BufWriter};
 
-#[cfg(test)]
+use frost_ed25519 as frost;
+
 use frost::Identifier;
 use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
@@ -8,7 +11,6 @@ use frost::{
     round2::SignatureShare,
     SigningPackage, VerifyingKey,
 };
-use frost_ed25519 as frost;
 use hex::FromHex;
 use participant::comms::cli::CLIComms;
 use participant::round2::print_values_round_2;
@@ -38,7 +40,7 @@ async fn check_valid_round_2_inputs() {
 
     // Generate commitments
 
-    let mut comms = CLIComms {};
+    let mut comms = CLIComms::new();
     let my_signer_commitments = SigningCommitments::new(
         nonce_commitment(MY_HIDING_COMMITMENT),
         nonce_commitment(MY_BINDING_COMMITMENT),
@@ -59,6 +61,7 @@ async fn check_valid_round_2_inputs() {
 
     let expected = Round2Config {
         signing_package: SigningPackage::new(signer_commitments, &message),
+        randomizer: None,
     };
 
     let mut buf = BufWriter::new(Vec::new());
@@ -72,6 +75,7 @@ async fn check_valid_round_2_inputs() {
         &mut buf,
         my_signer_commitments,
         Identifier::try_from(1).unwrap(),
+        false,
     )
     .await;
 
@@ -117,7 +121,10 @@ async fn check_sign() {
 
     let signing_package = SigningPackage::new(signer_commitments, &message);
 
-    let config = Round2Config { signing_package };
+    let config = Round2Config {
+        signing_package,
+        randomizer: None,
+    };
 
     let signature = generate_signature(config, &key_package, &nonces);
 

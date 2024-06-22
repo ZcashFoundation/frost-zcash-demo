@@ -1,10 +1,9 @@
-#![cfg(not(feature = "redpallas"))]
-
 use std::collections::{BTreeMap, HashMap};
+
+use frost_ed25519 as frost;
 
 use frost::keys::IdentifierList;
 use frost::{aggregate, SigningPackage};
-use frost_ed25519 as frost;
 use participant::round2::{generate_signature, Round2Config};
 use rand::thread_rng;
 
@@ -43,6 +42,7 @@ fn check_participant() {
     for participant_identifier in nonces.keys() {
         let config = Round2Config {
             signing_package: SigningPackage::new(commitments.clone(), &message),
+            randomizer: None,
         };
         let signature = generate_signature(
             config,

@@ -3,6 +3,9 @@ use clap::Parser;
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[arg(short = 'C', long, default_value = "ed25519")]
+    pub ciphersuite: String,
+
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
     /// If false, socket communication is enabled.
