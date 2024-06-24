@@ -87,7 +87,6 @@ mod tests {
         keys::{PublicKeyPackage, VerifyingShare},
         Error, Identifier, VerifyingKey,
     };
-    use hex::FromHex;
 
     use crate::comms::cli::validate;
 
@@ -103,15 +102,15 @@ mod tests {
         let mut signer_pubkeys = BTreeMap::new();
         signer_pubkeys.insert(
             id_1,
-            VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_1).unwrap()).unwrap(),
+            VerifyingShare::deserialize(&hex::decode(PUBLIC_KEY_1).unwrap()).unwrap(),
         );
         signer_pubkeys.insert(
             id_2,
-            VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY_2).unwrap()).unwrap(),
+            VerifyingShare::deserialize(&hex::decode(PUBLIC_KEY_2).unwrap()).unwrap(),
         );
 
         let group_public =
-            VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap();
+            VerifyingKey::deserialize(&hex::decode(GROUP_PUBLIC_KEY).unwrap()).unwrap();
 
         PublicKeyPackage::new(signer_pubkeys, group_public)
     }

@@ -4,8 +4,6 @@ use frost_core as frost;
 
 use frost_core::Ciphersuite;
 
-use eyre::eyre;
-
 use async_trait::async_trait;
 
 use frost::{
@@ -106,8 +104,7 @@ pub fn read_identifier<C: Ciphersuite + 'static>(
     let mut identifier_input = String::new();
     input.read_line(&mut identifier_input)?;
     let bytes = hex::decode(identifier_input.trim())?;
-    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::<C>::deserialize(&serialization)?;
+    let identifier = Identifier::<C>::deserialize(&bytes)?;
     Ok(identifier)
 }
 
