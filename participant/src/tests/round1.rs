@@ -9,7 +9,6 @@ use frost::{
     keys::{KeyPackage, SigningShare, VerifyingShare},
     round1, Error, VerifyingKey,
 };
-use hex::FromHex;
 use participant::{
     args::Args,
     round1::{print_values, request_inputs, Round1Config},
@@ -25,9 +24,9 @@ const SECRET_SHARE_JSON: &str = r#"{"header":{"version":0,"ciphersuite":"FROST-E
 async fn build_key_package() -> KeyPackage {
     KeyPackage::new(
         Identifier::try_from(1).unwrap(),
-        SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
-        VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
-        VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
+        SigningShare::deserialize(&hex::decode(SIGNING_SHARE).unwrap()).unwrap(),
+        VerifyingShare::deserialize(&hex::decode(PUBLIC_KEY).unwrap()).unwrap(),
+        VerifyingKey::deserialize(&hex::decode(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
         3,
     )
 }
@@ -135,8 +134,7 @@ async fn check_invalid_length_vss_commitment() {
 async fn check_print_values() {
     let mut buf = BufWriter::new(Vec::new());
 
-    let signing_share =
-        SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap();
+    let signing_share = SigningShare::deserialize(&hex::decode(SIGNING_SHARE).unwrap()).unwrap();
     let mut rng = thread_rng();
     let (_nonces, commitments) = round1::commit(&signing_share, &mut rng);
 
@@ -144,7 +142,7 @@ async fn check_print_values() {
 
     let out = String::from_utf8(buf.into_inner().unwrap()).unwrap();
 
-    let log = format!("=== Round 1 ===\nSigningNonces were generated and stored in memory\nSigningCommitments:\n{{\"header\":{{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"}},\"hiding\":\"{}\",\"binding\":\"{}\"}}\n=== Round 1 Completed ===\nPlease send your SigningCommitments to the coordinator\n", &hex::encode(commitments.hiding().serialize()), &hex::encode(commitments.binding().serialize()));
+    let log = format!("=== Round 1 ===\nSigningNonces were generated and stored in memory\nSigningCommitments:\n{{\"header\":{{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"}},\"hiding\":\"{}\",\"binding\":\"{}\"}}\n=== Round 1 Completed ===\nPlease send your SigningCommitments to the coordinator\n", &hex::encode(commitments.hiding().serialize().unwrap()), &hex::encode(commitments.binding().serialize().unwrap()));
 
     assert_eq!(out, log)
 }
