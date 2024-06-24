@@ -15,7 +15,7 @@ pub struct SerializedIdentifier(
 
 impl<C: frost_core::Ciphersuite> From<frost_core::Identifier<C>> for SerializedIdentifier {
     fn from(identifier: frost_core::Identifier<C>) -> Self {
-        Self(identifier.serialize().as_ref().to_vec())
+        Self(identifier.serialize().to_vec())
     }
 }
 
@@ -23,13 +23,7 @@ impl<C: frost_core::Ciphersuite> TryFrom<&SerializedIdentifier> for frost_core::
     type Error = frost_core::Error<C>;
 
     fn try_from(serialized_identifier: &SerializedIdentifier) -> Result<Self, Self::Error> {
-        frost_core::Identifier::<C>::deserialize(
-            &serialized_identifier
-                .clone()
-                .0
-                .try_into()
-                .map_err(|_| frost_core::Error::<C>::DeserializationError)?,
-        )
+        frost_core::Identifier::<C>::deserialize(&serialized_identifier.0)
     }
 }
 
@@ -111,7 +105,7 @@ pub struct SerializedRandomizer(
 
 impl<C: frost_core::Ciphersuite> From<frost_rerandomized::Randomizer<C>> for SerializedRandomizer {
     fn from(randomizer: frost_rerandomized::Randomizer<C>) -> Self {
-        Self(randomizer.serialize().as_ref().to_vec())
+        Self(randomizer.serialize().to_vec())
     }
 }
 
@@ -121,13 +115,7 @@ impl<C: frost_core::Ciphersuite> TryFrom<&SerializedRandomizer>
     type Error = frost_core::Error<C>;
 
     fn try_from(serialized_randomizer: &SerializedRandomizer) -> Result<Self, Self::Error> {
-        frost_rerandomized::Randomizer::<C>::deserialize(
-            &serialized_randomizer
-                .0
-                .clone()
-                .try_into()
-                .map_err(|_| frost_core::Error::<C>::DeserializationError)?,
-        )
+        frost_rerandomized::Randomizer::<C>::deserialize(&serialized_randomizer.0)
     }
 }
 
@@ -145,7 +133,7 @@ impl<C: frost_core::Ciphersuite> From<frost_core::round2::SignatureShare<C>>
     for SerializedSignatureShare
 {
     fn from(randomizer: frost_core::round2::SignatureShare<C>) -> Self {
-        Self(randomizer.serialize().as_ref().to_vec())
+        Self(randomizer.serialize().to_vec())
     }
 }
 
@@ -155,13 +143,7 @@ impl<C: frost_core::Ciphersuite> TryFrom<&SerializedSignatureShare>
     type Error = frost_core::Error<C>;
 
     fn try_from(serialized_randomizer: &SerializedSignatureShare) -> Result<Self, Self::Error> {
-        frost_core::round2::SignatureShare::<C>::deserialize(
-            serialized_randomizer
-                .0
-                .clone()
-                .try_into()
-                .map_err(|_| frost_core::Error::<C>::DeserializationError)?,
-        )
+        frost_core::round2::SignatureShare::<C>::deserialize(&serialized_randomizer.0)
     }
 }
 

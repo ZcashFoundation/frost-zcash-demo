@@ -32,14 +32,10 @@ pub fn request_randomizer<C: RandomizedCiphersuite + 'static>(
         fs::read(&args.randomizer)?
     };
 
-    Ok(frost_rerandomized::Randomizer::deserialize(
-        &randomizer
-            .try_into()
-            .map_err(|_| frost::Error::<C>::MalformedIdentifier)?,
-    )?)
+    Ok(frost_rerandomized::Randomizer::deserialize(&randomizer)?)
 }
 
-pub async fn step_3<C: Ciphersuite>(
+pub async fn step_3<C: Ciphersuite + 'static>(
     args: &Args,
     comms: &mut dyn Comms<C>,
     input: &mut dyn BufRead,
@@ -101,7 +97,7 @@ async fn request_inputs_signature_shares<C: Ciphersuite>(
     Ok(group_signature)
 }
 
-fn print_signature<C: Ciphersuite>(
+fn print_signature<C: Ciphersuite + 'static>(
     args: &Args,
     logger: &mut dyn Write,
     group_signature: Signature<C>,
@@ -113,7 +109,7 @@ fn print_signature<C: Ciphersuite>(
             serde_json::to_string(&group_signature)?
         )?;
     } else {
-        fs::write(&args.signature, group_signature.serialize())?;
+        fs::write(&args.signature, group_signature.serialize()?)?;
         eprintln!("Raw signature written to {}", &args.signature);
     };
     Ok(())

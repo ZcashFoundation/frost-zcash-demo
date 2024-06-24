@@ -33,13 +33,7 @@ pub fn split_secret<C: Ciphersuite>(
     identifiers: IdentifierList<C>,
     rng: &mut ThreadRng,
 ) -> Result<(BTreeMap<Identifier<C>, SecretShare<C>>, PublicKeyPackage<C>), Error<C>> {
-    let secret_key = SigningKey::deserialize(
-        config
-            .secret
-            .clone()
-            .try_into()
-            .map_err(|_| Error::MalformedSigningKey)?,
-    )?;
+    let secret_key = SigningKey::deserialize(&config.secret)?;
     let (shares, pubkeys) = frost::keys::split(
         &secret_key,
         config.max_signers,
