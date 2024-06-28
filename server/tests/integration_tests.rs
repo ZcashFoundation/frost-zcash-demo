@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 use axum_test::TestServer;
 use rand::thread_rng;
-use server::{args::Args, router, SerializedSignatureShare, SerializedSigningPackage};
+use server::{args::Args, router, AppState, SerializedSignatureShare, SerializedSigningPackage};
 
 use frost_core as frost;
 
@@ -47,14 +47,52 @@ async fn test_main_router<
         .collect();
 
     // Instantiate test server using axum_test
-    let router = router();
+    let shared_state = AppState::new(":memory:").await?;
+    let router = router(shared_state);
     let server = TestServer::new(router)?;
+
+    // Create a dummy user. We make all requests with the same user since
+    // it currently it doesn't really matter who the user is, users are only
+    // used to share session IDs. This will likely change soon.
+
+    let res = server
+        .post("/register")
+        .json(&server::RegisterArgs {
+            username: "alice".to_string(),
+            password: "passw0rd".to_string(),
+            pubkey: vec![],
+        })
+        .await;
+    res.assert_status_ok();
+
+    let res = server
+        .post("/register")
+        .json(&server::RegisterArgs {
+            username: "bob".to_string(),
+            password: "passw0rd".to_string(),
+            pubkey: vec![],
+        })
+        .await;
+    res.assert_status_ok();
+
+    let res = server
+        .post("/authorize")
+        .json(&server::AuthorizeArgs {
+            username: "alice".to_string(),
+            password: "passw0rd".to_string(),
+        })
+        .await;
+    res.assert_status_ok();
+    let r: server::AuthorizeOutput = res.json();
+    let token = r.access_token;
 
     // As the coordinator, create a new signing session with all participants,
     // for 2 messages
     let res = server
         .post("/create_new_session")
+        .authorization_bearer(token)
         .json(&server::CreateNewSessionArgs {
+            usernames: vec!["alice".to_string(), "bob".to_string()],
             num_signers: 2,
             message_count: 2,
         })
@@ -75,6 +113,7 @@ async fn test_main_router<
         // asking the server).
         let res = server
             .post("/get_session_info")
+            .authorization_bearer(token)
             .json(&server::GetSessionInfoArgs { session_id })
             .await;
         res.assert_status_ok();
@@ -96,6 +135,7 @@ async fn test_main_router<
         // Send commitments to server
         let res = server
             .post("/send_commitments")
+            .authorization_bearer(token)
             .json(&server::SendCommitmentsArgs {
                 identifier: (*identifier).into(),
                 session_id,
@@ -110,6 +150,7 @@ async fn test_main_router<
     // As the coordinator, get the commitments
     let res = server
         .post("/get_commitments")
+        .authorization_bearer(token)
         .json(&server::GetCommitmentsArgs { session_id })
         .await;
     res.assert_status_ok();
@@ -146,6 +187,7 @@ async fn test_main_router<
     // As the coordinator, send the SigningPackages to the server
     let res = server
         .post("/send_signing_package")
+        .authorization_bearer(token)
         .json(&server::SendSigningPackageArgs {
             session_id,
             signing_package: signing_packages
@@ -173,6 +215,7 @@ async fn test_main_router<
         // Get SigningPackages
         let res = server
             .post("get_signing_package")
+            .authorization_bearer(token)
             .json(&server::GetSigningPackageArgs { session_id })
             .await;
         res.assert_status_ok();
@@ -210,6 +253,7 @@ async fn test_main_router<
         // Send SignatureShares to the server
         let res = server
             .post("/send_signature_share")
+            .authorization_bearer(token)
             .json(&server::SendSignatureShareArgs {
                 identifier: (*identifier).into(),
                 session_id,
@@ -225,6 +269,7 @@ async fn test_main_router<
     // As the coordinator, get SignatureShares
     let res = server
         .post("/get_signature_shares")
+        .authorization_bearer(token)
         .json(&server::GetSignatureSharesArgs { session_id })
         .await;
     res.assert_status_ok();
@@ -265,6 +310,7 @@ async fn test_main_router<
     // Close the session
     let res = server
         .post("/close_session")
+        .authorization_bearer(token)
         .json(&server::CloseSessionArgs { session_id })
         .await;
     res.assert_status_ok();
@@ -288,9 +334,12 @@ async fn test_main_router<
 /// A better example on how to write client code.
 #[tokio::test]
 async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt::init();
+
     // Spawn server for testing
     tokio::spawn(async move {
         server::run(&Args {
+            database: ":memory:".to_string(),
             ip: "127.0.0.1".to_string(),
             port: 2744,
         })
@@ -302,19 +351,67 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: this could possibly be not enough, use some retry logic instead
     tokio::time::sleep(Duration::from_secs(2)).await;
 
-    // Call create_new_session
+    // Create a client to make requests
     let client = reqwest::Client::new();
+
+    // Call register to create users
     let r = client
-        .post("http://127.0.0.1:2744/create_new_session")
-        .json(&server::CreateNewSessionArgs {
-            num_signers: 2,
-            message_count: 1,
+        .post("http://127.0.0.1:2744/register")
+        .json(&server::RegisterArgs {
+            username: "alice".to_string(),
+            password: "passw0rd".to_string(),
+            pubkey: vec![],
         })
         .send()
-        .await?
-        .json::<server::CreateNewSessionOutput>()
         .await?;
-    println!("{}", r.session_id);
+    if r.status() != reqwest::StatusCode::OK {
+        panic!("{}", r.text().await?)
+    }
+    let r = client
+        .post("http://127.0.0.1:2744/register")
+        .json(&server::RegisterArgs {
+            username: "bob".to_string(),
+            password: "passw0rd".to_string(),
+            pubkey: vec![],
+        })
+        .send()
+        .await?;
+    if r.status() != reqwest::StatusCode::OK {
+        panic!("{}", r.text().await?)
+    }
+
+    // Call authorize to authenticate
+    let r = client
+        .post("http://127.0.0.1:2744/authorize")
+        .json(&server::AuthorizeArgs {
+            username: "alice".to_string(),
+            password: "passw0rd".to_string(),
+        })
+        .send()
+        .await?;
+    if r.status() != reqwest::StatusCode::OK {
+        panic!("{}", r.text().await?)
+    }
+    let r = r.json::<server::AuthorizeOutput>().await?;
+    let access_token = r.access_token;
+
+    // Call create_new_session
+    let r = client
+        .post("http://127.0.0.1:2744/create_new_session")
+        .bearer_auth(access_token)
+        .json(&server::CreateNewSessionArgs {
+            usernames: vec!["alice".to_string(), "bob".to_string()],
+            message_count: 1,
+            num_signers: 2,
+        })
+        .send()
+        .await?;
+    if r.status() != reqwest::StatusCode::OK {
+        panic!("{}", r.text().await?)
+    }
+    let r = r.json::<server::CreateNewSessionOutput>().await?;
+    let session_id = r.session_id;
+    println!("Session ID: {}", session_id);
 
     Ok(())
 }

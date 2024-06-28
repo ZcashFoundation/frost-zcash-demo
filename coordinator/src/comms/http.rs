@@ -20,6 +20,7 @@ use std::{
     io::{BufRead, Write},
     marker::PhantomData,
     time::Duration,
+    vec,
 };
 
 use super::Comms;
@@ -57,6 +58,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .client
             .post(format!("{}/create_new_session", self.host_port))
             .json(&server::CreateNewSessionArgs {
+                usernames: vec![],
                 num_signers,
                 message_count: 1,
             })
