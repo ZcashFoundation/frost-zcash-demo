@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
@@ -78,10 +79,24 @@ pub struct Session {
 }
 
 /// The global state of the server.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct AppState {
     /// Mapping of signing sessions by UUID.
     pub(crate) sessions: HashMap<Uuid, Session>,
+    pub(crate) db: SqlitePool,
+}
+
+impl AppState {
+    pub async fn new() -> Result<SharedState, Box<dyn std::error::Error>> {
+        // TODO: use memory when it's a test
+        let db = SqlitePool::connect(":memory:").await?;
+        sqlx::migrate!().run(&db).await?;
+        let state = Self {
+            sessions: Default::default(),
+            db,
+        };
+        Ok(Arc::new(RwLock::new(state)))
+    }
 }
 
 /// Type alias for the global state under a reference-counted RW mutex,

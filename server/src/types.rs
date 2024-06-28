@@ -147,6 +147,28 @@ impl<C: frost_core::Ciphersuite> TryFrom<&SerializedSignatureShare>
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RegisterArgs {
+    pub username: String,
+    pub password: String,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub pubkey: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthorizeOutput {
+    pub access_token: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthorizeArgs {
+    pub username: String,
+    pub password: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateNewSessionArgs {
     pub num_signers: u16,

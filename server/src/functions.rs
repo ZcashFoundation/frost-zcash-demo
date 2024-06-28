@@ -8,20 +8,88 @@ use uuid::Uuid;
 use crate::{
     state::{Session, SessionState, SharedState},
     types::*,
+    user::{authenticate_user, create_user, refresh_access_token, User},
     AppError,
 };
+
+pub(crate) async fn register(
+    State(state): State<SharedState>,
+    Json(args): Json<RegisterArgs>,
+) -> Result<Json<()>, AppError> {
+    let username = args.username.trim();
+    let password = args.password.trim();
+
+    if username.is_empty() || password.is_empty() {
+        return Err(AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("empty args").into(),
+        ));
+    }
+
+    let db = {
+        let state_lock = state.read().unwrap();
+        state_lock.db.clone()
+    };
+
+    create_user(db, username, password, args.pubkey)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    Ok(Json(()))
+}
+
+pub(crate) async fn authorize(
+    State(state): State<SharedState>,
+    Json(args): Json<AuthorizeArgs>,
+) -> Result<Json<AuthorizeOutput>, AppError> {
+    // Check if the user sent the credentials
+    if args.username.is_empty() || args.password.is_empty() {
+        return Err(AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("empty args").into(),
+        ));
+    }
+
+    let db = {
+        let state_lock = state.read().unwrap();
+        state_lock.db.clone()
+    };
+
+    let user = authenticate_user(db.clone(), &args.username, &args.password)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    let user = match user {
+        Some(user) => user,
+        None => {
+            return Err(AppError(
+                StatusCode::UNAUTHORIZED,
+                eyre!("invalid user or password").into(),
+            ))
+        }
+    };
+
+    let access_token = refresh_access_token(db.clone(), user.id)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    let token = AuthorizeOutput { access_token };
+
+    Ok(Json(token))
+}
 
 /// Implement the create_new_session API.
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
     tracing::info!("create_new_session");
     if args.message_count == 0 {
         return Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("invalid message_count"),
+            eyre!("invalid message_count").into(),
         ));
     }
     // Create new session object.
@@ -43,13 +111,14 @@ pub(crate) async fn create_new_session(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<GetSessionInfoArgs>,
 ) -> Result<Json<GetSessionInfoOutput>, AppError> {
     let state_lock = state.read().unwrap();
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
-        eyre!("session ID not found"),
+        eyre!("session ID not found").into(),
     ))?;
 
     Ok(Json(GetSessionInfoOutput {
@@ -63,6 +132,7 @@ pub(crate) async fn get_session_info(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_commitments(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<SendCommitmentsArgs>,
 ) -> Result<(), AppError> {
     // Get the mutex lock to read and write from the state
@@ -73,7 +143,7 @@ pub(crate) async fn send_commitments(
         .get_mut(&args.session_id)
         .ok_or(AppError(
             StatusCode::NOT_FOUND,
-            eyre!("session ID not found"),
+            eyre!("session ID not found").into(),
         ))?;
 
     match &mut session.state {
@@ -81,7 +151,7 @@ pub(crate) async fn send_commitments(
             if args.commitments.len() != session.message_count as usize {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    eyre!("wrong number of commitments"),
+                    eyre!("wrong number of commitments").into(),
                 ));
             }
             // Add commitment to map.
@@ -99,7 +169,7 @@ pub(crate) async fn send_commitments(
         _ => {
             return Err(AppError(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("incompatible session state"),
+                eyre!("incompatible session state").into(),
             ));
         }
     }
@@ -110,13 +180,14 @@ pub(crate) async fn send_commitments(
 // #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_commitments(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<GetCommitmentsArgs>,
 ) -> Result<Json<GetCommitmentsOutput>, AppError> {
     let state_lock = state.read().unwrap();
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
-        eyre!("session ID not found"),
+        eyre!("session ID not found").into(),
     ))?;
 
     match &session.state {
@@ -135,7 +206,7 @@ pub(crate) async fn get_commitments(
         })),
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("incompatible session state"),
+            eyre!("incompatible session state").into(),
         )),
     }
 }
@@ -144,6 +215,7 @@ pub(crate) async fn get_commitments(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_signing_package(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<SendSigningPackageArgs>,
 ) -> Result<(), AppError> {
     let mut state_lock = state.write().unwrap();
@@ -153,7 +225,7 @@ pub(crate) async fn send_signing_package(
         .get_mut(&args.session_id)
         .ok_or(AppError(
             StatusCode::NOT_FOUND,
-            eyre!("session ID not found"),
+            eyre!("session ID not found").into(),
         ))?;
 
     match &mut session.state {
@@ -161,7 +233,7 @@ pub(crate) async fn send_signing_package(
             if args.signing_package.len() != session.message_count as usize {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    eyre!("wrong number of inputs"),
+                    eyre!("wrong number of inputs").into(),
                 ));
             }
             if args.randomizer.len() != session.message_count as usize
@@ -169,7 +241,7 @@ pub(crate) async fn send_signing_package(
             {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    eyre!("wrong number of inputs"),
+                    eyre!("wrong number of inputs").into(),
                 ));
             }
             session.state = SessionState::WaitingForSignatureShares {
@@ -183,7 +255,7 @@ pub(crate) async fn send_signing_package(
         _ => {
             return Err(AppError(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("incompatible session state"),
+                eyre!("incompatible session state").into(),
             ));
         }
     }
@@ -194,13 +266,14 @@ pub(crate) async fn send_signing_package(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_signing_package(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<GetSigningPackageArgs>,
 ) -> Result<Json<GetSigningPackageOutput>, AppError> {
     let state_lock = state.read().unwrap();
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
-        eyre!("session ID not found"),
+        eyre!("session ID not found").into(),
     ))?;
 
     match &session.state {
@@ -217,7 +290,7 @@ pub(crate) async fn get_signing_package(
         })),
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("incompatible session state"),
+            eyre!("incompatible session state").into(),
         )),
     }
 }
@@ -227,6 +300,7 @@ pub(crate) async fn get_signing_package(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn send_signature_share(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<SendSignatureShareArgs>,
 ) -> Result<(), AppError> {
     let mut state_lock = state.write().unwrap();
@@ -236,7 +310,7 @@ pub(crate) async fn send_signature_share(
         .get_mut(&args.session_id)
         .ok_or(AppError(
             StatusCode::NOT_FOUND,
-            eyre!("session ID not found"),
+            eyre!("session ID not found").into(),
         ))?;
 
     match &mut session.state {
@@ -248,12 +322,15 @@ pub(crate) async fn send_signature_share(
             aux_msg: _,
         } => {
             if !identifiers.contains(&args.identifier) {
-                return Err(AppError(StatusCode::NOT_FOUND, eyre!("invalid identifier")));
+                return Err(AppError(
+                    StatusCode::NOT_FOUND,
+                    eyre!("invalid identifier").into(),
+                ));
             }
             if args.signature_share.len() != session.message_count as usize {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    eyre!("wrong number of signature shares"),
+                    eyre!("wrong number of signature shares").into(),
                 ));
             }
             // Currently ignoring the possibility of overwriting previous values
@@ -270,7 +347,7 @@ pub(crate) async fn send_signature_share(
         _ => {
             return Err(AppError(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("incompatible session state"),
+                eyre!("incompatible session state").into(),
             ));
         }
     }
@@ -281,13 +358,14 @@ pub(crate) async fn send_signature_share(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn get_signature_shares(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<GetSignatureSharesArgs>,
 ) -> Result<Json<GetSignatureSharesOutput>, AppError> {
     let state_lock = state.read().unwrap();
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
-        eyre!("session ID not found"),
+        eyre!("session ID not found").into(),
     ))?;
 
     match &session.state {
@@ -308,7 +386,7 @@ pub(crate) async fn get_signature_shares(
         }
         _ => Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("incompatible session state"),
+            eyre!("incompatible session state").into(),
         )),
     }
 }
@@ -317,6 +395,7 @@ pub(crate) async fn get_signature_shares(
 #[tracing::instrument(ret, err(Debug))]
 pub(crate) async fn close_session(
     State(state): State<SharedState>,
+    user: User,
     Json(args): Json<CloseSessionArgs>,
 ) -> Result<Json<()>, AppError> {
     state.write().unwrap().sessions.remove(&args.session_id);
