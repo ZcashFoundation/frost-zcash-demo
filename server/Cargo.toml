@@ -24,7 +24,7 @@ uuid = { version = "1.9.1", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
 axum-test = "15.2.0"
-frost-ed25519 = { version = "1.0.0-rc.0", features = ["serde"] }
+frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "81c649c412e5b6ba56d491d2857f91fbd28adbc7", features = [
     "frost",
     "serde",
