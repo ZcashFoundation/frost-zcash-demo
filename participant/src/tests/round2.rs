@@ -31,7 +31,7 @@ const BINDING_COMMITMENT_2: &str =
     "b0e13794eaf00be2e430b16ec7f72ab0b6579e52ca604d17406a4fd1597afd66";
 
 pub fn nonce_commitment(input: &str) -> NonceCommitment {
-    NonceCommitment::deserialize(<[u8; 32]>::from_hex(input).unwrap()).unwrap()
+    NonceCommitment::deserialize(&hex::decode(input).unwrap()).unwrap()
 }
 
 #[tokio::test]
@@ -92,9 +92,9 @@ async fn check_valid_round_2_inputs() {
 async fn check_sign() {
     let key_package = KeyPackage::new(
         Identifier::try_from(1).unwrap(),
-        SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
-        VerifyingShare::deserialize(<[u8; 32]>::from_hex(PUBLIC_KEY).unwrap()).unwrap(),
-        VerifyingKey::deserialize(<[u8; 32]>::from_hex(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
+        SigningShare::deserialize(&hex::decode(SIGNING_SHARE).unwrap()).unwrap(),
+        VerifyingShare::deserialize(&hex::decode(PUBLIC_KEY).unwrap()).unwrap(),
+        VerifyingKey::deserialize(&hex::decode(GROUP_PUBLIC_KEY).unwrap()).unwrap(),
         2,
     );
 
@@ -102,13 +102,13 @@ async fn check_sign() {
 
     // TODO: Nonce doesn't seem to be exported. Look into this to improve these tests
     let (nonces, my_commitments) = round1::commit(
-        &SigningShare::deserialize(<[u8; 32]>::from_hex(SIGNING_SHARE).unwrap()).unwrap(),
+        &SigningShare::deserialize(&hex::decode(SIGNING_SHARE).unwrap()).unwrap(),
         &mut rng,
     );
 
     let signer_commitments_2 = SigningCommitments::new(
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(HIDING_COMMITMENT_2).unwrap()).unwrap(),
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(BINDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(HIDING_COMMITMENT_2).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(BINDING_COMMITMENT_2).unwrap()).unwrap(),
     );
 
     let mut signer_commitments = BTreeMap::new();
@@ -116,10 +116,9 @@ async fn check_sign() {
     signer_commitments.insert(Identifier::try_from(2).unwrap(), signer_commitments_2);
 
     let message =
-        <[u8; 32]>::from_hex("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673")
-            .unwrap();
+        &hex::decode("15d21ccd7ee42959562fc8aa63224c8851fb3ec85a3faf66040d380fb9738673").unwrap();
 
-    let signing_package = SigningPackage::new(signer_commitments, &message);
+    let signing_package = SigningPackage::new(signer_commitments, message);
 
     let config = Round2Config {
         signing_package,
@@ -138,7 +137,7 @@ async fn check_print_values_round_2() {
     const SIGNATURE_SHARE: &str =
         "44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900";
     let signature_response =
-        SignatureShare::deserialize(<[u8; 32]>::from_hex(SIGNATURE_SHARE).unwrap()).unwrap();
+        SignatureShare::deserialize(&hex::decode(SIGNATURE_SHARE).unwrap()).unwrap();
 
     print_values_round_2(signature_response, &mut buf).unwrap();
 

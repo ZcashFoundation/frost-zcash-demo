@@ -5,8 +5,6 @@ use frost::{
     Error, Identifier,
 };
 
-use eyre::eyre;
-
 use std::io::{BufRead, Write};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -87,8 +85,7 @@ pub fn read_identifier<C: Ciphersuite + 'static>(
     let mut identifier_input = String::new();
     input.read_line(&mut identifier_input)?;
     let bytes = hex::decode(identifier_input.trim())?;
-    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::<C>::deserialize(&serialization)?;
+    let identifier = Identifier::<C>::deserialize(&bytes)?;
     Ok(identifier)
 }
 

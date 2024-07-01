@@ -13,7 +13,6 @@ use frost::{
     Identifier, SigningPackage, VerifyingKey,
 };
 use frost_ed25519 as frost;
-use hex::FromHex;
 use std::{collections::BTreeMap, io::BufWriter};
 
 use super::common::get_helpers;
@@ -35,19 +34,18 @@ fn build_pub_key_package() -> (BTreeMap<Identifier, VerifyingShare>, VerifyingKe
     let mut signer_pubkeys = BTreeMap::new();
     signer_pubkeys.insert(
         id_1,
-        VerifyingShare::deserialize(<[u8; 32]>::from_hex(public_key_1).unwrap()).unwrap(),
+        VerifyingShare::deserialize(&hex::decode(public_key_1).unwrap()).unwrap(),
     );
     signer_pubkeys.insert(
         id_2,
-        VerifyingShare::deserialize(<[u8; 32]>::from_hex(public_key_2).unwrap()).unwrap(),
+        VerifyingShare::deserialize(&hex::decode(public_key_2).unwrap()).unwrap(),
     );
     signer_pubkeys.insert(
         id_3,
-        VerifyingShare::deserialize(<[u8; 32]>::from_hex(public_key_3).unwrap()).unwrap(),
+        VerifyingShare::deserialize(&hex::decode(public_key_3).unwrap()).unwrap(),
     );
 
-    let group_public =
-        VerifyingKey::deserialize(<[u8; 32]>::from_hex(verifying_key).unwrap()).unwrap();
+    let group_public = VerifyingKey::deserialize(&hex::decode(verifying_key).unwrap()).unwrap();
 
     (signer_pubkeys, group_public)
 }
@@ -65,12 +63,12 @@ fn build_signing_commitments() -> BTreeMap<Identifier, SigningCommitments> {
     let id_3 = Identifier::try_from(3).unwrap();
 
     let signer_commitments_1 = SigningCommitments::new(
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(hiding_commitment_1).unwrap()).unwrap(),
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(binding_commitment_1).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(hiding_commitment_1).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(binding_commitment_1).unwrap()).unwrap(),
     );
     let signer_commitments_3 = SigningCommitments::new(
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(hiding_commitment_3).unwrap()).unwrap(),
-        NonceCommitment::deserialize(<[u8; 32]>::from_hex(binding_commitment_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(hiding_commitment_3).unwrap()).unwrap(),
+        NonceCommitment::deserialize(&hex::decode(binding_commitment_3).unwrap()).unwrap(),
     );
 
     let mut signing_commitments = BTreeMap::new();

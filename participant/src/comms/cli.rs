@@ -6,8 +6,6 @@ use frost_core::Ciphersuite;
 
 use async_trait::async_trait;
 
-use eyre::eyre;
-
 use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
     SigningPackage,
@@ -71,11 +69,8 @@ where
             let mut json = String::new();
             input.read_line(&mut json).unwrap();
 
-            let randomizer = frost_rerandomized::Randomizer::<C>::deserialize(
-                &hex::decode(json.trim())?
-                    .try_into()
-                    .map_err(|_| eyre!("Invalid randomizer"))?,
-            )?;
+            let randomizer =
+                frost_rerandomized::Randomizer::<C>::deserialize(&hex::decode(json.trim())?)?;
             Ok((signing_package, Some(randomizer)))
         } else {
             Ok((signing_package, None))
@@ -97,8 +92,7 @@ pub fn read_identifier<C: Ciphersuite + 'static>(
     let mut identifier_input = String::new();
     input.read_line(&mut identifier_input)?;
     let bytes = hex::decode(identifier_input.trim())?;
-    let serialization = bytes.try_into().map_err(|_| eyre!("Invalid Identifier"))?;
-    let identifier = Identifier::<C>::deserialize(&serialization)?;
+    let identifier = Identifier::<C>::deserialize(&bytes)?;
     Ok(identifier)
 }
 
