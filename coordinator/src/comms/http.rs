@@ -16,6 +16,7 @@ use frost::{
 
 use std::{
     collections::BTreeMap,
+    env,
     error::Error,
     io::{BufRead, Write},
     marker::PhantomData,
@@ -30,18 +31,27 @@ pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
+    username: String,
+    password: String,
+    access_token: String,
+    signers: Vec<String>,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Ciphersuite> HTTPComms<C> {
-    pub fn new(args: &Args) -> Self {
+    pub fn new(args: &Args) -> Result<Self, Box<dyn Error>> {
         let client = reqwest::Client::new();
-        Self {
+        let password = env::var(&args.password).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?;
+        Ok(Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
+            username: args.username.clone(),
+            password,
+            access_token: String::new(),
+            signers: args.signers.clone(),
             _phantom: Default::default(),
-        }
+        })
     }
 }
 
@@ -54,11 +64,26 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _pub_key_package: &PublicKeyPackage<C>,
         num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
+        self.access_token = self
+            .client
+            .post(format!("{}/login", self.host_port))
+            .json(&server::LoginArgs {
+                username: self.username.clone(),
+                password: self.password.clone(),
+            })
+            .send()
+            .await?
+            .json::<server::LoginOutput>()
+            .await?
+            .access_token
+            .to_string();
+
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
+            .bearer_auth(&self.access_token)
             .json(&server::CreateNewSessionArgs {
-                usernames: vec![],
+                usernames: self.signers.clone(),
                 num_signers,
                 message_count: 1,
             })
@@ -67,10 +92,12 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .json::<server::CreateNewSessionOutput>()
             .await?;
 
-        eprintln!(
-            "Send the following session ID to participants: {}",
-            r.session_id
-        );
+        if self.signers.is_empty() {
+            eprintln!(
+                "Send the following session ID to participants: {}",
+                r.session_id
+            );
+        }
         self.session_id = Some(r.session_id);
         eprint!("Waiting for participants to send their commitments...");
 
@@ -78,6 +105,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let r = self
                 .client
                 .post(format!("{}/get_commitments", self.host_port))
+                .bearer_auth(&self.access_token)
                 .json(&server::GetCommitmentsArgs {
                     session_id: r.session_id,
                 })
@@ -116,6 +144,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         let _r = self
             .client
             .post(format!("{}/send_signing_package", self.host_port))
+            .bearer_auth(&self.access_token)
             .json(&server::SendSigningPackageArgs {
                 aux_msg: Default::default(),
                 session_id: self.session_id.unwrap(),
@@ -133,6 +162,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let r = self
                 .client
                 .post(format!("{}/get_signature_shares", self.host_port))
+                .bearer_auth(&self.access_token)
                 .json(&server::GetSignatureSharesArgs {
                     session_id: self.session_id.unwrap(),
                 })
@@ -146,6 +176,23 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             }
         };
         eprintln!();
+
+        let _r = self
+            .client
+            .post(format!("{}/close_session", self.host_port))
+            .bearer_auth(&self.access_token)
+            .json(&server::CloseSessionArgs {
+                session_id: self.session_id.unwrap(),
+            })
+            .send()
+            .await?;
+
+        let _r = self
+            .client
+            .post(format!("{}/logout", self.host_port))
+            .bearer_auth(&self.access_token)
+            .send()
+            .await?;
 
         let signature_shares = r
             .signature_shares

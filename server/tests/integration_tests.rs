@@ -76,14 +76,14 @@ async fn test_main_router<
     res.assert_status_ok();
 
     let res = server
-        .post("/authorize")
-        .json(&server::AuthorizeArgs {
+        .post("/login")
+        .json(&server::LoginArgs {
             username: "alice".to_string(),
             password: "passw0rd".to_string(),
         })
         .await;
     res.assert_status_ok();
-    let r: server::AuthorizeOutput = res.json();
+    let r: server::LoginOutput = res.json();
     let token = r.access_token;
 
     // As the coordinator, create a new signing session with all participants,
@@ -380,10 +380,10 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         panic!("{}", r.text().await?)
     }
 
-    // Call authorize to authenticate
+    // Call login to authenticate
     let r = client
-        .post("http://127.0.0.1:2744/authorize")
-        .json(&server::AuthorizeArgs {
+        .post("http://127.0.0.1:2744/login")
+        .json(&server::LoginArgs {
             username: "alice".to_string(),
             password: "passw0rd".to_string(),
         })
@@ -392,7 +392,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     if r.status() != reqwest::StatusCode::OK {
         panic!("{}", r.text().await?)
     }
-    let r = r.json::<server::AuthorizeOutput>().await?;
+    let r = r.json::<server::LoginOutput>().await?;
     let access_token = r.access_token;
 
     // Call create_new_session

@@ -159,12 +159,12 @@ pub struct RegisterArgs {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AuthorizeOutput {
+pub struct LoginOutput {
     pub access_token: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AuthorizeArgs {
+pub struct LoginArgs {
     pub username: String,
     pub password: String,
 }

@@ -23,7 +23,8 @@ pub fn router(shared_state: SharedState) -> Router {
     // Shared state that is passed to each handler by axum
     Router::new()
         .route("/register", post(functions::register))
-        .route("/authorize", post(functions::authorize))
+        .route("/login", post(functions::login))
+        .route("/logout", post(functions::logout))
         .route("/unregister", post(functions::unregister))
         .route("/create_new_session", post(functions::create_new_session))
         .route("/list_sessions", post(functions::list_sessions))

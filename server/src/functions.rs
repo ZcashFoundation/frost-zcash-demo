@@ -7,12 +7,15 @@ use uuid::Uuid;
 use crate::{
     state::{Session, SessionState, SharedState},
     types::*,
-    user::{authenticate_user, create_user, delete_user, get_user, refresh_access_token, User},
+    user::{
+        add_access_token, authenticate_user, create_user, delete_user, get_user,
+        remove_access_token, User,
+    },
     AppError,
 };
 
 /// Implement the register API.
-#[tracing::instrument(ret, err(Debug), skip(args), fields(args.username = %args.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,args), fields(args.username = %args.username))]
 pub(crate) async fn register(
     State(state): State<SharedState>,
     Json(args): Json<RegisterArgs>,
@@ -39,12 +42,12 @@ pub(crate) async fn register(
     Ok(Json(()))
 }
 
-/// Implement the authorize API.
-#[tracing::instrument(ret, err(Debug), skip(args), fields(args.username = %args.username))]
-pub(crate) async fn authorize(
+/// Implement the login API.
+#[tracing::instrument(ret, err(Debug), skip(state,args), fields(args.username = %args.username))]
+pub(crate) async fn login(
     State(state): State<SharedState>,
-    Json(args): Json<AuthorizeArgs>,
-) -> Result<Json<AuthorizeOutput>, AppError> {
+    Json(args): Json<LoginArgs>,
+) -> Result<Json<LoginOutput>, AppError> {
     // Check if the user sent the credentials
     if args.username.is_empty() || args.password.is_empty() {
         return Err(AppError(
@@ -72,17 +75,39 @@ pub(crate) async fn authorize(
         }
     };
 
-    let access_token = refresh_access_token(db.clone(), user.id)
+    let access_token = add_access_token(db.clone(), user.id)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    let token = AuthorizeOutput { access_token };
+    let token = LoginOutput { access_token };
 
     Ok(Json(token))
 }
 
+/// Implement the logout API.
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+pub(crate) async fn logout(
+    State(state): State<SharedState>,
+    user: User,
+) -> Result<Json<()>, AppError> {
+    let db = {
+        let state_lock = state.read().unwrap();
+        state_lock.db.clone()
+    };
+
+    remove_access_token(
+        db.clone(),
+        user.current_token
+            .expect("user is logged in so they must have a token"),
+    )
+    .await
+    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    Ok(Json(()))
+}
+
 /// Implement the unregister API.
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn unregister(
     State(state): State<SharedState>,
     user: User,
@@ -100,13 +125,12 @@ pub(crate) async fn unregister(
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
-    tracing::info!("create_new_session");
     if args.message_count == 0 {
         return Err(AppError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -159,13 +183,11 @@ pub(crate) async fn create_new_session(
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<ListSessionsOutput>, AppError> {
-    tracing::info!("list_sessions");
-
     let state = state.read().unwrap();
 
     let session_ids = state
@@ -178,7 +200,7 @@ pub(crate) async fn list_sessions(
 }
 
 /// Implement the get_session_info API
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     user: User,
@@ -199,7 +221,7 @@ pub(crate) async fn get_session_info(
 
 /// Implement the send_commitments API
 // TODO: get identifier from channel rather from arguments
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn send_commitments(
     State(state): State<SharedState>,
     user: User,
@@ -229,6 +251,11 @@ pub(crate) async fn send_commitments(
             // (it seems better to ignore overwrites, which could be caused by
             // poor networking connectivity leading to retries)
             commitments.insert(args.identifier, args.commitments);
+            tracing::debug!(
+                "added commitments, currently {}/{}",
+                commitments.len(),
+                session.num_signers
+            );
             // If complete, advance to next state
             if commitments.len() == session.num_signers as usize {
                 session.state = SessionState::CommitmentsReady {
@@ -247,10 +274,10 @@ pub(crate) async fn send_commitments(
 }
 
 /// Implement the get_commitments API
-// #[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn get_commitments(
     State(state): State<SharedState>,
-    _user: User,
+    user: User,
     Json(args): Json<GetCommitmentsArgs>,
 ) -> Result<Json<GetCommitmentsOutput>, AppError> {
     let state_lock = state.read().unwrap();
@@ -282,7 +309,7 @@ pub(crate) async fn get_commitments(
 }
 
 /// Implement the send_signing_package API
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn send_signing_package(
     State(state): State<SharedState>,
     user: User,
@@ -333,7 +360,7 @@ pub(crate) async fn send_signing_package(
 }
 
 /// Implement the get_signing_package API
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn get_signing_package(
     State(state): State<SharedState>,
     user: User,
@@ -367,7 +394,7 @@ pub(crate) async fn get_signing_package(
 
 /// Implement the send_signature_share API
 // TODO: get identifier from channel rather from arguments
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn send_signature_share(
     State(state): State<SharedState>,
     user: User,
@@ -425,7 +452,7 @@ pub(crate) async fn send_signature_share(
 }
 
 /// Implement the get_signature_shares API
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn get_signature_shares(
     State(state): State<SharedState>,
     user: User,
@@ -462,7 +489,7 @@ pub(crate) async fn get_signature_shares(
 }
 
 /// Implement the close_session API.
-#[tracing::instrument(ret, err(Debug), skip(user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
 pub(crate) async fn close_session(
     State(state): State<SharedState>,
     user: User,

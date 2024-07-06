@@ -25,6 +25,17 @@ pub struct User {
     pub(crate) username: String,
     pub(crate) password: String,
     pub(crate) pubkey: Vec<u8>,
+    #[sqlx(skip)]
+    pub(crate) access_tokens: Vec<AccessToken>,
+    #[sqlx(skip)]
+    pub(crate) current_token: Option<Uuid>,
+}
+
+#[derive(Debug, FromRow)]
+#[allow(dead_code)]
+pub struct AccessToken {
+    pub(crate) id: i64,
+    pub(crate) user_id: i64,
     pub(crate) access_token: Option<Uuid>,
 }
 
@@ -63,7 +74,17 @@ pub(crate) async fn get_user(
         .bind(username)
         .fetch_optional(&db)
         .await?;
-    Ok(user)
+    if let Some(mut user) = user {
+        let access_tokens: Vec<AccessToken> =
+            sqlx::query_as("select * from access_tokens where user_id = ?")
+                .bind(user.id)
+                .fetch_all(&db)
+                .await?;
+        user.access_tokens = access_tokens;
+        Ok(Some(user))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Delete an User from the database, given its database ID.
@@ -105,7 +126,7 @@ pub(crate) async fn authenticate_user(
 /// Refreshes the user's access token, identified by its id in the database.
 ///
 /// Generates a new token and overwrites the old one in the database, if any.
-pub(crate) async fn refresh_access_token(
+pub(crate) async fn add_access_token(
     db: SqlitePool,
     id: i64,
 ) -> Result<Uuid, Box<dyn std::error::Error>> {
@@ -113,15 +134,33 @@ pub(crate) async fn refresh_access_token(
 
     sqlx::query(
         r#"
-        update users set access_token = ? where id = ?
+        insert into access_tokens (user_id, access_token)
+        values (?, ?)
         "#,
     )
-    .bind(access_token)
     .bind(id)
+    .bind(access_token)
     .execute(&db)
     .await?;
 
     Ok(access_token)
+}
+
+/// Remove a user's access token.
+pub(crate) async fn remove_access_token(
+    db: SqlitePool,
+    access_token: Uuid,
+) -> Result<(), Box<dyn std::error::Error>> {
+    sqlx::query(
+        r#"
+        delete from access_tokens where access_token = ?
+        "#,
+    )
+    .bind(access_token)
+    .execute(&db)
+    .await?;
+
+    Ok(())
 }
 
 /// Return the User for a given access token, or None if there is no match.
@@ -129,10 +168,14 @@ pub(crate) async fn get_user_for_access_token(
     db: SqlitePool,
     access_token: Uuid,
 ) -> Result<Option<User>, Box<dyn std::error::Error>> {
-    let user: Option<User> = sqlx::query_as("select * from users where access_token = ? ")
-        .bind(access_token)
-        .fetch_optional(&db)
-        .await?;
+    let user: Option<User> = sqlx::query_as(
+        r#"
+        select * from users inner join access_tokens on users.id = access_tokens.user_id where access_tokens.access_token = ?
+        "#,
+    )
+    .bind(access_token)
+    .fetch_optional(&db)
+    .await?;
     Ok(user)
 }
 
@@ -143,6 +186,10 @@ pub(crate) async fn get_user_for_access_token(
 impl FromRequestParts<SharedState> for User {
     type Rejection = AppError;
 
+    #[tracing::instrument(ret, err(Debug), skip(parts, state))]
+    // Can be removed after this fix is released
+    // https://github.com/rust-lang/rust-clippy/issues/12281
+    #[allow(clippy::blocks_in_conditions)]
     async fn from_request_parts(
         parts: &mut Parts,
         state: &SharedState,
@@ -175,7 +222,10 @@ impl FromRequestParts<SharedState> for User {
             .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
         match user {
-            Some(user) => Ok(user),
+            Some(mut user) => {
+                user.current_token = Some(access_token);
+                Ok(user)
+            }
             None => {
                 return Err(AppError(
                     StatusCode::INTERNAL_SERVER_ERROR,
