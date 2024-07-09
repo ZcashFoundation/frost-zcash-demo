@@ -511,6 +511,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
+ "derivative",
  "exitcode",
  "eyre",
  "frost-core",
@@ -523,6 +524,7 @@ dependencies = [
  "reddsa",
  "reqwest",
  "serde_json",
+ "serdect",
  "server",
  "thiserror",
  "tokio",
@@ -1771,6 +1773,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
+ "derivative",
  "exitcode",
  "eyre",
  "frost-core",
@@ -1782,6 +1785,7 @@ dependencies = [
  "reddsa",
  "reqwest",
  "serde_json",
+ "serdect",
  "server",
  "tokio",
 ]

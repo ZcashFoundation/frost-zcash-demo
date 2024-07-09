@@ -2,11 +2,13 @@
 
 use async_trait::async_trait;
 
-use frost_core::{self as frost, Ciphersuite};
+use frost_core::SigningPackage;
+use frost_core::{self as frost, serde, serde::Deserialize, serde::Serialize, Ciphersuite};
 
 use eyre::eyre;
 
 use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
+use frost_rerandomized::Randomizer;
 
 use super::Comms;
 
@@ -27,10 +29,45 @@ pub struct HTTPComms<C: Ciphersuite> {
     username: String,
     password: String,
     access_token: String,
+    coordinator: String,
     _phantom: PhantomData<C>,
 }
 
 use server::Uuid;
+
+// TODO: deduplicate with coordinator
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(crate = "self::serde")]
+#[serde(bound = "C: Ciphersuite")]
+pub struct SendCommitmentsArgs<C: Ciphersuite> {
+    pub identifier: Identifier<C>,
+    pub commitments: Vec<SigningCommitments<C>>,
+}
+
+// TODO: deduplicate with coordinator
+#[derive(Serialize, Deserialize, derivative::Derivative)]
+#[derivative(Debug)]
+#[serde(crate = "self::serde")]
+#[serde(bound = "C: Ciphersuite")]
+pub struct SendSigningPackageArgs<C: Ciphersuite> {
+    pub signing_package: Vec<SigningPackage<C>>,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub aux_msg: Vec<u8>,
+    #[derivative(Debug = "ignore")]
+    pub randomizer: Vec<Randomizer<C>>,
+}
+
+// TODO: deduplicate with coordinator
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(crate = "self::serde")]
+#[serde(bound = "C: Ciphersuite")]
+pub struct SendSignatureSharesArgs<C: Ciphersuite> {
+    pub identifier: Identifier<C>,
+    pub signature_share: Vec<SignatureShare<C>>,
+}
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -47,6 +84,7 @@ where
             username: args.username.clone(),
             password,
             access_token: String::new(),
+            coordinator: String::new(),
             _phantom: Default::default(),
         })
     }
@@ -107,14 +145,30 @@ where
         };
         self.session_id = Some(session_id);
 
-        // Send Commitments to Server
-        self.client
-            .post(format!("{}/send_commitments", self.host_port))
+        let r = self
+            .client
+            .post(format!("{}/get_session_info", self.host_port))
             .bearer_auth(&self.access_token)
-            .json(&server::SendCommitmentsArgs {
+            .json(&server::GetSessionInfoArgs { session_id })
+            .send()
+            .await?
+            .json::<server::GetSessionInfoOutput>()
+            .await?;
+        self.coordinator = r.coordinator;
+
+        // Send Commitments to Server
+        let send_commitments_args = SendCommitmentsArgs {
+            identifier,
+            commitments: vec![commitments],
+        };
+        self.client
+            .post(format!("{}/send", self.host_port))
+            .bearer_auth(&self.access_token)
+            .json(&server::SendArgs {
                 session_id,
-                identifier: identifier.into(),
-                commitments: vec![(&commitments).try_into()?],
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_commitments_args)?,
             })
             .send()
             .await?;
@@ -123,39 +177,43 @@ where
 
         // Receive SigningPackage from Coordinator
 
-        let r = loop {
+        let r: SendSigningPackageArgs<C> = loop {
             let r = self
                 .client
-                .post(format!("{}/get_signing_package", self.host_port))
+                .post(format!("{}/receive", self.host_port))
                 .bearer_auth(&self.access_token)
-                .json(&server::GetSigningPackageArgs { session_id })
+                .json(&server::ReceiveArgs {
+                    session_id,
+                    as_coordinator: false,
+                })
                 .send()
+                .await?
+                .json::<server::ReceiveOutput>()
                 .await?;
-            if r.status() != 200 {
+            if r.msgs.is_empty() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 eprint!(".");
             } else {
                 eprintln!("\nSigning package received");
-                break r.json::<server::GetSigningPackageOutput>().await?;
+                eprintln!("\n{}", String::from_utf8(r.msgs[0].msg.clone()).unwrap());
+                break serde_json::from_slice(&r.msgs[0].msg)?;
             }
         };
 
-        let signing_package = if rerandomized {
+        if rerandomized {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
             let randomizer = r.randomizer.first().ok_or(eyre!("missing randomizer"))?;
-            (signing_package.try_into()?, Some(randomizer.try_into()?))
+            Ok((signing_package.clone(), Some(*randomizer)))
         } else {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
-            (signing_package.try_into()?, None)
-        };
-
-        Ok(signing_package)
+            Ok((signing_package.clone(), None))
+        }
     }
 
     async fn send_signature_share(
@@ -167,14 +225,20 @@ where
 
         eprintln!("Sending signature share to coordinator...");
 
+        let send_signature_shares_args = SendSignatureSharesArgs {
+            identifier,
+            signature_share: vec![signature_share],
+        };
+
         let _r = self
             .client
-            .post(format!("{}/send_signature_share", self.host_port))
+            .post(format!("{}/send", self.host_port))
             .bearer_auth(&self.access_token)
-            .json(&server::SendSignatureShareArgs {
-                identifier: identifier.into(),
+            .json(&server::SendArgs {
                 session_id: self.session_id.unwrap(),
-                signature_share: vec![signature_share.into()],
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_signature_shares_args)?,
             })
             .send()
             .await?;

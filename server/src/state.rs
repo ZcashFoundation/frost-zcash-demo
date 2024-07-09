@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     str::FromStr,
     sync::{Arc, RwLock},
 };
@@ -11,7 +11,7 @@ use sqlx::{
 use uuid::Uuid;
 
 use crate::{
-    SerializedIdentifier, SerializedSignatureShare, SerializedSigningCommitments,
+    Msg, SerializedIdentifier, SerializedSignatureShare, SerializedSigningCommitments,
     SerializedSigningPackage,
 };
 
@@ -74,6 +74,8 @@ impl Default for SessionState {
 pub struct Session {
     /// The usernames of the participants
     pub(crate) usernames: Vec<String>,
+    /// The username of the coordinator
+    pub(crate) coordinator: String,
     /// The number of signers in the session.
     pub(crate) num_signers: u16,
     /// The set of identifiers for the session.
@@ -82,6 +84,7 @@ pub struct Session {
     pub(crate) message_count: u8,
     /// The session state.
     pub(crate) state: SessionState,
+    pub(crate) queue: HashMap<String, VecDeque<Msg>>,
 }
 
 /// The global state of the server.

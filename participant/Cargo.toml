@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.81"
+derivative = "2.2.0"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
@@ -16,6 +17,7 @@ rand = "0.8"
 eyre = "0.6.12"
 exitcode = "1.1.2"
 serde_json = "1.0"
+serdect = { version = "0.2.0" }
 clap = { version = "4.5.13", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
