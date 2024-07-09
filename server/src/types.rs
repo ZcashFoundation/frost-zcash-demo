@@ -195,6 +195,40 @@ pub struct GetSessionInfoArgs {
 pub struct GetSessionInfoOutput {
     pub num_signers: u16,
     pub message_count: u8,
+    pub usernames: Vec<String>,
+    pub coordinator: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendArgs {
+    pub session_id: Uuid,
+    pub recipients: Vec<String>,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub msg: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Msg {
+    pub sender: String,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub msg: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ReceiveArgs {
+    pub session_id: Uuid,
+    pub as_coordinator: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ReceiveOutput {
+    pub msgs: Vec<Msg>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

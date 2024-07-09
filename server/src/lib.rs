@@ -29,6 +29,8 @@ pub fn router(shared_state: SharedState) -> Router {
         .route("/create_new_session", post(functions::create_new_session))
         .route("/list_sessions", post(functions::list_sessions))
         .route("/get_session_info", post(functions::get_session_info))
+        .route("/send", post(functions::send))
+        .route("/receive", post(functions::receive))
         .route("/send_commitments", post(functions::send_commitments))
         .route("/get_commitments", post(functions::get_commitments))
         .route(

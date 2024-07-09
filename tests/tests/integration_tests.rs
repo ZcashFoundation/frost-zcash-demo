@@ -12,6 +12,7 @@ use frost::Identifier;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io::BufWriter;
+use std::vec;
 
 use rand::thread_rng;
 
@@ -32,7 +33,7 @@ async fn trusted_dealer_journey() {
         cli: true,
         public_key_package: "".to_string(),
         signature: "".to_string(),
-        message: "".to_string(),
+        message: vec![],
         ..Default::default()
     };
     let mut coordinator_comms = CoordinatorCLIComms::new();

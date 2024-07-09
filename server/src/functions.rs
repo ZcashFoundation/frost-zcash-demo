@@ -169,11 +169,13 @@ pub(crate) async fn create_new_session(
     // Create Session object
     let session = Session {
         usernames: args.usernames,
+        coordinator: user.username,
         num_signers: args.num_signers,
         message_count: args.message_count,
         state: SessionState::WaitingForCommitments {
             commitments: Default::default(),
         },
+        queue: Default::default(),
     };
     // Save session into global state.
     state.sessions.insert(id, session);
@@ -216,7 +218,82 @@ pub(crate) async fn get_session_info(
     Ok(Json(GetSessionInfoOutput {
         num_signers: session.num_signers,
         message_count: session.message_count,
+        usernames: session.usernames.clone(),
+        coordinator: session.coordinator.clone(),
     }))
+}
+
+/// Implement the send API
+// TODO: get identifier from channel rather from arguments
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+pub(crate) async fn send(
+    State(state): State<SharedState>,
+    user: User,
+    Json(args): Json<SendArgs>,
+) -> Result<(), AppError> {
+    // Get the mutex lock to read and write from the state
+    let mut state_lock = state.write().unwrap();
+
+    let session = state_lock
+        .sessions
+        .get_mut(&args.session_id)
+        .ok_or(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("session ID not found").into(),
+        ))?;
+
+    let recipients = if args.recipients.is_empty() {
+        vec![String::new()]
+    } else {
+        args.recipients
+    };
+    for username in &recipients {
+        session
+            .queue
+            .entry(username.clone())
+            .or_default()
+            .push_back(Msg {
+                sender: user.username.clone(),
+                msg: args.msg.clone(),
+            });
+    }
+
+    Ok(())
+}
+
+/// Implement the recv API
+// TODO: get identifier from channel rather from arguments
+#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+pub(crate) async fn receive(
+    State(state): State<SharedState>,
+    user: User,
+    Json(args): Json<ReceiveArgs>,
+) -> Result<Json<ReceiveOutput>, AppError> {
+    // Get the mutex lock to read and write from the state
+    let mut state_lock = state.write().unwrap();
+
+    let session = state_lock
+        .sessions
+        .get_mut(&args.session_id)
+        .ok_or(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("session ID not found").into(),
+        ))?;
+
+    let username = if user.username == session.coordinator && args.as_coordinator {
+        String::new()
+    } else {
+        user.username
+    };
+
+    let msgs = session
+        .queue
+        .entry(username.to_string())
+        .or_default()
+        .drain(..)
+        .collect();
+
+    Ok(Json(ReceiveOutput { msgs }))
 }
 
 /// Implement the send_commitments API

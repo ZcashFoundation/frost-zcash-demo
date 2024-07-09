@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Parser, Debug, Default)]
+#[derive(Clone, Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     #[arg(short = 'C', long, default_value = "ed25519")]
@@ -42,10 +42,11 @@ pub struct Args {
     #[arg(short = 'P', long, default_value = "public-key-package.json")]
     pub public_key_package: String,
 
-    /// The message to sign. Can be a file with the raw message, or "". If ""
-    /// is specified, then it will be read from standard input as a hex string.
-    #[arg(short = 'm', long, default_value = "")]
-    pub message: String,
+    /// The messages to sign. Each instance can be a file with the raw message,
+    /// or "". If "" is specified, then it will be read from standard input as a
+    /// hex string.
+    #[arg(short = 'm', long)]
+    pub message: Vec<String>,
 
     /// The randomizer to use. Can be a file with the raw randomizer, empty, or
     /// "-". If empty, a random one will be generated. If "-" is specified, then

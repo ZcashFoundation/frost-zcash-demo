@@ -43,8 +43,9 @@ fn request_message<C: Ciphersuite>(
 
         hex::decode(msg.trim())?
     } else {
-        eprintln!("Reading message from {}...", &args.message);
-        fs::read(&args.message)?
+        // TODO: support more than 1 message
+        eprintln!("Reading message from {}...", &args.message[0]);
+        fs::read(&args.message[0])?
     };
 
     let signing_package = SigningPackage::new(commitments, &message);
