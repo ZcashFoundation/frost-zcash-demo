@@ -2,13 +2,9 @@ use frost_core::{self as frost, Ciphersuite};
 
 use frost::{round1::SigningCommitments, Identifier, SigningPackage};
 
-use std::{
-    collections::BTreeMap,
-    fs,
-    io::{BufRead, Write},
-};
+use std::{collections::BTreeMap, io::Write};
 
-use crate::args::Args;
+use crate::args::ProcessedArgs;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CommitmentsConfig<C: Ciphersuite> {
@@ -17,39 +13,12 @@ pub struct CommitmentsConfig<C: Ciphersuite> {
 }
 
 pub fn step_2<C: Ciphersuite>(
-    args: &Args,
-    input: &mut impl BufRead,
+    args: &ProcessedArgs<C>,
     logger: &mut dyn Write,
     commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
 ) -> Result<SigningPackage<C>, Box<dyn std::error::Error>> {
-    let signing_package = request_message(args, input, logger, commitments)?;
+    let signing_package = SigningPackage::new(commitments, &args.messages[0]);
     print_signing_package(logger, &signing_package);
-    Ok(signing_package)
-}
-
-// Input required:
-// 1. message
-fn request_message<C: Ciphersuite>(
-    args: &Args,
-    input: &mut impl BufRead,
-    logger: &mut dyn Write,
-    commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
-) -> Result<SigningPackage<C>, Box<dyn std::error::Error>> {
-    let message = if args.message.is_empty() {
-        writeln!(logger, "The message to be signed (hex encoded)")?;
-
-        let mut msg = String::new();
-        input.read_line(&mut msg)?;
-
-        hex::decode(msg.trim())?
-    } else {
-        // TODO: support more than 1 message
-        eprintln!("Reading message from {}...", &args.message[0]);
-        fs::read(&args.message[0])?
-    };
-
-    let signing_package = SigningPackage::new(commitments, &message);
-
     Ok(signing_package)
 }
 
