@@ -18,7 +18,6 @@ use frost::{
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    env,
     error::Error,
     io::{BufRead, Write},
     marker::PhantomData,
@@ -27,7 +26,7 @@ use std::{
 };
 
 use super::Comms;
-use crate::args::Args;
+use crate::args::ProcessedArgs;
 
 /// The current state of the server, and the required data for the state.
 #[derive(derivative::Derivative)]
@@ -109,12 +108,12 @@ pub struct SendSignatureSharesArgs<C: Ciphersuite> {
 }
 
 impl<C: Ciphersuite> SessionState<C> {
-    fn recv(&mut self, args: &Args, msg: Msg, num_signers: u16) -> Result<(), Box<dyn Error>> {
+    fn recv(&mut self, args: &ProcessedArgs<C>, msg: Msg) -> Result<(), Box<dyn Error>> {
         match self {
             SessionState::WaitingForCommitments { .. } => {
                 let send_commitments_args: SendCommitmentsArgs<C> =
                     serde_json::from_slice(&msg.msg)?;
-                self.send_commitments(args, msg.sender, send_commitments_args, num_signers)?;
+                self.send_commitments(args, msg.sender, send_commitments_args)?;
             }
             SessionState::WaitingForSignatureShares { .. } => {
                 let send_signature_shares_args: SendSignatureSharesArgs<C> =
@@ -128,17 +127,16 @@ impl<C: Ciphersuite> SessionState<C> {
 
     fn send_commitments(
         &mut self,
-        args: &Args,
+        args: &ProcessedArgs<C>,
         username: String,
         send_commitments_args: SendCommitmentsArgs<C>,
-        num_signers: u16,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForCommitments {
             commitments,
             usernames,
         } = self
         {
-            if send_commitments_args.commitments.len() != 1 {
+            if send_commitments_args.commitments.len() != args.messages.len() {
                 return Err(eyre!("wrong number of commitments").into());
             }
 
@@ -153,12 +151,12 @@ impl<C: Ciphersuite> SessionState<C> {
             eprintln!(
                 "added commitments, currently {}/{}",
                 commitments.len(),
-                num_signers
+                args.num_signers
             );
             usernames.insert(username, send_commitments_args.identifier);
 
             // If complete, advance to next state
-            if commitments.len() == num_signers as usize {
+            if commitments.len() == args.num_signers as usize {
                 *self = SessionState::CommitmentsReady {
                     commitments: commitments.clone(),
                     usernames: usernames.clone(),
@@ -177,7 +175,7 @@ impl<C: Ciphersuite> SessionState<C> {
     #[allow(clippy::type_complexity)]
     fn get_commitments(
         &mut self,
-        args: &Args,
+        args: &ProcessedArgs<C>,
     ) -> Result<
         (
             Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>>,
@@ -193,9 +191,10 @@ impl<C: Ciphersuite> SessionState<C> {
             // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
             // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
             // it easier for the coordinator to build the SigningPackages.
-            let commitments: Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>> = (0..1)
-                .map(|i| commitments.iter().map(|(id, c)| (*id, c[i])).collect())
-                .collect();
+            let commitments: Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>> =
+                (0..args.messages.len())
+                    .map(|i| commitments.iter().map(|(id, c)| (*id, c[i])).collect())
+                    .collect();
             Ok((commitments, usernames.clone()))
         } else {
             panic!("wrong state");
@@ -204,7 +203,6 @@ impl<C: Ciphersuite> SessionState<C> {
 
     fn send_signing_package(
         &mut self,
-        _args: &Args,
         signing_package: Vec<SigningPackage<C>>,
         randomizer: Vec<Randomizer<C>>,
         aux_msg: Vec<u8>,
@@ -234,7 +232,7 @@ impl<C: Ciphersuite> SessionState<C> {
 
     fn send_signature_shares_args(
         &mut self,
-        args: &Args,
+        args: &ProcessedArgs<C>,
         _username: String,
         send_signature_shares_args: SendSignatureSharesArgs<C>,
     ) -> Result<(), Box<dyn Error>> {
@@ -243,7 +241,7 @@ impl<C: Ciphersuite> SessionState<C> {
             signature_shares,
         } = self
         {
-            if send_signature_shares_args.signature_share.len() != 1 {
+            if send_signature_shares_args.signature_share.len() != args.messages.len() {
                 return Err(eyre!("wrong number of signature shares").into());
             }
             if !identifiers.contains(&send_signature_shares_args.identifier) {
@@ -272,13 +270,13 @@ impl<C: Ciphersuite> SessionState<C> {
     #[allow(clippy::type_complexity)]
     fn get_signature_shares(
         &mut self,
-        args: &Args,
+        args: &ProcessedArgs<C>,
     ) -> Result<Vec<BTreeMap<Identifier<C>, SignatureShare<C>>>, Box<dyn Error>> {
         if let SessionState::SignatureSharesReady { signature_shares } = self {
             // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
             // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
             // it easier for the coordinator to build the SigningPackages.
-            let signature_shares = (0..1)
+            let signature_shares = (0..args.messages.len())
                 .map(|i| signature_shares.iter().map(|(id, s)| (*id, s[i])).collect())
                 .collect();
             Ok(signature_shares)
@@ -292,29 +290,22 @@ pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
-    username: String,
-    password: String,
     access_token: String,
-    signers: Vec<String>,
     num_signers: u16,
-    args: Args,
+    args: ProcessedArgs<C>,
     state: SessionState<C>,
     usernames: HashMap<String, Identifier<C>>,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Ciphersuite> HTTPComms<C> {
-    pub fn new(args: &Args) -> Result<Self, Box<dyn Error>> {
+    pub fn new(args: &ProcessedArgs<C>) -> Result<Self, Box<dyn Error>> {
         let client = reqwest::Client::new();
-        let password = env::var(&args.password).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?;
         Ok(Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
-            username: args.username.clone(),
-            password,
             access_token: String::new(),
-            signers: args.signers.clone(),
             num_signers: 0,
             args: args.clone(),
             state: Default::default(),
@@ -337,8 +328,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .client
             .post(format!("{}/login", self.host_port))
             .json(&server::LoginArgs {
-                username: self.username.clone(),
-                password: self.password.clone(),
+                username: self.args.username.clone(),
+                password: self.args.password.clone(),
             })
             .send()
             .await?
@@ -352,7 +343,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(&self.access_token)
             .json(&server::CreateNewSessionArgs {
-                usernames: self.signers.clone(),
+                usernames: self.args.signers.clone(),
                 num_signers,
                 message_count: 1,
             })
@@ -361,7 +352,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .json::<server::CreateNewSessionOutput>()
             .await?;
 
-        if self.signers.is_empty() {
+        if self.args.signers.is_empty() {
             eprintln!(
                 "Send the following session ID to participants: {}",
                 r.session_id
@@ -385,7 +376,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                self.state.recv(&self.args, msg, self.num_signers)?;
+                self.state.recv(&self.args, msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
             eprint!(".");
@@ -413,7 +404,6 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         eprintln!("Sending SigningPackage to participants...");
 
         let send_signing_package_args = self.state.send_signing_package(
-            &self.args,
             vec![signing_package.clone()],
             randomizer.map(|r| vec![r]).unwrap_or_default(),
             Default::default(),
@@ -449,7 +439,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                self.state.recv(&self.args, msg, self.num_signers)?;
+                self.state.recv(&self.args, msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
             eprint!(".");
