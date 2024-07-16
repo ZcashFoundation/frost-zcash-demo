@@ -1,25 +1,20 @@
 //! HTTP implementation of the Comms trait.
 
+use std::{
+    env,
+    error::Error,
+    io::{BufRead, Write},
+    marker::PhantomData,
+    time::Duration,
+};
+
 use async_trait::async_trait;
-
-use frost_core::SigningPackage;
-use frost_core::{self as frost, serde, serde::Deserialize, serde::Serialize, Ciphersuite};
-
 use eyre::eyre;
-
-use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
-use frost_rerandomized::Randomizer;
+use frost_core::{
+    self as frost, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
+};
 
 use super::Comms;
-
-use std::env;
-use std::io::{BufRead, Write};
-
-use std::error::Error;
-
-use std::marker::PhantomData;
-use std::time::Duration;
-
 use crate::args::Args;
 
 pub struct HTTPComms<C: Ciphersuite> {
@@ -29,45 +24,10 @@ pub struct HTTPComms<C: Ciphersuite> {
     username: String,
     password: String,
     access_token: String,
-    coordinator: String,
     _phantom: PhantomData<C>,
 }
 
-use server::Uuid;
-
-// TODO: deduplicate with coordinator
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(crate = "self::serde")]
-#[serde(bound = "C: Ciphersuite")]
-pub struct SendCommitmentsArgs<C: Ciphersuite> {
-    pub identifier: Identifier<C>,
-    pub commitments: Vec<SigningCommitments<C>>,
-}
-
-// TODO: deduplicate with coordinator
-#[derive(Serialize, Deserialize, derivative::Derivative)]
-#[derivative(Debug)]
-#[serde(crate = "self::serde")]
-#[serde(bound = "C: Ciphersuite")]
-pub struct SendSigningPackageArgs<C: Ciphersuite> {
-    pub signing_package: Vec<SigningPackage<C>>,
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub aux_msg: Vec<u8>,
-    #[derivative(Debug = "ignore")]
-    pub randomizer: Vec<Randomizer<C>>,
-}
-
-// TODO: deduplicate with coordinator
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(crate = "self::serde")]
-#[serde(bound = "C: Ciphersuite")]
-pub struct SendSignatureSharesArgs<C: Ciphersuite> {
-    pub identifier: Identifier<C>,
-    pub signature_share: Vec<SignatureShare<C>>,
-}
+use server::{SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -84,7 +44,6 @@ where
             username: args.username.clone(),
             password,
             access_token: String::new(),
-            coordinator: String::new(),
             _phantom: Default::default(),
         })
     }
@@ -144,17 +103,6 @@ where
             }
         };
         self.session_id = Some(session_id);
-
-        let r = self
-            .client
-            .post(format!("{}/get_session_info", self.host_port))
-            .bearer_auth(&self.access_token)
-            .json(&server::GetSessionInfoArgs { session_id })
-            .send()
-            .await?
-            .json::<server::GetSessionInfoOutput>()
-            .await?;
-        self.coordinator = r.coordinator;
 
         // Send Commitments to Server
         let send_commitments_args = SendCommitmentsArgs {

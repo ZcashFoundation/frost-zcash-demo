@@ -2405,6 +2405,7 @@ dependencies = [
  "axum-macros",
  "axum-test",
  "clap",
+ "coordinator",
  "derivative",
  "eyre",
  "frost-core",
