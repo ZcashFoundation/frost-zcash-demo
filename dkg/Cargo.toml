@@ -10,7 +10,7 @@ eyre = "0.6.12"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "4d8c4bb337231e6e89117334d7c61dada589a953", features = ["frost"] }
-clap = { version = "4.5.9", features = ["derive"] }
+clap = { version = "4.5.11", features = ["derive"] }
 hex = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"
