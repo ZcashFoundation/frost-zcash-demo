@@ -6,7 +6,12 @@ members = [
     "coordinator",
     "tests",
     "server",
+    # "zcash-sign",
 ]
+# TODO: go back to the workspace. It currently can't because it has a dependency
+# conflict with dependencies from other members. This will be solved when
+# zcash-sign is updated to zcash_primitives 0.16
+exclude = ["zcash-sign"]
 default-members = [
     "participant",
     "trusted-dealer",

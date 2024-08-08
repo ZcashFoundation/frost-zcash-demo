@@ -1,0 +1,33 @@
+[package]
+name = "frost-zcash-sign"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base64 = "0.22.1"
+clap = { version = "4.5.11", features = ["derive"] }
+eyre = "0.6.12"
+halo2_gadgets = "0.3.0"
+halo2_proofs = "0.3.0"
+hex = "0.4.3"
+lazy_static = "1.5.0"
+orchard = "0.8.0"
+rand = "0.8.5"
+rand_core = "0.6.4"
+sapling-crypto = "0.1.3"
+serde = "1.0.204"
+serde-hex = "0.1.0"
+serde_json = "1.0.120"
+serde_with = { version = "3.9.0", features = ["hex"] }
+zcash_address = "0.3.2"
+zcash_client_backend = { version = "0.12.1", features = ["orchard"] }
+zcash_encoding = "0.2.0"
+zcash_keys = { version =  "0.2.0", features = ["test-dependencies", "orchard"] }
+zcash_primitives = "0.15.1"
+zcash_proofs = { version = "0.15.0", features = ["bundled-prover"] }
+zcash_protocol = "0.1.1"
+
+[patch.crates-io]
+# TODO: remove this when https://github.com/zcash/orchard/issues/430 is fully
+# addressed and a new release is made
+orchard = { git = "https://github.com/conradoplg/orchard.git", rev = "2b6b22b8ed6fb156fe6b7833c469b03fca87bc8e" }
