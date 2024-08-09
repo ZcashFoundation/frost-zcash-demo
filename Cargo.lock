@@ -416,7 +416,7 @@ dependencies = [
  "itertools",
  "message-io",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "reqwest",
  "serde_json",
  "server",
@@ -579,7 +579,7 @@ dependencies = [
  "itertools",
  "pipe",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "serde_json",
  "thiserror",
 ]
@@ -1415,7 +1415,7 @@ dependencies = [
  "hex",
  "message-io",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "reqwest",
  "serde_json",
  "server",
@@ -1583,6 +1583,24 @@ dependencies = [
 name = "reddsa"
 version = "0.5.1"
 source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953#4d8c4bb337231e6e89117334d7c61dada589a953"
+dependencies = [
+ "blake2b_simd",
+ "byteorder",
+ "frost-rerandomized",
+ "group",
+ "hex",
+ "jubjub",
+ "pasta_curves",
+ "rand_core",
+ "serde",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
+name = "reddsa"
+version = "0.5.1"
+source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=56a31af7099b95737031ef6cf251939ed99627c0#56a31af7099b95737031ef6cf251939ed99627c0"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -1935,7 +1953,7 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "regex",
  "reqwest",
  "serde",
@@ -2152,7 +2170,7 @@ dependencies = [
  "hex",
  "participant",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "serde_json",
  "server",
  "tokio",
@@ -2433,10 +2451,11 @@ dependencies = [
  "exitcode",
  "frost-core",
  "frost-ed25519",
+ "frost-rerandomized",
  "hex",
  "itertools",
  "rand",
- "reddsa",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=56a31af7099b95737031ef6cf251939ed99627c0)",
  "serde_json",
  "thiserror",
 ]
