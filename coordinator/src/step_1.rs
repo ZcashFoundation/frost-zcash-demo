@@ -7,7 +7,7 @@ use std::{
     io::{BufRead, Write},
 };
 
-use crate::{args::Args, comms::Comms, input::read_from_file_or_stdin};
+use crate::{args::ProcessedArgs, comms::Comms};
 
 #[derive(PartialEq, Debug)]
 pub struct ParticipantsConfig<C: Ciphersuite> {
@@ -17,7 +17,7 @@ pub struct ParticipantsConfig<C: Ciphersuite> {
 
 // TODO: needs to include the coordinator's keys!
 pub async fn step_1<C: Ciphersuite>(
-    args: &Args,
+    args: &ProcessedArgs<C>,
     comms: &mut dyn Comms<C>,
     reader: &mut dyn BufRead,
     logger: &mut dyn Write,
@@ -34,39 +34,18 @@ pub async fn step_1<C: Ciphersuite>(
 // 2. number of participants
 // 3. identifiers for all participants
 async fn read_commitments<C: Ciphersuite>(
-    args: &Args,
+    args: &ProcessedArgs<C>,
     comms: &mut dyn Comms<C>,
     input: &mut dyn BufRead,
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig<C>, Box<dyn std::error::Error>> {
-    let out = read_from_file_or_stdin(
-        input,
-        logger,
-        "public key package",
-        &args.public_key_package,
-    )?;
-
-    let pub_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
-
-    let num_of_participants = if !args.signers.is_empty() {
-        args.signers.len() as u16
-    } else if args.num_signers == 0 {
-        writeln!(logger, "The number of participants: ")?;
-
-        let mut participants = String::new();
-        input.read_line(&mut participants)?;
-        participants.trim().parse::<u16>()?
-    } else {
-        args.num_signers
-    };
-
     let commitments_list = comms
-        .get_signing_commitments(input, logger, &pub_key_package, num_of_participants)
+        .get_signing_commitments(input, logger, &args.public_key_package, args.num_signers)
         .await?;
 
     Ok(ParticipantsConfig {
         commitments: commitments_list,
-        pub_key_package,
+        pub_key_package: args.public_key_package.clone(),
     })
 }
 

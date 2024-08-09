@@ -1,4 +1,5 @@
 use coordinator::args::Args as CoordinatorArgs;
+use coordinator::args::ProcessedArgs;
 use coordinator::comms::cli::CLIComms as CoordinatorCLIComms;
 
 use participant::args::Args as ParticipantArgs;
@@ -12,6 +13,7 @@ use frost::Identifier;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io::BufWriter;
+use std::vec;
 
 use rand::thread_rng;
 
@@ -32,7 +34,7 @@ async fn trusted_dealer_journey() {
         cli: true,
         public_key_package: "".to_string(),
         signature: "".to_string(),
-        message: "".to_string(),
+        message: vec![],
         ..Default::default()
     };
     let mut coordinator_comms = CoordinatorCLIComms::new();
@@ -107,10 +109,18 @@ async fn trusted_dealer_journey() {
         commitments_map.insert(participant_identifier, commitments);
     }
 
-    let step_1_input = format!(
-        "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
-        serde_json::to_string(&pubkeys).unwrap(),
+    let message = "74657374";
+    let input = format!(
+        "{}\n{}\n{}\n",
         num_of_participants,
+        serde_json::to_string(&pubkeys).unwrap(),
+        message
+    );
+    let pcoordinator_args =
+        ProcessedArgs::new(&coordinator_args, &mut input.as_bytes(), &mut buf).unwrap();
+
+    let step_1_input = format!(
+        "{}\n{}\n{}\n{}\n{}\n{}\n",
         id_input_1,
         serde_json::to_string(&commitments_map[&participant_id_1]).unwrap(),
         id_input_2,
@@ -120,7 +130,7 @@ async fn trusted_dealer_journey() {
     );
 
     let participants_config = coordinator::step_1::step_1(
-        &coordinator_args,
+        &pcoordinator_args,
         &mut coordinator_comms,
         &mut step_1_input.as_bytes(),
         &mut buf,
@@ -132,16 +142,8 @@ async fn trusted_dealer_journey() {
 
     let mut signature_shares = HashMap::new();
 
-    let message = "74657374";
-    let step_2_input = format!("{}\n", message);
-
-    let signing_package = coordinator::step_2::step_2(
-        &coordinator_args,
-        &mut step_2_input.as_bytes(),
-        &mut buf,
-        commitments_map.clone(),
-    )
-    .unwrap();
+    let signing_package =
+        coordinator::step_2::step_2(&pcoordinator_args, &mut buf, commitments_map.clone()).unwrap();
 
     // Round 2
 
@@ -177,13 +179,12 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&signature_shares[&participant_id_3]).unwrap()
     );
     let group_signature = coordinator::step_3::step_3(
-        &coordinator_args,
+        &pcoordinator_args,
         &mut coordinator_comms,
         &mut step_3_input.as_bytes(),
         &mut buf,
         participants_config,
         &signing_package,
-        None,
     )
     .await
     .unwrap();

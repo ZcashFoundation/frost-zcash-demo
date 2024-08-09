@@ -1,8 +1,12 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use axum_test::TestServer;
+use coordinator::comms::http::SessionState;
 use rand::thread_rng;
-use server::{args::Args, router, AppState, SerializedSignatureShare, SerializedSigningPackage};
+use server::{
+    args::Args, router, AppState, SendCommitmentsArgs, SendSignatureSharesArgs,
+    SendSigningPackageArgs,
+};
 
 use frost_core as frost;
 
@@ -84,13 +88,25 @@ async fn test_main_router<
         .await;
     res.assert_status_ok();
     let r: server::LoginOutput = res.json();
-    let token = r.access_token;
+    let alice_token = r.access_token;
+
+    let res = server
+        .post("/login")
+        .json(&server::LoginArgs {
+            username: "bob".to_string(),
+            password: "passw0rd".to_string(),
+        })
+        .await;
+    res.assert_status_ok();
+    let r: server::LoginOutput = res.json();
+    let bob_token = r.access_token;
+    let tokens = [alice_token, bob_token];
 
     // As the coordinator, create a new signing session with all participants,
     // for 2 messages
     let res = server
         .post("/create_new_session")
-        .authorization_bearer(token)
+        .authorization_bearer(alice_token)
         .json(&server::CreateNewSessionArgs {
             usernames: vec!["alice".to_string(), "bob".to_string()],
             num_signers: 2,
@@ -106,7 +122,7 @@ async fn test_main_router<
 
     // Map to store the SigningNonces (for each message, for each participant)
     let mut nonces_map = BTreeMap::<_, _>::new();
-    for (identifier, key_package) in key_packages.iter().take(2) {
+    for ((identifier, key_package), token) in key_packages.iter().take(2).zip(tokens.iter()) {
         // As participant `identifier`
 
         // Get the number of messages (the participants wouldn't know without
@@ -126,20 +142,25 @@ async fn test_main_router<
             let (nonces, commitments) =
                 frost::round1::commit(key_package.signing_share(), &mut rng);
             nonces_vec.push(nonces);
-            commitments_vec.push((&commitments).try_into()?);
+            commitments_vec.push(commitments);
         }
 
         // Store nonces for later use
         nonces_map.insert(*identifier, nonces_vec);
 
         // Send commitments to server
+        let send_commitments_args = SendCommitmentsArgs {
+            identifier: *identifier,
+            commitments: commitments_vec,
+        };
         let res = server
-            .post("/send_commitments")
+            .post("/send")
             .authorization_bearer(token)
-            .json(&server::SendCommitmentsArgs {
-                identifier: (*identifier).into(),
+            .json(&server::SendArgs {
                 session_id,
-                commitments: commitments_vec,
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_commitments_args)?,
             })
             .await;
         if res.status_code() != 200 {
@@ -148,23 +169,27 @@ async fn test_main_router<
     }
 
     // As the coordinator, get the commitments
-    let res = server
-        .post("/get_commitments")
-        .authorization_bearer(token)
-        .json(&server::GetCommitmentsArgs { session_id })
-        .await;
-    res.assert_status_ok();
-    let r: server::GetCommitmentsOutput = res.json();
-    // Deserialize commitments in the response
-    let commitments = r
-        .commitments
-        .iter()
-        .map(|m| {
-            m.iter()
-                .map(|(i, c)| Ok((i.try_into()?, c.try_into()?)))
-                .collect::<Result<BTreeMap<_, _>, Box<dyn std::error::Error>>>()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut coordinator_state = SessionState::<C>::new(2, 2);
+    loop {
+        let res = server
+            .post("/receive")
+            .authorization_bearer(alice_token)
+            .json(&server::ReceiveArgs {
+                session_id,
+                as_coordinator: true,
+            })
+            .await;
+        res.assert_status_ok();
+        let r: server::ReceiveOutput = res.json();
+        for msg in r.msgs {
+            coordinator_state.recv(msg)?;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        if coordinator_state.has_commitments() {
+            break;
+        }
+    }
+    let (commitments, usernames) = coordinator_state.commitments()?;
 
     // As the coordinator, choose messages and create one SigningPackage
     // and one RandomizedParams for each.
@@ -185,54 +210,64 @@ async fn test_main_router<
         .collect::<Result<Vec<_>, _>>()?;
 
     // As the coordinator, send the SigningPackages to the server
-    let res = server
-        .post("/send_signing_package")
-        .authorization_bearer(token)
-        .json(&server::SendSigningPackageArgs {
-            session_id,
-            signing_package: signing_packages
+    let send_signing_package_args = SendSigningPackageArgs {
+        signing_package: signing_packages.clone(),
+        aux_msg: aux_msg.to_vec(),
+        randomizer: if rerandomized {
+            randomized_params
                 .iter()
-                .map(std::convert::TryInto::<SerializedSigningPackage>::try_into)
-                .collect::<Result<_, _>>()?,
-            randomizer: if rerandomized {
-                randomized_params
-                    .iter()
-                    .map(|p| (*p.randomizer()).into())
-                    .collect()
-            } else {
-                Vec::new()
-            },
-            aux_msg: aux_msg.to_owned(),
+                .map(|p| (*p.randomizer()))
+                .collect()
+        } else {
+            Vec::new()
+        },
+    };
+    let res = server
+        .post("/send")
+        .authorization_bearer(alice_token)
+        .json(&server::SendArgs {
+            session_id,
+            recipients: usernames.keys().cloned().collect(),
+            msg: serde_json::to_vec(&send_signing_package_args)?,
         })
         .await;
     res.assert_status_ok();
 
     // As each participant, get SigningPackages and generate the SignatureShares
     // for each.
-    for (identifier, key_package) in key_packages.iter().take(2) {
+    for ((identifier, key_package), token) in key_packages.iter().take(2).zip(tokens.iter()) {
         // As participant `identifier`
 
         // Get SigningPackages
-        let res = server
-            .post("get_signing_package")
-            .authorization_bearer(token)
-            .json(&server::GetSigningPackageArgs { session_id })
-            .await;
-        res.assert_status_ok();
-        let r: server::GetSigningPackageOutput = res.json();
+        let r: SendSigningPackageArgs<C> = loop {
+            let r = server
+                .post("/receive")
+                .authorization_bearer(token)
+                .json(&server::ReceiveArgs {
+                    session_id,
+                    as_coordinator: false,
+                })
+                .await
+                .json::<server::ReceiveOutput>();
+            if r.msgs.is_empty() {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            } else {
+                break serde_json::from_slice(&r.msgs[0].msg)?;
+            }
+        };
 
         // Generate SignatureShares for each SigningPackage
-        let signature_share = if rerandomized {
+        let signature_shares = if rerandomized {
             r.signing_package
                 .iter()
                 .zip(r.randomizer.iter())
                 .enumerate()
                 .map(|(i, (signing_package, randomizer))| {
                     frost_rerandomized::sign(
-                        &signing_package.try_into()?,
+                        signing_package,
                         &nonces_map[identifier][i],
                         key_package,
-                        randomizer.try_into()?,
+                        *randomizer,
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?
@@ -241,49 +276,50 @@ async fn test_main_router<
                 .iter()
                 .enumerate()
                 .map(|(i, signing_package)| {
-                    frost::round2::sign(
-                        &signing_package.try_into()?,
-                        &nonces_map[identifier][i],
-                        key_package,
-                    )
+                    frost::round2::sign(signing_package, &nonces_map[identifier][i], key_package)
                 })
                 .collect::<Result<Vec<_>, _>>()?
         };
 
         // Send SignatureShares to the server
+        let send_signature_shares_args = SendSignatureSharesArgs {
+            identifier: *identifier,
+            signature_share: signature_shares,
+        };
         let res = server
-            .post("/send_signature_share")
+            .post("/send")
             .authorization_bearer(token)
-            .json(&server::SendSignatureShareArgs {
-                identifier: (*identifier).into(),
+            .json(&server::SendArgs {
                 session_id,
-                signature_share: signature_share
-                    .iter()
-                    .map(|s| std::convert::Into::<SerializedSignatureShare>::into(*s))
-                    .collect(),
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_signature_shares_args)?,
             })
             .await;
         res.assert_status_ok();
     }
 
     // As the coordinator, get SignatureShares
-    let res = server
-        .post("/get_signature_shares")
-        .authorization_bearer(token)
-        .json(&server::GetSignatureSharesArgs { session_id })
-        .await;
-    res.assert_status_ok();
-    let r: server::GetSignatureSharesOutput = res.json();
+    loop {
+        let r = server
+            .post("/receive")
+            .authorization_bearer(alice_token)
+            .json(&server::ReceiveArgs {
+                session_id,
+                as_coordinator: true,
+            })
+            .await
+            .json::<server::ReceiveOutput>();
+        for msg in r.msgs {
+            coordinator_state.recv(msg)?;
+        }
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        if coordinator_state.has_signature_shares() {
+            break;
+        }
+    }
 
-    let signature_shares = r
-        .signature_shares
-        .iter()
-        .map(|m| {
-            m.iter()
-                .map(|(i, s)| Ok((i.try_into()?, s.try_into()?)))
-                .collect::<Result<BTreeMap<_, _>, Box<dyn std::error::Error>>>()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let signature_shares = coordinator_state.signature_shares()?;
 
     // Generate the final Signature for each message
     let signatures = if rerandomized {
@@ -310,7 +346,7 @@ async fn test_main_router<
     // Close the session
     let res = server
         .post("/close_session")
-        .authorization_bearer(token)
+        .authorization_bearer(alice_token)
         .json(&server::CloseSessionArgs { session_id })
         .await;
     res.assert_status_ok();

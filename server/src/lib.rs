@@ -29,21 +29,8 @@ pub fn router(shared_state: SharedState) -> Router {
         .route("/create_new_session", post(functions::create_new_session))
         .route("/list_sessions", post(functions::list_sessions))
         .route("/get_session_info", post(functions::get_session_info))
-        .route("/send_commitments", post(functions::send_commitments))
-        .route("/get_commitments", post(functions::get_commitments))
-        .route(
-            "/send_signing_package",
-            post(functions::send_signing_package),
-        )
-        .route("/get_signing_package", post(functions::get_signing_package))
-        .route(
-            "/send_signature_share",
-            post(functions::send_signature_share),
-        )
-        .route(
-            "/get_signature_shares",
-            post(functions::get_signature_shares),
-        )
+        .route("/send", post(functions::send))
+        .route("/receive", post(functions::receive))
         .route("/close_session", post(functions::close_session))
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state)
