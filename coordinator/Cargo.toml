@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "0.1.80"
+async-trait = "0.1.81"
 eyre = "0.6.12"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
@@ -18,7 +18,7 @@ rand = "0.8"
 serde_json = "1.0"
 itertools = "0.13.0"
 exitcode = "1.1.2"
-clap = { version = "4.5.8", features = ["derive"] }
+clap = { version = "4.5.13", features = ["derive"] }
 reqwest = { version = "0.12.5", features = ["json"] }
 server = { path = "../server" }
 tokio = { version = "1", features = ["full"] }
