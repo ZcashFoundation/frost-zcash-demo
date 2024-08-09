@@ -48,7 +48,9 @@ async fn read_commitments<C: Ciphersuite>(
 
     let pub_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
 
-    let num_of_participants = if args.num_signers == 0 {
+    let num_of_participants = if !args.signers.is_empty() {
+        args.signers.len() as u16
+    } else if args.num_signers == 0 {
         writeln!(logger, "The number of participants: ")?;
 
         let mut participants = String::new();

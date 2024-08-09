@@ -17,6 +17,15 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub http: bool,
 
+    /// The username to use in HTTP mode.
+    #[arg(short = 'u', long, default_value = "")]
+    pub username: String,
+
+    /// The password to use in HTTP mode. If specified, it will be read from the
+    /// environment variable with the given name.
+    #[arg(short = 'w', long, default_value = "")]
+    pub password: String,
+
     /// Public key package to use. Can be a file with a JSON-encoded
     /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
