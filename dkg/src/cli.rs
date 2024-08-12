@@ -8,9 +8,10 @@ use std::io::{BufRead, Write};
 
 use crate::inputs::{read_round1_package, read_round2_package, request_inputs};
 
-// The redpallas ciphersuite requires ensuring public key have an even Y
-// coordinate. Since the code uses generics, this trait is used to convert if
-// needed depending on the ciphersuite.
+// The redpallas ciphersuite, when used for generating Orchard spending key
+// signatures, requires ensuring public key have an even Y coordinate. Since the
+// code uses generics, this trait is used to convert if needed depending on the
+// ciphersuite.
 //
 // If you are adding a new ciphersuite to this tool which does note require
 // this, just implement it and the default implementation (which does nothing)

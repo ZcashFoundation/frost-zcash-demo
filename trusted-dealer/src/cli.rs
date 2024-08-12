@@ -10,9 +10,10 @@ use crate::args::Args;
 use crate::inputs::{print_values, request_inputs};
 use crate::trusted_dealer_keygen::{split_secret, trusted_dealer_keygen};
 
-// The redpallas ciphersuite requires ensuring public key have an even Y
-// coordinate. Since the code uses generics, this trait is used to convert if
-// needed depending on the ciphersuite.
+// The redpallas ciphersuite, when used for generating Orchard spending key
+// signatures, requires ensuring public key have an even Y coordinate. Since the
+// code uses generics, this trait is used to convert if needed depending on the
+// ciphersuite.
 //
 // If you are adding a new ciphersuite to this tool which does note require
 // this, just implement it and the default implementation (which does nothing)
