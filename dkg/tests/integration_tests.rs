@@ -1,6 +1,6 @@
 use frost_core::{self as frost, Ciphersuite};
 
-use dkg::cli::cli;
+use dkg::cli::{cli, MaybeIntoEvenY};
 
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
@@ -35,7 +35,7 @@ fn check_dkg() {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static>() {
+fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
     let mut input_writers = Vec::new();
     let mut output_readers = Vec::new();
     let mut join_handles = Vec::new();
