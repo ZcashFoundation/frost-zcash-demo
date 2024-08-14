@@ -1,23 +1,20 @@
 //! HTTP implementation of the Comms trait.
 
+use std::{
+    env,
+    error::Error,
+    io::{BufRead, Write},
+    marker::PhantomData,
+    time::Duration,
+};
+
 use async_trait::async_trait;
-
-use frost_core::{self as frost, Ciphersuite};
-
 use eyre::eyre;
-
-use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
+use frost_core::{
+    self as frost, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
+};
 
 use super::Comms;
-
-use std::env;
-use std::io::{BufRead, Write};
-
-use std::error::Error;
-
-use std::marker::PhantomData;
-use std::time::Duration;
-
 use crate::args::Args;
 
 pub struct HTTPComms<C: Ciphersuite> {
@@ -30,7 +27,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     _phantom: PhantomData<C>,
 }
 
-use server::Uuid;
+use server::{SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -108,13 +105,18 @@ where
         self.session_id = Some(session_id);
 
         // Send Commitments to Server
+        let send_commitments_args = SendCommitmentsArgs {
+            identifier,
+            commitments: vec![commitments],
+        };
         self.client
-            .post(format!("{}/send_commitments", self.host_port))
+            .post(format!("{}/send", self.host_port))
             .bearer_auth(&self.access_token)
-            .json(&server::SendCommitmentsArgs {
+            .json(&server::SendArgs {
                 session_id,
-                identifier: identifier.into(),
-                commitments: vec![(&commitments).try_into()?],
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_commitments_args)?,
             })
             .send()
             .await?;
@@ -123,39 +125,43 @@ where
 
         // Receive SigningPackage from Coordinator
 
-        let r = loop {
+        let r: SendSigningPackageArgs<C> = loop {
             let r = self
                 .client
-                .post(format!("{}/get_signing_package", self.host_port))
+                .post(format!("{}/receive", self.host_port))
                 .bearer_auth(&self.access_token)
-                .json(&server::GetSigningPackageArgs { session_id })
+                .json(&server::ReceiveArgs {
+                    session_id,
+                    as_coordinator: false,
+                })
                 .send()
+                .await?
+                .json::<server::ReceiveOutput>()
                 .await?;
-            if r.status() != 200 {
+            if r.msgs.is_empty() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 eprint!(".");
             } else {
                 eprintln!("\nSigning package received");
-                break r.json::<server::GetSigningPackageOutput>().await?;
+                eprintln!("\n{}", String::from_utf8(r.msgs[0].msg.clone()).unwrap());
+                break serde_json::from_slice(&r.msgs[0].msg)?;
             }
         };
 
-        let signing_package = if rerandomized {
+        if rerandomized {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
             let randomizer = r.randomizer.first().ok_or(eyre!("missing randomizer"))?;
-            (signing_package.try_into()?, Some(randomizer.try_into()?))
+            Ok((signing_package.clone(), Some(*randomizer)))
         } else {
             let signing_package = r
                 .signing_package
                 .first()
                 .ok_or(eyre!("missing signing package"))?;
-            (signing_package.try_into()?, None)
-        };
-
-        Ok(signing_package)
+            Ok((signing_package.clone(), None))
+        }
     }
 
     async fn send_signature_share(
@@ -167,14 +173,20 @@ where
 
         eprintln!("Sending signature share to coordinator...");
 
+        let send_signature_shares_args = SendSignatureSharesArgs {
+            identifier,
+            signature_share: vec![signature_share],
+        };
+
         let _r = self
             .client
-            .post(format!("{}/send_signature_share", self.host_port))
+            .post(format!("{}/send", self.host_port))
             .bearer_auth(&self.access_token)
-            .json(&server::SendSignatureShareArgs {
-                identifier: identifier.into(),
+            .json(&server::SendArgs {
                 session_id: self.session_id.unwrap(),
-                signature_share: vec![signature_share.into()],
+                // Empty recipients: Coordinator
+                recipients: vec![],
+                msg: serde_json::to_vec(&send_signature_shares_args)?,
             })
             .send()
             .await?;

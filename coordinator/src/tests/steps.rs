@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use coordinator::{
-    args::Args,
+    args::{Args, ProcessedArgs},
     comms::cli::CLIComms,
     step_1::{step_1, ParticipantsConfig},
     step_2::step_2,
@@ -105,17 +105,15 @@ async fn check_step_1() {
 
     let signing_commitments = build_signing_commitments();
 
-    let input = format!(
-        "{}\n{}\n{}\n{}\n{}\n{}\n",
-        pub_key_package,
-        num_of_participants,
-        participant_id_1,
-        commitments_input_1,
-        participant_id_3,
-        commitments_input_3
-    );
+    let input = format!("{}\n{}\n", num_of_participants, pub_key_package);
 
-    let mut valid_input = input.as_bytes();
+    let pargs = ProcessedArgs::new(&args, &mut input.as_bytes(), &mut buf).unwrap();
+
+    let input = format!(
+        "{}\n{}\n{}\n{}\n",
+        participant_id_1, commitments_input_1, participant_id_3, commitments_input_3
+    );
+    let mut buf = BufWriter::new(Vec::new());
 
     let (signer_pub_keys, group_public) = build_pub_key_package();
 
@@ -124,7 +122,7 @@ async fn check_step_1() {
         pub_key_package: PublicKeyPackage::new(signer_pub_keys, group_public),
     };
 
-    let participants_config = step_1(&args, &mut comms, &mut valid_input, &mut buf).await;
+    let participants_config = step_1(&pargs, &mut comms, &mut input.as_bytes(), &mut buf).await;
 
     assert!(participants_config.unwrap() == expected_participants_config);
 }
@@ -140,22 +138,18 @@ async fn check_step_2() {
         commitments_from_part_3,
         signing_package_helper,
         message,
+        pub_key_package,
         ..
     } = get_helpers();
 
     let args = Args::default();
     let mut buf = BufWriter::new(Vec::new());
 
-    // -- INPUTS --
-
     let input = format!(
-        "{}\n{}\n{}\n",
-        message, commitments_from_part_1, commitments_from_part_3
+        "2\n{}\n{}\n{}\n{}\n",
+        pub_key_package, message, commitments_from_part_1, commitments_from_part_3
     );
-
-    let mut valid_input = input.as_bytes();
-
-    // --
+    let pargs = ProcessedArgs::new(&args, &mut input.as_bytes(), &mut buf).unwrap();
 
     let signing_commitments = build_signing_commitments();
 
@@ -163,21 +157,12 @@ async fn check_step_2() {
 
     let expected_signing_package = SigningPackage::new(signing_commitments.clone(), &message);
 
-    let signing_package = step_2(
-        &args,
-        &mut valid_input,
-        &mut buf,
-        signing_commitments.clone(),
-    )
-    .unwrap();
+    let mut buf = BufWriter::new(Vec::new());
+    let signing_package = step_2(&pargs, &mut buf, signing_commitments.clone()).unwrap();
 
-    // assert!(&signing_package.await.is_ok());
     assert!(signing_package == expected_signing_package);
 
-    let expected = format!(
-        "The message to be signed (hex encoded)\nSigning Package:\n{}\n",
-        signing_package_helper
-    );
+    let expected = format!("Signing Package:\n{}\n", signing_package_helper);
 
     let (_, res) = &buf.into_parts();
     let actual = String::from_utf8(res.as_ref().unwrap().to_owned()).unwrap();
@@ -197,12 +182,16 @@ async fn check_step_3() {
         signature_3,
         group_signature,
         message,
+        pub_key_package,
         ..
     } = get_helpers();
 
     let mut comms = CLIComms::new();
     let mut buf = BufWriter::new(Vec::new());
     let args = Args::default();
+
+    let input = format!("2\n{}\n{}\n", pub_key_package, message);
+    let pargs = ProcessedArgs::new(&args, &mut input.as_bytes(), &mut buf).unwrap();
 
     // keygen output
 
@@ -227,14 +216,14 @@ async fn check_step_3() {
 
     // step 3 generate signature
 
+    let mut buf = BufWriter::new(Vec::new());
     step_3(
-        &args,
+        &pargs,
         &mut comms,
         &mut valid_input,
         &mut buf,
         participants_config,
         &signing_package,
-        None,
     )
     .await
     .unwrap();

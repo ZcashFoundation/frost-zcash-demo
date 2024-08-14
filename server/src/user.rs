@@ -186,7 +186,7 @@ pub(crate) async fn get_user_for_access_token(
 impl FromRequestParts<SharedState> for User {
     type Rejection = AppError;
 
-    #[tracing::instrument(ret, err(Debug), skip(parts, state))]
+    #[tracing::instrument(err(Debug), skip(parts, state))]
     // Can be removed after this fix is released
     // https://github.com/rust-lang/rust-clippy/issues/12281
     #[allow(clippy::blocks_in_conditions)]

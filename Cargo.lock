@@ -511,6 +511,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
+ "derivative",
  "exitcode",
  "eyre",
  "frost-core",
@@ -523,6 +524,7 @@ dependencies = [
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "reqwest",
  "serde_json",
+ "serdect",
  "server",
  "thiserror",
  "tokio",
@@ -1771,6 +1773,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
+ "derivative",
  "exitcode",
  "eyre",
  "frost-core",
@@ -1782,6 +1785,7 @@ dependencies = [
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "reqwest",
  "serde_json",
+ "serdect",
  "server",
  "tokio",
 ]
@@ -2401,6 +2405,7 @@ dependencies = [
  "axum-macros",
  "axum-test",
  "clap",
+ "coordinator",
  "derivative",
  "eyre",
  "frost-core",
