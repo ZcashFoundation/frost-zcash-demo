@@ -100,7 +100,7 @@ where
                 if r.session_ids.len() > 1 {
                     return Err(eyre!("user has more than one FROST session active, which is still not supported by this tool").into());
                 } else if r.session_ids.is_empty() {
-                    return Err(eyre!("User has no current session actives. The Coordinator should either specify your username, or manually share the session ID which you can specify with --session_id").into());
+                    return Err(eyre!("User has no current sessions active. The Coordinator should either specify your username, or manually share the session ID which you can specify with --session_id").into());
                 }
                 r.session_ids[0]
             }
