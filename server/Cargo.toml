@@ -7,15 +7,19 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.5"
+axum-extra = { version = "0.9.3", features = ["typed-header"] }
+axum-macros = "0.4.1"
 clap = { version = "4.5.13", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
+password-auth = "1.0.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.2.0" }
 serde_json = "1.0.122"
+sqlx = { version = "0.7.3", features = ["sqlite", "time", "runtime-tokio", "uuid"] }
 tokio = { version = "1.38", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tracing = "0.1"
@@ -23,7 +27,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.10.0", features = ["v4", "fast-rng", "serde"] }
 
 [dev-dependencies]
-axum-test = "14.10.0"
+axum-test = "15.2.0"
 frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "4d8c4bb337231e6e89117334d7c61dada589a953", features = [
     "frost",

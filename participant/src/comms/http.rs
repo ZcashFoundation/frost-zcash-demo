@@ -10,6 +10,7 @@ use frost::{round1::SigningCommitments, round2::SignatureShare, Identifier};
 
 use super::Comms;
 
+use std::env;
 use std::io::{BufRead, Write};
 
 use std::error::Error;
@@ -22,7 +23,10 @@ use crate::args::Args;
 pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
-    session_id: Uuid,
+    session_id: Option<Uuid>,
+    username: String,
+    password: String,
+    access_token: String,
     _phantom: PhantomData<C>,
 }
 
@@ -33,14 +37,18 @@ impl<C> HTTPComms<C>
 where
     C: Ciphersuite,
 {
-    pub fn new(args: &Args) -> Self {
+    pub fn new(args: &Args) -> Result<Self, Box<dyn Error>> {
         let client = reqwest::Client::new();
-        Self {
+        let password = env::var(&args.password).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?;
+        Ok(Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
-            session_id: Uuid::parse_str(&args.session_id).expect("invalid session id"),
+            session_id: Uuid::parse_str(&args.session_id).ok(),
+            username: args.username.clone(),
+            password,
+            access_token: String::new(),
             _phantom: Default::default(),
-        }
+        })
     }
 }
 
@@ -63,11 +71,48 @@ where
         ),
         Box<dyn Error>,
     > {
+        self.access_token = self
+            .client
+            .post(format!("{}/login", self.host_port))
+            .json(&server::LoginArgs {
+                username: self.username.clone(),
+                password: self.password.clone(),
+            })
+            .send()
+            .await?
+            .json::<server::LoginOutput>()
+            .await?
+            .access_token
+            .to_string();
+
+        let session_id = match self.session_id {
+            Some(s) => s,
+            None => {
+                // Get session ID from server
+                let r = self
+                    .client
+                    .post(format!("{}/list_sessions", self.host_port))
+                    .bearer_auth(&self.access_token)
+                    .send()
+                    .await?
+                    .json::<server::ListSessionsOutput>()
+                    .await?;
+                if r.session_ids.len() > 1 {
+                    return Err(eyre!("user has more than one FROST session active, which is still not supported by this tool").into());
+                } else if r.session_ids.is_empty() {
+                    return Err(eyre!("User has no current sessions active. The Coordinator should either specify your username, or manually share the session ID which you can specify with --session_id").into());
+                }
+                r.session_ids[0]
+            }
+        };
+        self.session_id = Some(session_id);
+
         // Send Commitments to Server
         self.client
             .post(format!("{}/send_commitments", self.host_port))
+            .bearer_auth(&self.access_token)
             .json(&server::SendCommitmentsArgs {
-                session_id: self.session_id,
+                session_id,
                 identifier: identifier.into(),
                 commitments: vec![(&commitments).try_into()?],
             })
@@ -82,9 +127,8 @@ where
             let r = self
                 .client
                 .post(format!("{}/get_signing_package", self.host_port))
-                .json(&server::GetSigningPackageArgs {
-                    session_id: self.session_id,
-                })
+                .bearer_auth(&self.access_token)
+                .json(&server::GetSigningPackageArgs { session_id })
                 .send()
                 .await?;
             if r.status() != 200 {
@@ -126,11 +170,19 @@ where
         let _r = self
             .client
             .post(format!("{}/send_signature_share", self.host_port))
+            .bearer_auth(&self.access_token)
             .json(&server::SendSignatureShareArgs {
                 identifier: identifier.into(),
-                session_id: self.session_id,
+                session_id: self.session_id.unwrap(),
                 signature_share: vec![signature_share.into()],
             })
+            .send()
+            .await?;
+
+        let _r = self
+            .client
+            .post(format!("{}/logout", self.host_port))
+            .bearer_auth(&self.access_token)
             .send()
             .await?;
 

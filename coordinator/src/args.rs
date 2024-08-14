@@ -17,6 +17,21 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub http: bool,
 
+    /// The username to use in HTTP mode.
+    #[arg(short = 'u', long, default_value = "")]
+    pub username: String,
+
+    /// The password to use in HTTP mode. If specified, it will be read from the
+    /// environment variable with the given name.
+    #[arg(short = 'w', long, default_value = "")]
+    pub password: String,
+
+    /// The comma-separated usernames of the signers to use in HTTP mode.
+    /// If HTTP mode is enabled and this is empty, then the session ID
+    /// will be printed and will have to be shared manually.
+    #[arg(short = 'S', long, value_delimiter = ',')]
+    pub signers: Vec<String>,
+
     /// The number of participants. If 0, will prompt for a value.
     #[arg(short = 'n', long, default_value_t = 0)]
     pub num_signers: u16,

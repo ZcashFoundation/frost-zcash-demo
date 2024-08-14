@@ -22,7 +22,7 @@ pub async fn cli<C: RandomizedCiphersuite + 'static>(
     let mut comms: Box<dyn Comms<C>> = if args.cli {
         Box::new(CLIComms::new())
     } else if args.http {
-        Box::new(HTTPComms::new(args))
+        Box::new(HTTPComms::new(args)?)
     } else {
         Box::new(SocketComms::new(args))
     };
