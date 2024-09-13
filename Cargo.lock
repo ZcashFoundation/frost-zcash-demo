@@ -1021,17 +1021,23 @@ dependencies = [
  "directories",
  "dirs",
  "eyre",
+ "frost-core",
+ "frost-ed25519",
  "hex",
  "postcard",
+ "rand",
+ "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
  "reqwest",
  "rpassword",
  "serde",
+ "serde_json",
  "serdect",
  "server",
  "snow",
  "tempfile",
  "tokio",
  "toml",
+ "trusted-dealer",
 ]
 
 [[package]]
