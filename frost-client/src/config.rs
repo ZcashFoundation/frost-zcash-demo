@@ -31,7 +31,7 @@ pub struct Config {
     pub contact: BTreeMap<String, Contact>,
     /// The FROST groups the user belongs to, keyed by (TODO)
     #[serde(default)]
-    pub groups: BTreeMap<String, Group>,
+    pub group: BTreeMap<String, Group>,
 }
 
 /// A registry entry. Note that the server URL is not in the struct;
@@ -66,8 +66,16 @@ pub struct CommunicationKey {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
     /// The encoded public key package for the group.
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
     pub public_key_package: Vec<u8>,
     /// The user's encodede key package for the group.
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
     pub key_package: Vec<u8>,
     /// The group participants, keyed by (TODO)
     pub participant: BTreeMap<String, Participant>,
@@ -77,8 +85,16 @@ pub struct Group {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Participant {
     /// The identifier of the participant in the group.
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
     pub identifier: Vec<u8>,
     /// The communication public key for the participant.
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
     pub pubkey: Vec<u8>,
     /// The server the participant is registered in, if any.
     pub server_url: Option<String>,

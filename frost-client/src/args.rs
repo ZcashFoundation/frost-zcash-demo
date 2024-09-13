@@ -70,4 +70,26 @@ pub(crate) enum Command {
         #[arg(short, long)]
         config: Option<String>,
     },
+    TrustedDealer {
+        /// The path to the config file to manage.
+        ///
+        /// You can specify `num_signers` different paths. In that case, the
+        /// group information will be added to each config file. This is
+        /// particularly useful for tests, where all participants are run in the
+        /// same machine with a config file for each.
+        ///
+        /// If a single path is specified (or none, which will use
+        /// $HOME/.local/frost/credentials.toml), then it will run the trusted
+        /// dealer process via the FROST server (TODO: this is not supported yet)
+        #[arg(short, long)]
+        config: Vec<String>,
+        #[arg(short = 'C', long, default_value = "ed25519")]
+        ciphersuite: String,
+        /// The threshold (minimum number of signers).
+        #[arg(short = 't', long, default_value_t = 2)]
+        threshold: u16,
+        /// The total number of participants (maximum number of signers).
+        #[arg(short = 'n', long, default_value_t = 3)]
+        num_signers: u16,
+    },
 }

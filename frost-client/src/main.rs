@@ -4,6 +4,7 @@ pub mod contact;
 pub mod init;
 pub mod login;
 pub mod write_atomic;
+pub mod trusted_dealer;
 
 use std::error::Error;
 
