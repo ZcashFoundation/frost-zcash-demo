@@ -8,5 +8,5 @@ Run `frost-client -h` (or `cargo run -p frost-client -- -h`) to get the
 command line help.
 
 Eventually, `frost-client` will also be able to be imported as a library to
-offer functionality to developers which want to offer similar functionality
+offer functionality to developers who want to offer similar functionality
 to `frost-client` in their own applications (e.g. wallets).

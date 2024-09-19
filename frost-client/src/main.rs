@@ -3,6 +3,7 @@ pub mod config;
 pub mod contact;
 pub mod init;
 pub mod login;
+pub mod write_atomic;
 
 use std::error::Error;
 

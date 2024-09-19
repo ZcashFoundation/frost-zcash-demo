@@ -2,6 +2,8 @@ use core::str;
 use std::{
     collections::BTreeMap,
     error::Error,
+    fs::File,
+    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -9,7 +11,7 @@ use std::{
 use eyre::eyre;
 use serde::{Deserialize, Serialize};
 
-use crate::contact::Contact;
+use crate::{contact::Contact, write_atomic};
 
 /// The config file, which is serialized with serde.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -82,6 +84,20 @@ pub struct Participant {
     pub server_url: Option<String>,
     /// The username of the participant in the server, if any.
     pub username: Option<String>,
+}
+
+#[cfg(unix)]
+fn set_permissions(file: &File, mode: u32) -> Result<(), Box<dyn Error>> {
+    let mut perms = file.metadata()?.permissions();
+    perms.set_mode(mode);
+    file.set_permissions(perms)?;
+    Ok(())
+}
+
+#[cfg(not(unix))]
+#[allow(unused)]
+fn set_permissions(file: &File, mode: u32) -> Result<(), Box<dyn Error>> {
+    Ok(())
 }
 
 impl Config {

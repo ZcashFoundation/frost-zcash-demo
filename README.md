@@ -34,16 +34,16 @@ This repo contains 4 projects:
 7. [Zcash Signer](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/zcash-sign)
 
 The first four are command line tools that generate FROST shares and run the
-FROST protocol. The offer multiple communication interfaces, from copy&pasting
+FROST protocol. They offer multiple communication interfaces, from copy & pasting
 to using the Server; see below.
 
-The Server helps participants and coordinators to communicate with each other.
+The Server helps participants and coordinators communicate with each other.
 
-The FROST client is a CLI tool that serves as an example on how to interact
+The FROST client is a CLI tool that serves as an example of how to interact
 with the server.
 
 The Zcash Signer is a standalone tool that allows signing a Zcash transaction
-with a externally-generated signature (i.e. using FROST, but could be something
+with an externally-generated signature (e.g. using FROST, but could be something
 else).
 
 
