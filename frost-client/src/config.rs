@@ -86,20 +86,6 @@ pub struct Participant {
     pub username: Option<String>,
 }
 
-#[cfg(unix)]
-fn set_permissions(file: &File, mode: u32) -> Result<(), Box<dyn Error>> {
-    let mut perms = file.metadata()?.permissions();
-    perms.set_mode(mode);
-    file.set_permissions(perms)?;
-    Ok(())
-}
-
-#[cfg(not(unix))]
-#[allow(unused)]
-fn set_permissions(file: &File, mode: u32) -> Result<(), Box<dyn Error>> {
-    Ok(())
-}
-
 impl Config {
     /// Returns the default path of the config
     /// ($HOME/.config/frost/credentials.toml in Linux) if `path` is None,
