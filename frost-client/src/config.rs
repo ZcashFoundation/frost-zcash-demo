@@ -8,10 +8,10 @@ use std::{
     str::FromStr,
 };
 
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
 use serde::{Deserialize, Serialize};
 
-use crate::{contact::Contact, write_atomic};
+use crate::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
 
 /// The config file, which is serialized with serde.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -29,9 +29,20 @@ pub struct Config {
     /// The address book of the user, keyed by each contact's name.
     #[serde(default)]
     pub contact: BTreeMap<String, Contact>,
-    /// The FROST groups the user belongs to, keyed by (TODO)
+    /// The FROST groups the user belongs to, keyed by hex-encoded verifying key
     #[serde(default)]
     pub group: BTreeMap<String, Group>,
+}
+
+impl Config {
+    pub fn contact_by_pubkey(&self, pubkey: &[u8]) -> Result<Contact, Box<dyn Error>> {
+        Ok(self
+            .contact
+            .values()
+            .find(|c| c.pubkey == pubkey)
+            .cloned()
+            .ok_or_eyre("contact not found")?)
+    }
 }
 
 /// A registry entry. Note that the server URL is not in the struct;
@@ -65,6 +76,7 @@ pub struct CommunicationKey {
 // TODO: add a textual name for the group?
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
+    pub ciphersuite: String,
     /// The encoded public key package for the group.
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
@@ -77,11 +89,34 @@ pub struct Group {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub key_package: Vec<u8>,
-    /// The group participants, keyed by (TODO)
+    /// The server the participants are registered in, if any.
+    pub server_url: Option<String>,
+    /// The group participants, keyed by hex-encoded identifier
     pub participant: BTreeMap<String, Participant>,
 }
 
-/// A FROST grou participant.
+impl Group {
+    /// Returns a human-readable summary of the contact; used when it is
+    /// printed to the terminal.
+    pub fn as_human_readable_summary(&self, config: &Config) -> Result<String, Box<dyn Error>> {
+        let helper = ciphersuite_helper(&self.ciphersuite)?;
+        let info = helper.group_info(&self.key_package, &self.public_key_package)?;
+        let mut s = format!(
+            "Group with public key {}\nServer URL: {}\nThreshold: {}\nParticipants: {}\n",
+            info.hex_verifying_key,
+            self.server_url.clone().unwrap_or_default(),
+            info.threshold,
+            info.num_participants
+        );
+        for participant in self.participant.values() {
+            let contact = config.contact_by_pubkey(&participant.pubkey)?;
+            s += &format!("\tName: {}", contact.name);
+        }
+        Ok(s)
+    }
+}
+
+/// A FROST group participant.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Participant {
     /// The identifier of the participant in the group.
@@ -96,8 +131,6 @@ pub struct Participant {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub pubkey: Vec<u8>,
-    /// The server the participant is registered in, if any.
-    pub server_url: Option<String>,
     /// The username of the participant in the server, if any.
     pub username: Option<String>,
 }

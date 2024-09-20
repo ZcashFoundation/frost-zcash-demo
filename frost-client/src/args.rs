@@ -83,6 +83,9 @@ pub(crate) enum Command {
         /// dealer process via the FROST server (TODO: this is not supported yet)
         #[arg(short, long)]
         config: Vec<String>,
+        /// The name of each participant.
+        #[arg(short = 'N', long, value_delimiter = ',')]
+        names: Vec<String>,
         #[arg(short = 'C', long, default_value = "ed25519")]
         ciphersuite: String,
         /// The threshold (minimum number of signers).
@@ -91,5 +94,12 @@ pub(crate) enum Command {
         /// The total number of participants (maximum number of signers).
         #[arg(short = 'n', long, default_value_t = 3)]
         num_signers: u16,
+    },
+    /// Lists the groups the user is in.
+    Groups {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
     },
 }

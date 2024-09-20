@@ -9,6 +9,7 @@ use trusted_dealer::MaybeIntoEvenY;
 use crate::{
     args::Command,
     config::{Config, Group, Participant},
+    contact::Contact,
 };
 
 pub(crate) fn trusted_dealer(args: &Command) -> Result<(), Box<dyn Error>> {
@@ -31,6 +32,7 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         ciphersuite: _,
         threshold,
         num_signers,
+        names,
     } = (*args).clone()
     else {
         panic!("invalid Command");
@@ -40,6 +42,9 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         return Err(
             eyre!("The `config` option must specify `num_signers` different config files").into(),
         );
+    }
+    if names.len() != num_signers as usize {
+        return Err(eyre!("The `names` option must specify `num_signers` names").into());
     }
 
     let trusted_dealer_config = trusted_dealer::Config {
@@ -55,7 +60,8 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
 
     // First pass over configs; create participants map
     let mut participants = BTreeMap::new();
-    for (identifier, path) in shares.keys().zip(config.iter()) {
+    let mut contacts = Vec::new();
+    for ((identifier, path), name) in shares.keys().zip(config.iter()).zip(names.iter()) {
         let config = Config::read(Some(path.to_string()))?;
         let pubkey = config
             .communication_key
@@ -63,11 +69,18 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
             .pubkey;
         let participant = Participant {
             identifier: identifier.serialize(),
+            pubkey: pubkey.clone(),
+            username: None,
+        };
+        participants.insert(hex::encode(identifier.serialize()), participant);
+        let contact = Contact {
+            version: None,
+            name: name.clone(),
             pubkey,
             server_url: None,
             username: None,
         };
-        participants.insert(hex::encode(identifier.serialize()), participant);
+        contacts.push(contact);
     }
 
     // Second pass over configs; write group information
@@ -75,14 +88,19 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         let mut config = Config::read(Some(path.to_string()))?;
         let key_package: KeyPackage<C> = share.clone().try_into()?;
         let group = Group {
+            ciphersuite: C::ID.to_string(),
             key_package: postcard::to_allocvec(&key_package)?,
             public_key_package: postcard::to_allocvec(&public_key_package)?,
             participant: participants.clone(),
+            server_url: None,
         };
         config.group.insert(
             hex::encode(public_key_package.verifying_key().serialize()?),
             group,
         );
+        for c in &contacts {
+            config.contact.insert(c.name.clone(), c.clone());
+        }
         config.write()?;
     }
 
