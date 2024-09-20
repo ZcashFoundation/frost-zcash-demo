@@ -1,10 +1,12 @@
 pub mod args;
+pub mod ciphersuite_helper;
 pub mod config;
 pub mod contact;
+pub mod group;
 pub mod init;
 pub mod login;
-pub mod write_atomic;
 pub mod trusted_dealer;
+pub mod write_atomic;
 
 use std::error::Error;
 
@@ -21,6 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::Export { .. } => contact::export(&args.command),
         Command::Import { .. } => contact::import(&args.command),
         Command::Contacts { .. } => contact::list(&args.command),
+        Command::Groups { .. } => group::list(&args.command),
     }?;
 
     Ok(())
