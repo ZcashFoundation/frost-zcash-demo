@@ -21,7 +21,7 @@ serdect = { version = "0.2.0" }
 clap = { version = "4.5.15", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
-reqwest = { version = "0.12.5", features = ["json"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 server = { path = "../server" }
 
 [features]
