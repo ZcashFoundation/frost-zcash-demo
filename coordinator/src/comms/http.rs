@@ -277,7 +277,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
-            access_token: String::new(),
+            access_token: args.authentication_token.clone().unwrap_or_default(),
             num_signers: 0,
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
@@ -296,19 +296,21 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _pub_key_package: &PublicKeyPackage<C>,
         num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
-        self.access_token = self
-            .client
-            .post(format!("{}/login", self.host_port))
-            .json(&server::LoginArgs {
-                username: self.args.username.clone(),
-                password: self.args.password.clone(),
-            })
-            .send()
-            .await?
-            .json::<server::LoginOutput>()
-            .await?
-            .access_token
-            .to_string();
+        if self.access_token.is_empty() {
+            self.access_token = self
+                .client
+                .post(format!("{}/login", self.host_port))
+                .json(&server::LoginArgs {
+                    username: self.args.username.clone(),
+                    password: self.args.password.clone(),
+                })
+                .send()
+                .await?
+                .json::<server::LoginOutput>()
+                .await?
+                .access_token
+                .to_string();
+        }
 
         let r = self
             .client

@@ -18,15 +18,22 @@ pub async fn cli<C: RandomizedCiphersuite + 'static>(
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pargs = ProcessedArgs::<C>::new(args, reader, logger)?;
+    cli_for_processed_args(pargs, reader, logger).await
+}
 
+pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
+    pargs: ProcessedArgs<C>,
+    reader: &mut impl BufRead,
+    logger: &mut impl Write,
+) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
 
-    let mut comms: Box<dyn Comms<C>> = if args.cli {
+    let mut comms: Box<dyn Comms<C>> = if pargs.cli {
         Box::new(CLIComms::new())
-    } else if args.http {
+    } else if pargs.http {
         Box::new(HTTPComms::new(&pargs)?)
     } else {
-        Box::new(SocketComms::new(args))
+        Box::new(SocketComms::new(&pargs))
     };
 
     let participants_config = step_1(&pargs, &mut *comms, reader, logger).await?;
