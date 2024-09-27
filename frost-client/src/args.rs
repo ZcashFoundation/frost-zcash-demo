@@ -102,4 +102,39 @@ pub(crate) enum Command {
         #[arg(short, long)]
         config: Option<String>,
     },
+    Coordinator {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// The server URL to use. You can use a substring of the URL. It will
+        /// use the username previously logged in via the `login` subcommand for
+        /// the given server.
+        #[arg(short, long)]
+        server_url: String,
+        /// The group to use, identified by the group public key (use `groups`
+        /// to list)
+        #[arg(short, long)]
+        group: String,
+        /// The comma-separated usernames of the signers to use.
+        #[arg(short = 'S', long, value_delimiter = ',')]
+        signers: Vec<String>,
+        /// The messages to sign. Each instance can be a file with the raw message,
+        /// "" or "-". If "" or "-" is specified, then it will be read from standard
+        /// input as a hex string. If none are passed, a single one will be read
+        /// from standard input as a hex string.
+        #[arg(short = 'm', long)]
+        message: Vec<String>,
+        /// The randomizers to use. Each instance can be a file with the raw
+        /// randomizer, "" or "-". If "" or "-" is specified, then it will be read
+        /// from standard input as a hex string. If none are passed, random ones
+        /// will be generated. If one or more are passed, the number should match
+        /// the `message` parameter.
+        #[arg(short = 'r', long)]
+        randomizer: Vec<String>,
+        /// Where to write the generated raw bytes signature. If "-", the
+        /// human-readable hex-string is printed to stdout.
+        #[arg(short = 'o', long, default_value = "")]
+        signature: String,
+    },
 }

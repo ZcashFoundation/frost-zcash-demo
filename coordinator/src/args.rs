@@ -76,19 +76,19 @@ pub struct Args {
     #[arg(short = 's', long, default_value = "")]
     pub signature: String,
 
-    /// IP to bind to, if using online comms
+    /// IP to bind to, if using socket comms.
+    /// IP to connect to, if using HTTP mode.
     #[arg(short, long, default_value = "0.0.0.0")]
     pub ip: String,
 
-    /// Port to bind to, if using online comms
+    /// Port to bind to, if using socket comms.
+    /// Port to connect to, if using HTTP mode.
     #[arg(short, long, default_value_t = 2744)]
     pub port: u16,
 }
 
 #[derive(Clone, Debug)]
 pub struct ProcessedArgs<C: Ciphersuite> {
-    pub ciphersuite: String,
-
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
     /// If false, socket communication is enabled.
@@ -103,6 +103,10 @@ pub struct ProcessedArgs<C: Ciphersuite> {
 
     /// The (actual) password to use in HTTP mode.
     pub password: String,
+
+    /// The authentication token to use in HTTP mode; if not specified
+    /// it will login with `password`
+    pub authentication_token: Option<String>,
 
     /// The comma-separated usernames of the signers to use in HTTP mode.
     /// If HTTP mode is enabled and this is empty, then the session ID
@@ -125,10 +129,12 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// human-readable hex-string is printed to stdout.
     pub signature: String,
 
-    /// IP to bind to, if using online comms
+    /// IP to bind to, if using socket comms.
+    /// IP to connect to, if using HTTP mode.
     pub ip: String,
 
-    /// Port to bind to, if using online comms
+    /// Port to bind to, if using socket comms.
+    /// Port to connect to, if using HTTP mode.
     pub port: u16,
 }
 
@@ -142,7 +148,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         output: &mut dyn Write,
     ) -> Result<Self, Box<dyn Error>> {
         let password = if args.http {
-            env::var(&args.password).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?
+            read_password(&args.password)?
         } else {
             String::new()
         };
@@ -168,58 +174,12 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
 
         let public_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
 
-        let messages = if args.message.is_empty() {
-            writeln!(output, "The message to be signed (hex encoded)")?;
-            let mut msg = String::new();
-            input.read_line(&mut msg)?;
-            vec![hex::decode(msg.trim())?]
-        } else {
-            args.message
-                .iter()
-                .map(|filename| {
-                    let msg = if filename == "-" || filename.is_empty() {
-                        writeln!(output, "The message to be signed (hex encoded)")?;
-                        let mut msg = String::new();
-                        input.read_line(&mut msg)?;
-                        hex::decode(msg.trim())?
-                    } else {
-                        eprintln!("Reading message from {}...", &filename);
-                        fs::read(filename)?
-                    };
-                    Ok(msg)
-                })
-                .collect::<Result<_, Box<dyn Error>>>()?
-        };
+        let messages = read_messages(&args.message, output, input)?;
 
         println!("Processing randomizer {:?}", args.randomizer);
-        let randomizers = if args.ciphersuite == "redpallas" {
-            if args.randomizer.is_empty() {
-                Vec::new()
-            } else {
-                args.randomizer
-                    .iter()
-                    .map(|filename| {
-                        let randomizer = if filename == "-" || filename.is_empty() {
-                            writeln!(output, "Enter the randomizer (hex string):")?;
-                            let mut randomizer = String::new();
-                            input.read_line(&mut randomizer)?;
-                            let bytes = hex::decode(randomizer.trim())?;
-                            frost_rerandomized::Randomizer::deserialize(&bytes)?
-                        } else {
-                            eprintln!("Reading randomizer from {}...", &filename);
-                            let bytes = fs::read(filename)?;
-                            frost_rerandomized::Randomizer::deserialize(&bytes)?
-                        };
-                        Ok(randomizer)
-                    })
-                    .collect::<Result<_, Box<dyn Error>>>()?
-            }
-        } else {
-            Vec::new()
-        };
+        let randomizers = read_randomizers(&args.randomizer, output, input)?;
 
         Ok(ProcessedArgs {
-            ciphersuite: args.ciphersuite.clone(),
             cli: args.cli,
             http: args.http,
             username: args.username.clone(),
@@ -232,6 +192,77 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             signature: args.signature.clone(),
             ip: args.ip.clone(),
             port: args.port,
+            authentication_token: None,
         })
     }
+}
+
+pub fn read_password(password_env_name: &str) -> Result<String, Box<dyn Error>> {
+    if password_env_name.is_empty() {
+        Ok(
+            rpassword::prompt_password("Password: ")
+                .map_err(|_| eyre!("Error reading password"))?,
+        )
+    } else {
+        Ok(env::var(password_env_name).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?)
+    }
+}
+
+pub fn read_messages(
+    message_paths: &[String],
+    output: &mut dyn Write,
+    input: &mut dyn BufRead,
+) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+    let messages = if message_paths.is_empty() {
+        writeln!(output, "The message to be signed (hex encoded)")?;
+        let mut msg = String::new();
+        input.read_line(&mut msg)?;
+        vec![hex::decode(msg.trim())?]
+    } else {
+        message_paths
+            .iter()
+            .map(|filename| {
+                let msg = if *filename == "-" || filename.is_empty() {
+                    writeln!(output, "The message to be signed (hex encoded)")?;
+                    let mut msg = String::new();
+                    input.read_line(&mut msg)?;
+                    hex::decode(msg.trim())?
+                } else {
+                    eprintln!("Reading message from {}...", &filename);
+                    fs::read(filename)?
+                };
+                Ok(msg)
+            })
+            .collect::<Result<_, Box<dyn Error>>>()?
+    };
+    Ok(messages)
+}
+
+pub fn read_randomizers<C: Ciphersuite + 'static>(
+    randomizer_paths: &[String],
+    output: &mut dyn Write,
+    input: &mut dyn BufRead,
+) -> Result<Vec<Randomizer<C>>, Box<dyn Error>> {
+    let randomizers = if randomizer_paths.is_empty() {
+        Vec::new()
+    } else {
+        randomizer_paths
+            .iter()
+            .map(|filename| {
+                let randomizer = if filename == "-" || filename.is_empty() {
+                    writeln!(output, "Enter the randomizer (hex string):")?;
+                    let mut randomizer = String::new();
+                    input.read_line(&mut randomizer)?;
+                    let bytes = hex::decode(randomizer.trim())?;
+                    frost_rerandomized::Randomizer::deserialize(&bytes)?
+                } else {
+                    eprintln!("Reading randomizer from {}...", &filename);
+                    let bytes = fs::read(filename)?;
+                    frost_rerandomized::Randomizer::deserialize(&bytes)?
+                };
+                Ok(randomizer)
+            })
+            .collect::<Result<_, Box<dyn Error>>>()?
+    };
+    Ok(randomizers)
 }

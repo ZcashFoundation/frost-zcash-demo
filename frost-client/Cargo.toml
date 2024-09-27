@@ -11,6 +11,7 @@ snow = "0.9.6"
 toml = "0.8.19"
 server = { path = "../server" }
 trusted-dealer = { path = "../trusted-dealer" }
+coordinator = { path = "../coordinator" }
 eyre = "0.6.12"
 rpassword = "7.3.1"
 directories = "5.0.1"
@@ -24,5 +25,7 @@ tempfile = "3.13.0"
 serde_json = "1.0"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
 frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
+frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "4d8c4bb337231e6e89117334d7c61dada589a953", features = ["frost"] }
 rand = "0.8"
+stable-eyre = "0.2"
