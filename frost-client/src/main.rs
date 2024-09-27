@@ -24,6 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::Import { .. } => contact::import(&args.command),
         Command::Contacts { .. } => contact::list(&args.command),
         Command::Groups { .. } => group::list(&args.command),
+        Command::TrustedDealer { .. } => trusted_dealer::trusted_dealer(&args.command),
     }?;
 
     Ok(())
