@@ -2,8 +2,6 @@ use core::str;
 use std::{
     collections::BTreeMap,
     error::Error,
-    fs::File,
-    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -110,7 +108,7 @@ impl Group {
         );
         for participant in self.participant.values() {
             let contact = config.contact_by_pubkey(&participant.pubkey)?;
-            s += &format!("\tName: {}", contact.name);
+            s += &format!("\t{}\n", contact.name);
         }
         Ok(s)
     }

@@ -44,7 +44,7 @@ where
 pub(crate) fn ciphersuite_helper(
     ciphersuite_id: &str,
 ) -> Result<Box<dyn CiphersuiteHelper>, Box<dyn Error>> {
-    if ciphersuite_id == "ed25519" {
+    if ciphersuite_id == Ed25519Sha512::ID {
         return Ok(Box::new(CiphersuiteHelperImpl::<Ed25519Sha512>::default()));
     }
     Err(eyre!("invalid ciphersuite ID").into())
