@@ -267,6 +267,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     usernames: HashMap<String, Identifier<C>>,
+    should_logout: bool,
     _phantom: PhantomData<C>,
 }
 
@@ -282,6 +283,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
             usernames: Default::default(),
+            should_logout: args.authentication_token.is_none(),
             _phantom: Default::default(),
         })
     }
@@ -430,12 +432,14 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .send()
             .await?;
 
-        let _r = self
-            .client
-            .post(format!("{}/logout", self.host_port))
-            .bearer_auth(&self.access_token)
-            .send()
-            .await?;
+        if self.should_logout {
+            let _r = self
+                .client
+                .post(format!("{}/logout", self.host_port))
+                .bearer_auth(&self.access_token)
+                .send()
+                .await?;
+        }
 
         let signature_shares = self.state.signature_shares()?;
 

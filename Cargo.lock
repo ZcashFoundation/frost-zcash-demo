@@ -605,7 +605,7 @@ dependencies = [
  "itertools",
  "message-io",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "reqwest",
  "rpassword",
  "serde_json",
@@ -847,7 +847,7 @@ dependencies = [
  "itertools",
  "pipe",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "serde_json",
  "thiserror",
 ]
@@ -1028,9 +1028,10 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "hex",
+ "participant",
  "postcard",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "reqwest",
  "rpassword",
  "serde",
@@ -1993,8 +1994,9 @@ dependencies = [
  "hex",
  "message-io",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "reqwest",
+ "rpassword",
  "serde_json",
  "serdect",
  "server",
@@ -2244,25 +2246,7 @@ dependencies = [
 [[package]]
 name = "reddsa"
 version = "0.5.1"
-source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953#4d8c4bb337231e6e89117334d7c61dada589a953"
-dependencies = [
- "blake2b_simd",
- "byteorder",
- "frost-rerandomized",
- "group",
- "hex",
- "jubjub",
- "pasta_curves",
- "rand_core",
- "serde",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "reddsa"
-version = "0.5.1"
-source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=56a31af7099b95737031ef6cf251939ed99627c0#56a31af7099b95737031ef6cf251939ed99627c0"
+source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead#ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -2689,7 +2673,7 @@ dependencies = [
  "frost-rerandomized",
  "password-auth",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "regex",
  "reqwest",
  "serde",
@@ -3185,7 +3169,7 @@ dependencies = [
  "hex",
  "participant",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=4d8c4bb337231e6e89117334d7c61dada589a953)",
+ "reddsa",
  "serde_json",
  "server",
  "tokio",
@@ -3515,7 +3499,7 @@ dependencies = [
  "hex",
  "itertools",
  "rand",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=56a31af7099b95737031ef6cf251939ed99627c0)",
+ "reddsa",
  "serde_json",
  "thiserror",
 ]
