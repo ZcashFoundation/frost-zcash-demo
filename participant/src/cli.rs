@@ -1,4 +1,4 @@
-use crate::args::Args;
+use crate::args::{Args, ProcessedArgs};
 
 use crate::comms::cli::CLIComms;
 use crate::comms::http::HTTPComms;
@@ -6,29 +6,40 @@ use crate::comms::socket::SocketComms;
 
 use crate::comms::Comms;
 
-use crate::round1::{generate_nonces_and_commitments, print_values, request_inputs};
+use crate::round1::{generate_nonces_and_commitments, print_values};
 use crate::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
+use frost_core::Ciphersuite;
+use frost_ed25519::Ed25519Sha512;
 use frost_rerandomized::RandomizedCiphersuite;
 use rand::thread_rng;
+use reddsa::frost::redpallas::PallasBlake2b512;
 use std::io::{BufRead, Write};
 
 pub async fn cli<C: RandomizedCiphersuite + 'static>(
     args: &Args,
+    reader: &mut impl BufRead,
+    logger: &mut impl Write,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pargs = ProcessedArgs::<C>::new(args, reader, logger)?;
+    cli_for_processed_args(pargs, reader, logger).await
+}
+
+pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
+    pargs: ProcessedArgs<C>,
     input: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut comms: Box<dyn Comms<C>> = if args.cli {
+    let mut comms: Box<dyn Comms<C>> = if pargs.cli {
         Box::new(CLIComms::new())
-    } else if args.http {
-        Box::new(HTTPComms::new(args)?)
+    } else if pargs.http {
+        Box::new(HTTPComms::new(&pargs)?)
     } else {
-        Box::new(SocketComms::new(args))
+        Box::new(SocketComms::new(&pargs))
     };
 
     // Round 1
 
-    let round_1_config = request_inputs(args, input, logger).await?;
-    let key_package = round_1_config.key_package;
+    let key_package = pargs.key_package;
 
     writeln!(logger, "Key Package succesfully created.")?;
 
@@ -39,9 +50,9 @@ pub async fn cli<C: RandomizedCiphersuite + 'static>(
 
     // Round 2 - Sign
 
-    let rerandomized = if args.ciphersuite == "ed25519" {
+    let rerandomized = if C::ID == Ed25519Sha512::ID {
         false
-    } else if args.ciphersuite == "redpallas" {
+    } else if C::ID == PallasBlake2b512::ID {
         true
     } else {
         panic!("invalid ciphersuite");

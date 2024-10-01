@@ -41,6 +41,15 @@ impl Config {
             .cloned()
             .ok_or_eyre("contact not found")?)
     }
+
+    pub fn username_by_server_url(&self, server_url: &str) -> Result<String, Box<dyn Error>> {
+        Ok(self
+            .registry
+            .get(server_url)
+            .ok_or_eyre("Not logged in in the giver server")?
+            .username
+            .clone())
+    }
 }
 
 /// A registry entry. Note that the server URL is not in the struct;
