@@ -137,4 +137,19 @@ pub(crate) enum Command {
         #[arg(short = 'o', long, default_value = "")]
         signature: String,
     },
+    Participant {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// The server URL to use. You can use a substring of the URL. It will
+        /// use the username previously logged in via the `login` subcommand for
+        /// the given server.
+        #[arg(short, long)]
+        server_url: String,
+        /// The group to use, identified by the group public key (use `groups`
+        /// to list)
+        #[arg(short, long)]
+        group: String,
+    },
 }

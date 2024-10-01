@@ -1,7 +1,6 @@
 //! HTTP implementation of the Comms trait.
 
 use std::{
-    env,
     error::Error,
     io::{BufRead, Write},
     marker::PhantomData,
@@ -15,7 +14,7 @@ use frost_core::{
 };
 
 use super::Comms;
-use crate::args::Args;
+use crate::args::ProcessedArgs;
 
 pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
@@ -24,6 +23,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     username: String,
     password: String,
     access_token: String,
+    should_logout: bool,
     _phantom: PhantomData<C>,
 }
 
@@ -34,16 +34,16 @@ impl<C> HTTPComms<C>
 where
     C: Ciphersuite,
 {
-    pub fn new(args: &Args) -> Result<Self, Box<dyn Error>> {
+    pub fn new(args: &ProcessedArgs<C>) -> Result<Self, Box<dyn Error>> {
         let client = reqwest::Client::new();
-        let password = env::var(&args.password).map_err(|_| eyre!("The password argument must specify the name of a environment variable containing the password"))?;
         Ok(Self {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: Uuid::parse_str(&args.session_id).ok(),
             username: args.username.clone(),
-            password,
-            access_token: String::new(),
+            password: args.password.clone(),
+            access_token: args.authentication_token.clone().unwrap_or_default(),
+            should_logout: args.authentication_token.is_none(),
             _phantom: Default::default(),
         })
     }
@@ -68,19 +68,21 @@ where
         ),
         Box<dyn Error>,
     > {
-        self.access_token = self
-            .client
-            .post(format!("{}/login", self.host_port))
-            .json(&server::LoginArgs {
-                username: self.username.clone(),
-                password: self.password.clone(),
-            })
-            .send()
-            .await?
-            .json::<server::LoginOutput>()
-            .await?
-            .access_token
-            .to_string();
+        if self.access_token.is_empty() {
+            self.access_token = self
+                .client
+                .post(format!("{}/login", self.host_port))
+                .json(&server::LoginArgs {
+                    username: self.username.clone(),
+                    password: self.password.clone(),
+                })
+                .send()
+                .await?
+                .json::<server::LoginOutput>()
+                .await?
+                .access_token
+                .to_string();
+        }
 
         let session_id = match self.session_id {
             Some(s) => s,
@@ -191,12 +193,14 @@ where
             .send()
             .await?;
 
-        let _r = self
-            .client
-            .post(format!("{}/logout", self.host_port))
-            .bearer_auth(&self.access_token)
-            .send()
-            .await?;
+        if self.should_logout {
+            let _r = self
+                .client
+                .post(format!("{}/logout", self.host_port))
+                .bearer_auth(&self.access_token)
+                .send()
+                .await?;
+        }
 
         Ok(())
     }

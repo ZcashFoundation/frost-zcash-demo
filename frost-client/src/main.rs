@@ -6,8 +6,8 @@ pub mod coordinator;
 pub mod group;
 pub mod init;
 pub mod login;
+pub mod participant;
 pub mod trusted_dealer;
-pub mod util;
 pub mod write_atomic;
 
 use std::error::Error;
@@ -29,6 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::Groups { .. } => group::list(&args.command),
         Command::TrustedDealer { .. } => trusted_dealer::trusted_dealer(&args.command),
         Command::Coordinator { .. } => crate::coordinator::run(&args.command).await,
+        Command::Participant { .. } => crate::participant::run(&args.command).await,
     }?;
 
     Ok(())
