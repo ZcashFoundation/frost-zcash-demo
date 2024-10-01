@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
-axum-macros = "0.4.1"
-clap = { version = "4.5.15", features = ["derive"] }
+axum-macros = "0.4.2"
+clap = { version = "4.5.18", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
@@ -18,10 +18,10 @@ password-auth = "1.0.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.2.0" }
-serde_json = "1.0.124"
+serde_json = "1.0.128"
 snow = "0.9.6"
-sqlx = { version = "0.8.0", features = ["sqlite", "time", "runtime-tokio", "uuid"] }
-tokio = { version = "1.38", features = ["full"] }
+sqlx = { version = "0.8.2", features = ["sqlite", "time", "runtime-tokio", "uuid"] }
+tokio = { version = "1.40", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -34,7 +34,7 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "4d8c4bb
     "frost",
     "serde",
 ] }
-reqwest = { version = "0.12.5", features = ["json"] }
+reqwest = { version = "0.12.7", features = ["json"] }
 regex = "1.10.6"
 coordinator = { path = "../coordinator" }
 
