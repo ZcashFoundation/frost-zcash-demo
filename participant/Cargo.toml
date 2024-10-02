@@ -18,7 +18,7 @@ eyre = "0.6.12"
 exitcode = "1.1.2"
 serde_json = "1.0"
 serdect = { version = "0.2.0" }
-clap = { version = "4.5.18", features = ["derive"] }
+clap = { version = "4.5.19", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
 reqwest = { version = "0.12.7", features = ["json"] }
