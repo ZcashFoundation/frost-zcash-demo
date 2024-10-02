@@ -29,6 +29,23 @@ This repo contains 4 projects:
 2. [DKG](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/dkg)
 3. [Coordinator](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/coordinator)
 4. [Participant](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/participant)
+5. [Server](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/server)
+6. [FROST client](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/frost-client)
+7. [Zcash Signer](https://github.com/ZcashFoundation/frost-zcash-demo/tree/main/zcash-sign)
+
+The first four are command line tools that generate FROST shares and run the
+FROST protocol. They offer multiple communication interfaces, from copy & pasting
+to using the Server; see below.
+
+The Server helps participants and coordinators communicate with each other.
+
+The FROST client is a CLI tool that serves as an example of how to interact
+with the server.
+
+The Zcash Signer is a standalone tool that allows signing a Zcash transaction
+with an externally-generated signature (e.g. using FROST, but could be something
+else).
+
 
 ## Status ⚠
 

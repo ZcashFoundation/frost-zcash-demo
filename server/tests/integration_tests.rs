@@ -1,4 +1,5 @@
-use std::{collections::BTreeMap, time::Duration};
+use core::str;
+use std::{collections::BTreeMap, error::Error, time::Duration};
 
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
@@ -449,5 +450,37 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let session_id = r.session_id;
     println!("Session ID: {}", session_id);
 
+    Ok(())
+}
+
+#[test]
+fn test_snow() -> Result<(), Box<dyn Error>> {
+    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
+    let keypair_alice = builder.generate_keypair().unwrap();
+    let keypair_bob = builder.generate_keypair().unwrap();
+    let mut anoise = builder
+        .local_private_key(&keypair_alice.private)
+        .remote_public_key(&keypair_bob.public)
+        .build_initiator()
+        .unwrap();
+
+    let mut encrypted = [0u8; 65535];
+    let len = anoise
+        .write_message("hello world".as_bytes(), &mut encrypted)
+        .unwrap();
+    let encrypted = &encrypted[0..len];
+
+    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
+    let mut bnoise = builder
+        .local_private_key(&keypair_bob.private)
+        .remote_public_key(&keypair_alice.public)
+        .build_responder()
+        .unwrap();
+
+    let mut decrypted = [0u8; 65535];
+    let len = bnoise.read_message(encrypted, &mut decrypted).unwrap();
+    let decrypted = &decrypted[0..len];
+
+    println!("{}", str::from_utf8(decrypted).unwrap());
     Ok(())
 }

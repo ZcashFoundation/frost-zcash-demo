@@ -1,0 +1,28 @@
+[package]
+name = "frost-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.16", features = ["derive"] }
+reqwest = { version = "0.12.5", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+snow = "0.9.6"
+toml = "0.8.19"
+server = { path = "../server" }
+trusted-dealer = { path = "../trusted-dealer" }
+eyre = "0.6.12"
+rpassword = "7.3.1"
+directories = "5.0.1"
+dirs = "5.0.1"
+hex = "0.4.3"
+tokio = { version = "1.38", features = ["full"] }
+serdect = "0.2.0"
+bech32 = "0.11.0"
+postcard = "1.0.10"
+tempfile = "3.12.0"
+serde_json = "1.0"
+frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
+frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "4d8c4bb337231e6e89117334d7c61dada589a953", features = ["frost"] }
+rand = "0.8"

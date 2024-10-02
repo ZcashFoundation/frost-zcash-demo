@@ -5,7 +5,7 @@ members = [
     "dkg",
     "coordinator",
     "tests",
-    "server",
+    "server", "frost-client",
     # "zcash-sign",
 ]
 # TODO: go back to the workspace. It currently can't because it has a dependency
