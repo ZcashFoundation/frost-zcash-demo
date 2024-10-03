@@ -2,6 +2,7 @@ use std::{
     env,
     error::Error,
     io::{BufRead, Write},
+    rc::Rc,
 };
 
 use clap::Parser;
@@ -58,7 +59,7 @@ pub struct Args {
     pub session_id: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ProcessedArgs<C: Ciphersuite> {
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
@@ -92,6 +93,12 @@ pub struct ProcessedArgs<C: Ciphersuite> {
 
     /// Optional Session ID
     pub session_id: String,
+
+    /// The participant's communication private key, if any
+    pub comm_privkey: Option<Vec<u8>>,
+
+    /// The coordinator's communication public key, if any
+    pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&str) -> Option<Vec<u8>>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
@@ -128,6 +135,8 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             port: args.port,
             authentication_token: None,
             session_id: args.session_id.clone(),
+            comm_privkey: None,
+            comm_coordinator_pubkey_getter: None,
         })
     }
 }

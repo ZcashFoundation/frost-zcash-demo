@@ -8,22 +8,74 @@ use std::{
 };
 
 use async_trait::async_trait;
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
 use frost_core::{
     self as frost, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
 };
+use snow::{HandshakeState, TransportState};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
+
+pub struct Noise {
+    handshake_state: Option<HandshakeState>,
+    transport_state: Option<TransportState>,
+}
+
+impl Noise {
+    fn new(handshake_state: HandshakeState) -> Self {
+        Self {
+            handshake_state: Some(handshake_state),
+            transport_state: None,
+        }
+    }
+
+    fn write_message(&mut self, payload: &[u8], message: &mut [u8]) -> Result<usize, snow::Error> {
+        if let Some(handshake_state) = &mut self.handshake_state {
+            let r = handshake_state.write_message(payload, message);
+            if handshake_state.is_handshake_finished() {
+                let handshake_state = self
+                    .handshake_state
+                    .take()
+                    .expect("we know there is a handshake state here");
+                self.transport_state = Some(handshake_state.into_transport_mode()?);
+            }
+            r
+        } else if let Some(transport_state) = &mut self.transport_state {
+            transport_state.write_message(payload, message)
+        } else {
+            panic!("invalid state");
+        }
+    }
+
+    fn read_message(&mut self, payload: &[u8], message: &mut [u8]) -> Result<usize, snow::Error> {
+        if let Some(handshake_state) = &mut self.handshake_state {
+            let r = handshake_state.read_message(payload, message);
+            if handshake_state.is_handshake_finished() {
+                let handshake_state = self
+                    .handshake_state
+                    .take()
+                    .expect("we know there is a handshake state here");
+                self.transport_state = Some(handshake_state.into_transport_mode()?);
+            }
+            r
+        } else if let Some(transport_state) = &mut self.transport_state {
+            transport_state.read_message(payload, message)
+        } else {
+            panic!("invalid state");
+        }
+    }
+}
 
 pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
-    username: String,
-    password: String,
     access_token: String,
     should_logout: bool,
+    args: ProcessedArgs<C>,
+    send_noise: Option<Noise>,
+    recv_noise: Option<Noise>,
     _phantom: PhantomData<C>,
 }
 
@@ -40,12 +92,36 @@ where
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: Uuid::parse_str(&args.session_id).ok(),
-            username: args.username.clone(),
-            password: args.password.clone(),
             access_token: args.authentication_token.clone().unwrap_or_default(),
             should_logout: args.authentication_token.is_none(),
+            args: args.clone(),
+            send_noise: None,
+            recv_noise: None,
             _phantom: Default::default(),
         })
+    }
+
+    fn encrypt_if_needed(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+        if let Some(noise) = &mut self.send_noise {
+            let mut encrypted = vec![0; 65535];
+            let len = noise.write_message(&msg, &mut encrypted)?;
+            encrypted.truncate(len);
+            Ok(encrypted)
+        } else {
+            Ok(msg)
+        }
+    }
+
+    fn decrypt_if_needed(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+        if let Some(noise) = &mut self.send_noise {
+            let mut decrypted = vec![0; 65535];
+            decrypted.resize(65535, 0);
+            let len = noise.read_message(&msg, &mut decrypted)?;
+            decrypted.truncate(len);
+            Ok(decrypted)
+        } else {
+            Ok(msg)
+        }
     }
 }
 
@@ -73,8 +149,8 @@ where
                 .client
                 .post(format!("{}/login", self.host_port))
                 .json(&server::LoginArgs {
-                    username: self.username.clone(),
-                    password: self.password.clone(),
+                    username: self.args.username.clone(),
+                    password: self.args.password.clone(),
                 })
                 .send()
                 .await?
@@ -106,11 +182,56 @@ where
         };
         self.session_id = Some(session_id);
 
+        let session_info = self
+            .client
+            .post(format!("{}/get_session_info", self.host_port))
+            .json(&server::GetSessionInfoArgs { session_id })
+            .send()
+            .await?
+            .json::<server::GetSessionInfoOutput>()
+            .await?;
+
+        (self.send_noise, self.recv_noise) = if let (
+            Some(comm_privkey),
+            Some(comm_coordinator_pubkey_getter),
+        ) = (
+            &self.args.comm_privkey,
+            &self.args.comm_coordinator_pubkey_getter,
+        ) {
+            let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
+            let builder = snow::Builder::new(
+                "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                    .parse()
+                    .expect("should be a valid cipher"),
+            );
+            let send_noise = Noise::new(
+                builder
+                    .local_private_key(comm_privkey)
+                    .remote_public_key(&comm_coordinator_pubkey)
+                    .build_initiator()?,
+            );
+            let builder = snow::Builder::new(
+                "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                    .parse()
+                    .expect("should be a valid cipher"),
+            );
+            let recv_noise = Noise::new(
+                builder
+                    .local_private_key(comm_privkey)
+                    .remote_public_key(&comm_coordinator_pubkey)
+                    .build_initiator()?,
+            );
+            (Some(send_noise), Some(recv_noise))
+        } else {
+            (None, None)
+        };
+
         // Send Commitments to Server
         let send_commitments_args = SendCommitmentsArgs {
             identifier,
             commitments: vec![commitments],
         };
+        let msg = self.encrypt_if_needed(serde_json::to_vec(&send_commitments_args)?)?;
         self.client
             .post(format!("{}/send", self.host_port))
             .bearer_auth(&self.access_token)
@@ -118,7 +239,7 @@ where
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_commitments_args)?,
+                msg,
             })
             .send()
             .await?;
@@ -146,7 +267,8 @@ where
             } else {
                 eprintln!("\nSigning package received");
                 eprintln!("\n{}", String::from_utf8(r.msgs[0].msg.clone()).unwrap());
-                break serde_json::from_slice(&r.msgs[0].msg)?;
+                let msg = self.decrypt_if_needed(r.msgs[0].msg.clone())?;
+                break serde_json::from_slice(&msg)?;
             }
         };
 
@@ -180,6 +302,8 @@ where
             signature_share: vec![signature_share],
         };
 
+        let msg = self.encrypt_if_needed(serde_json::to_vec(&send_signature_shares_args)?)?;
+
         let _r = self
             .client
             .post(format!("{}/send", self.host_port))
@@ -188,7 +312,7 @@ where
                 session_id: self.session_id.unwrap(),
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_signature_shares_args)?,
+                msg,
             })
             .send()
             .await?;

@@ -1028,6 +1028,7 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "hex",
+ "itertools",
  "participant",
  "postcard",
  "rand",
@@ -2000,6 +2001,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "server",
+ "snow",
  "tokio",
 ]
 
