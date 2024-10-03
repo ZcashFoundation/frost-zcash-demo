@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::rc::Rc;
 
 use coordinator::cli::cli_for_processed_args;
 use eyre::eyre;
@@ -57,6 +58,8 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
     let mut input = Box::new(std::io::stdin().lock());
     let mut output = std::io::stdout();
 
+    let server_url =
+        server_url.unwrap_or(group.server_url.clone().ok_or_eyre("server-url required")?);
     let server_url_parsed =
         Url::parse(&format!("http://{}", server_url)).wrap_err("error parsing server-url")?;
 
@@ -65,6 +68,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
         .get(&server_url)
         .ok_or_eyre("Not registered in the given server")?;
 
+    let group_participants = group.participant.clone();
     let pargs = coordinator::args::ProcessedArgs {
         cli: false,
         http: true,
@@ -87,6 +91,19 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
                 .clone()
                 .ok_or_eyre("Not logged in in the given server")?,
         ),
+        comm_privkey: Some(
+            config
+                .communication_key
+                .ok_or_eyre("user not initialized")?
+                .privkey
+                .clone(),
+        ),
+        comm_participant_pubkey_getter: Some(Rc::new(move |participant_username| {
+            group_participants
+                .values()
+                .find(|p| p.username == Some(participant_username.to_string()))
+                .map(|p| p.pubkey.clone())
+        })),
     };
 
     cli_for_processed_args(pargs, &mut input, &mut output).await?;
