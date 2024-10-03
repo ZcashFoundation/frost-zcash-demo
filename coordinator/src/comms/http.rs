@@ -10,13 +10,13 @@ use std::{
 };
 
 use async_trait::async_trait;
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
 use frost_core::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
     Identifier, SigningPackage,
 };
-use itertools::Itertools;
 
+use participant::comms::http::Noise;
 use server::{Msg, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
 
 use super::Comms;
@@ -268,6 +268,10 @@ pub struct HTTPComms<C: Ciphersuite> {
     state: SessionState<C>,
     usernames: HashMap<String, Identifier<C>>,
     should_logout: bool,
+    // The "send" Noise objects by username of recipients.
+    send_noise: Option<HashMap<String, Noise>>,
+    // The "receive" Noise objects by username of senders.
+    recv_noise: Option<HashMap<String, Noise>>,
     _phantom: PhantomData<C>,
 }
 
@@ -284,8 +288,50 @@ impl<C: Ciphersuite> HTTPComms<C> {
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
             usernames: Default::default(),
             should_logout: args.authentication_token.is_none(),
+            send_noise: None,
+            recv_noise: None,
             _phantom: Default::default(),
         })
+    }
+
+    // Encrypts a message for a given recipient if encryption is enabled.
+    fn encrypt_if_needed(
+        &mut self,
+        recipient: &str,
+        msg: Vec<u8>,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
+        if let Some(noise_map) = &mut self.send_noise {
+            let noise = noise_map
+                .get_mut(recipient)
+                .ok_or_eyre("unknown recipient")?;
+            let mut encrypted = vec![0; 65535];
+            let len = noise.write_message(&msg, &mut encrypted)?;
+            encrypted.truncate(len);
+            Ok(encrypted)
+        } else {
+            Ok(msg)
+        }
+    }
+
+    // Decrypts a message if encryption is enabled.
+    // Note that this authenticates the `sender` in the `Msg` struct; if the
+    // sender is tampered with, the message would fail to decrypt.
+    fn decrypt_if_needed(&mut self, msg: Msg) -> Result<Msg, Box<dyn Error>> {
+        if let Some(noise_map) = &mut self.recv_noise {
+            let noise = noise_map
+                .get_mut(&msg.sender)
+                .ok_or_eyre("unknown sender")?;
+            let mut decrypted = vec![0; 65535];
+            decrypted.resize(65535, 0);
+            let len = noise.read_message(&msg.msg, &mut decrypted)?;
+            decrypted.truncate(len);
+            Ok(Msg {
+                sender: msg.sender,
+                msg: decrypted,
+            })
+        } else {
+            Ok(msg)
+        }
     }
 }
 
@@ -336,6 +382,49 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         }
         self.session_id = Some(r.session_id);
         self.num_signers = num_signers;
+
+        // If encryption is enabled, create the Noise objects
+        (self.send_noise, self.recv_noise) = if let (
+            Some(comm_privkey),
+            Some(comm_participant_pubkey_getter),
+        ) = (
+            &self.args.comm_privkey,
+            &self.args.comm_participant_pubkey_getter,
+        ) {
+            let mut send_noise_map = HashMap::new();
+            let mut recv_noise_map = HashMap::new();
+            for username in &self.args.signers {
+                let comm_participant_pubkey = comm_participant_pubkey_getter(username).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
+                let builder = snow::Builder::new(
+                    "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                        .parse()
+                        .expect("should be a valid cipher"),
+                );
+                let send_noise = Noise::new(
+                    builder
+                        .local_private_key(comm_privkey)
+                        .remote_public_key(&comm_participant_pubkey)
+                        .build_initiator()?,
+                );
+                let builder = snow::Builder::new(
+                    "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                        .parse()
+                        .expect("should be a valid cipher"),
+                );
+                let recv_noise = Noise::new(
+                    builder
+                        .local_private_key(comm_privkey)
+                        .remote_public_key(&comm_participant_pubkey)
+                        .build_responder()?,
+                );
+                send_noise_map.insert(username.clone(), send_noise);
+                recv_noise_map.insert(username.clone(), recv_noise);
+            }
+            (Some(send_noise_map), Some(recv_noise_map))
+        } else {
+            (None, None)
+        };
+
         eprint!("Waiting for participants to send their commitments...");
 
         loop {
@@ -352,6 +441,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
+                let msg = self.decrypt_if_needed(msg)?;
                 self.state.recv(msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
@@ -382,19 +472,27 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             aux_msg: Default::default(),
             randomizer: randomizer.map(|r| vec![r]).unwrap_or_default(),
         };
-        let _r = self
-            .client
-            .post(format!("{}/send", self.host_port))
-            .bearer_auth(&self.access_token)
-            .json(&server::SendArgs {
-                session_id: self.session_id.unwrap(),
-                recipients: self.usernames.keys().cloned().collect_vec(),
-                msg: serde_json::to_vec(&send_signing_package_args)?,
-            })
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        // We need to send a message separately for each recipient even if the
+        // message is the same, because they are (possibly) encrypted
+        // individually for each recipient.
+        let usernames: Vec<_> = self.usernames.keys().cloned().collect();
+        for recipient in usernames {
+            let msg = self
+                .encrypt_if_needed(&recipient, serde_json::to_vec(&send_signing_package_args)?)?;
+            let _r = self
+                .client
+                .post(format!("{}/send", self.host_port))
+                .bearer_auth(&self.access_token)
+                .json(&server::SendArgs {
+                    session_id: self.session_id.unwrap(),
+                    recipients: vec![recipient.clone()],
+                    msg,
+                })
+                .send()
+                .await?
+                .bytes()
+                .await?;
+        }
 
         eprintln!("Waiting for participants to send their SignatureShares...");
 
@@ -412,6 +510,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
+                let msg = self.decrypt_if_needed(msg)?;
                 self.state.recv(msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;

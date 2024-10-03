@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, error::Error};
 
 use eyre::{eyre, OptionExt};
+use itertools::izip;
 use rand::thread_rng;
 
 use frost_core::{keys::KeyPackage, Ciphersuite};
@@ -36,6 +37,8 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         threshold,
         num_signers,
         names,
+        usernames,
+        server_url,
     } = (*args).clone()
     else {
         panic!("invalid Command");
@@ -64,16 +67,28 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
     // First pass over configs; create participants map
     let mut participants = BTreeMap::new();
     let mut contacts = Vec::new();
-    for ((identifier, path), name) in shares.keys().zip(config.iter()).zip(names.iter()) {
+    for (idx, (identifier, path, name)) in
+        izip!(shares.keys(), config.iter(), names.iter()).enumerate()
+    {
         let config = Config::read(Some(path.to_string()))?;
         let pubkey = config
             .communication_key
             .ok_or_eyre("config not initialized")?
             .pubkey;
+        let username = if server_url.is_some() {
+            Some(
+                usernames
+                    .get(idx)
+                    .ok_or_eyre("must specify usernames of all users")?
+                    .clone(),
+            )
+        } else {
+            None
+        };
         let participant = Participant {
             identifier: identifier.serialize(),
             pubkey: pubkey.clone(),
-            username: None,
+            username,
         };
         participants.insert(hex::encode(identifier.serialize()), participant);
         let contact = Contact {
@@ -95,7 +110,7 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
             key_package: postcard::to_allocvec(&key_package)?,
             public_key_package: postcard::to_allocvec(&public_key_package)?,
             participant: participants.clone(),
-            server_url: None,
+            server_url: server_url.clone(),
         };
         config.group.insert(
             hex::encode(public_key_package.verifying_key().serialize()?),

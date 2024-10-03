@@ -464,6 +464,8 @@ fn test_snow() -> Result<(), Box<dyn Error>> {
         .build_initiator()
         .unwrap();
 
+    println!("{}", anoise.is_handshake_finished());
+
     let mut encrypted = [0u8; 65535];
     let len = anoise
         .write_message("hello world".as_bytes(), &mut encrypted)
@@ -481,6 +483,22 @@ fn test_snow() -> Result<(), Box<dyn Error>> {
     let len = bnoise.read_message(encrypted, &mut decrypted).unwrap();
     let decrypted = &decrypted[0..len];
 
+    let mut anoise = anoise.into_transport_mode()?;
+    let mut bnoise = bnoise.into_transport_mode()?;
+
     println!("{}", str::from_utf8(decrypted).unwrap());
+
+    let mut encrypted = [0u8; 65535];
+    let len = anoise
+        .write_message("hello world".as_bytes(), &mut encrypted)
+        .unwrap();
+    let encrypted = &encrypted[0..len];
+
+    let mut decrypted = [0u8; 65535];
+    let len = bnoise.read_message(encrypted, &mut decrypted).unwrap();
+    let decrypted = &decrypted[0..len];
+
+    println!("{}", str::from_utf8(decrypted).unwrap());
+
     Ok(())
 }
