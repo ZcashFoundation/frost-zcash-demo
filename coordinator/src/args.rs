@@ -3,6 +3,7 @@ use std::{
     error::Error,
     fs,
     io::{BufRead, Write},
+    rc::Rc,
 };
 
 use clap::Parser;
@@ -87,7 +88,7 @@ pub struct Args {
     pub port: u16,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ProcessedArgs<C: Ciphersuite> {
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
@@ -136,6 +137,18 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// Port to bind to, if using socket comms.
     /// Port to connect to, if using HTTP mode.
     pub port: u16,
+
+    /// The coordinator's communication private key. Specifying this along with
+    /// `comm_participant_pubkey_getter` enables encryption.
+    pub comm_privkey: Option<Vec<u8>>,
+
+    /// A function that returns the public key for a given username, or None
+    /// if not available.
+    // It is a `Rc<dyn Fn>` to make it easier to use;
+    // using `fn()` would preclude using closures and using generics would
+    // require a lot of code change for something simple.
+    #[allow(clippy::type_complexity)]
+    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&str) -> Option<Vec<u8>>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
@@ -193,6 +206,8 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             ip: args.ip.clone(),
             port: args.port,
             authentication_token: None,
+            comm_privkey: None,
+            comm_participant_pubkey_getter: None,
         })
     }
 }
