@@ -6,6 +6,7 @@ use frost_core::{
     Ciphersuite,
 };
 use frost_ed25519::Ed25519Sha512;
+use reddsa::frost::redpallas::PallasBlake2b512;
 
 /// Additional information about a group, derived from the key packages.
 #[derive(Debug, Clone)]
@@ -46,6 +47,10 @@ pub(crate) fn ciphersuite_helper(
 ) -> Result<Box<dyn CiphersuiteHelper>, Box<dyn Error>> {
     if ciphersuite_id == Ed25519Sha512::ID {
         return Ok(Box::new(CiphersuiteHelperImpl::<Ed25519Sha512>::default()));
+    } else if ciphersuite_id == PallasBlake2b512::ID {
+        return Ok(Box::new(
+            CiphersuiteHelperImpl::<PallasBlake2b512>::default(),
+        ));
     }
     Err(eyre!("invalid ciphersuite ID").into())
 }
