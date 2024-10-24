@@ -83,9 +83,18 @@ pub(crate) enum Command {
         /// dealer process via the FROST server (TODO: this is not supported yet)
         #[arg(short, long)]
         config: Vec<String>,
-        /// The name of each participant.
+        /// The comma-separated name of each participant.
         #[arg(short = 'N', long, value_delimiter = ',')]
         names: Vec<String>,
+        /// The comma-separated username of each participant in the same order
+        /// as `names`. Note: these won't be checked in the server.
+        #[arg(short, long, value_delimiter = ',')]
+        usernames: Vec<String>,
+        /// The server URL, if desired. Note that this does not connect to the
+        /// server; it will just associated the server URL with the group in the
+        /// config file.
+        #[arg(short, long)]
+        server_url: Option<String>,
         #[arg(short = 'C', long, default_value = "ed25519")]
         ciphersuite: String,
         /// The threshold (minimum number of signers).
@@ -107,11 +116,11 @@ pub(crate) enum Command {
         /// $HOME/.local/frost/credentials.toml
         #[arg(short, long)]
         config: Option<String>,
-        /// The server URL to use. You can use a substring of the URL. It will
-        /// use the username previously logged in via the `login` subcommand for
-        /// the given server.
+        /// The server URL to use. If not specified, it will use the server URL
+        /// for the specified group, if any. It will use the username previously
+        /// logged in via the `login` subcommand for the given server.
         #[arg(short, long)]
-        server_url: String,
+        server_url: Option<String>,
         /// The group to use, identified by the group public key (use `groups`
         /// to list)
         #[arg(short, long)]
@@ -142,11 +151,11 @@ pub(crate) enum Command {
         /// $HOME/.local/frost/credentials.toml
         #[arg(short, long)]
         config: Option<String>,
-        /// The server URL to use. You can use a substring of the URL. It will
-        /// use the username previously logged in via the `login` subcommand for
-        /// the given server.
+        /// The server URL to use. If not specified, it will use the server URL
+        /// for the specified group, if any. It will use the username previously
+        /// logged in via the `login` subcommand for the given server.
         #[arg(short, long)]
-        server_url: String,
+        server_url: Option<String>,
         /// The group to use, identified by the group public key (use `groups`
         /// to list)
         #[arg(short, long)]

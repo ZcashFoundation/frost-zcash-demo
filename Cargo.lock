@@ -603,6 +603,7 @@ dependencies = [
  "hex",
  "itertools",
  "message-io",
+ "participant",
  "rand",
  "reddsa",
  "reqwest",
@@ -610,6 +611,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "server",
+ "snow",
  "thiserror",
  "tokio",
 ]
@@ -1027,6 +1029,7 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "hex",
+ "itertools",
  "participant",
  "postcard",
  "rand",
@@ -1999,6 +2002,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "server",
+ "snow",
  "tokio",
 ]
 
