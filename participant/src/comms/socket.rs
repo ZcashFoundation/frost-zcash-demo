@@ -20,7 +20,7 @@ use std::{
 };
 
 use super::{Comms, Message};
-use crate::args::Args;
+use crate::args::ProcessedArgs;
 
 pub struct SocketComms<C: Ciphersuite> {
     input_rx: Receiver<(Endpoint, Vec<u8>)>,
@@ -33,7 +33,7 @@ impl<C> SocketComms<C>
 where
     C: Ciphersuite,
 {
-    pub fn new(args: &Args) -> Self {
+    pub fn new(args: &ProcessedArgs<C>) -> Self {
         let (handler, listener) = node::split::<()>();
         let addr = format!("{}:{}", args.ip, args.port);
         let (tx, rx) = mpsc::channel(2000); // Don't need to receive the endpoint. Change this

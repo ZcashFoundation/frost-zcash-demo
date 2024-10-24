@@ -267,6 +267,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     usernames: HashMap<String, Identifier<C>>,
+    should_logout: bool,
     _phantom: PhantomData<C>,
 }
 
@@ -277,11 +278,12 @@ impl<C: Ciphersuite> HTTPComms<C> {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
-            access_token: String::new(),
+            access_token: args.authentication_token.clone().unwrap_or_default(),
             num_signers: 0,
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
             usernames: Default::default(),
+            should_logout: args.authentication_token.is_none(),
             _phantom: Default::default(),
         })
     }
@@ -296,19 +298,21 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _pub_key_package: &PublicKeyPackage<C>,
         num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
-        self.access_token = self
-            .client
-            .post(format!("{}/login", self.host_port))
-            .json(&server::LoginArgs {
-                username: self.args.username.clone(),
-                password: self.args.password.clone(),
-            })
-            .send()
-            .await?
-            .json::<server::LoginOutput>()
-            .await?
-            .access_token
-            .to_string();
+        if self.access_token.is_empty() {
+            self.access_token = self
+                .client
+                .post(format!("{}/login", self.host_port))
+                .json(&server::LoginArgs {
+                    username: self.args.username.clone(),
+                    password: self.args.password.clone(),
+                })
+                .send()
+                .await?
+                .json::<server::LoginOutput>()
+                .await?
+                .access_token
+                .to_string();
+        }
 
         let r = self
             .client
@@ -428,12 +432,14 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .send()
             .await?;
 
-        let _r = self
-            .client
-            .post(format!("{}/logout", self.host_port))
-            .bearer_auth(&self.access_token)
-            .send()
-            .await?;
+        if self.should_logout {
+            let _r = self
+                .client
+                .post(format!("{}/logout", self.host_port))
+                .bearer_auth(&self.access_token)
+                .send()
+                .await?;
+        }
 
         let signature_shares = self.state.signature_shares()?;
 
