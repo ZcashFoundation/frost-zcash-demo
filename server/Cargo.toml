@@ -9,7 +9,7 @@ edition = "2021"
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
 axum-macros = "0.4.2"
-clap = { version = "4.5.19", features = ["derive"] }
+clap = { version = "4.5.20", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0-rc.0", features = ["serde"] }
@@ -34,8 +34,8 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
     "frost",
     "serde",
 ] }
-reqwest = { version = "0.12.7", features = ["json"] }
-regex = "1.10.6"
+reqwest = { version = "0.12.8", features = ["json"] }
+regex = "1.11.0"
 coordinator = { path = "../coordinator" }
 
 [features]
