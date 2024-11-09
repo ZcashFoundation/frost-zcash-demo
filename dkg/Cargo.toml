@@ -12,7 +12,7 @@ frost-ed25519 = { version = "2.0.0-rc.0", features = ["serde"] }
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead", features = ["frost"] }
 clap = { version = "4.5.20", features = ["derive"] }
 hex = { version = "0.4", features = ["serde"] }
-thiserror = "1.0"
+thiserror = "2.0"
 rand = "0.8"
 serde_json = "1.0"
 itertools = "0.13.0"
