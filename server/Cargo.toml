@@ -18,7 +18,7 @@ password-auth = "1.0.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.2.0" }
-serde_json = "1.0.128"
+serde_json = "1.0.133"
 snow = "0.9.6"
 sqlx = { version = "0.8.2", features = ["sqlite", "time", "runtime-tokio", "uuid"] }
 tokio = { version = "1.41", features = ["full"] }
