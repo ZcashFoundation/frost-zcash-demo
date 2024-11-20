@@ -621,6 +621,7 @@ dependencies = [
  "hex",
  "itertools",
  "message-io",
+ "participant",
  "rand",
  "reddsa",
  "reqwest",
@@ -628,6 +629,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "server",
+ "snow",
  "thiserror 2.0.3",
  "tokio",
 ]
@@ -811,7 +813,7 @@ checksum = "74ef43543e701c01ad77d3a5922755c6a1d71b22d942cb8042be4994b380caff"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.72",
+ "syn 2.0.87",
 ]
 
 [[package]]
@@ -1056,6 +1058,7 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "hex",
+ "itertools",
  "participant",
  "postcard",
  "rand",
@@ -2028,6 +2031,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "server",
+ "snow",
  "tokio",
 ]
 
