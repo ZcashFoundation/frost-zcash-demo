@@ -21,7 +21,7 @@ serdect = { version = "0.2.0" }
 itertools = "0.13.0"
 exitcode = "1.1.2"
 clap = { version = "4.5.20", features = ["derive"] }
-reqwest = { version = "0.12.8", features = ["json"] }
+reqwest = { version = "0.12.9", features = ["json"] }
 server = { path = "../server" }
 participant = { path = "../participant" }
 tokio = { version = "1", features = ["full"] }
