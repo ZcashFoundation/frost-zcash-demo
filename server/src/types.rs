@@ -17,6 +17,34 @@ pub struct RegisterArgs {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ChallengeArgs {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChallengeOutput {
+    pub challenge: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyLoginArgs {
+    pub uuid: Uuid,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub pubkey: Vec<u8>,
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub signature: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyLoginOutput {
+    pub access_token: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoginOutput {
     pub access_token: Uuid,
 }
@@ -29,7 +57,7 @@ pub struct LoginArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateNewSessionArgs {
-    pub usernames: Vec<String>,
+    pub pubkeys: Vec<Vec<u8>>,
     pub num_signers: u16,
     pub message_count: u8,
 }
@@ -53,14 +81,24 @@ pub struct GetSessionInfoArgs {
 pub struct GetSessionInfoOutput {
     pub num_signers: u16,
     pub message_count: u8,
-    pub usernames: Vec<String>,
-    pub coordinator: String,
+    pub pubkeys: Vec<Vec<u8>>,
+    pub coordinator_pubkey: Vec<u8>,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct PublicKey(
+    #[serde(
+        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
+        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
+    )]
+    pub Vec<u8>,
+);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SendArgs {
     pub session_id: Uuid,
-    pub recipients: Vec<String>,
+    pub recipients: Vec<PublicKey>,
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
@@ -70,7 +108,7 @@ pub struct SendArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Msg {
-    pub sender: String,
+    pub sender: Vec<u8>,
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
