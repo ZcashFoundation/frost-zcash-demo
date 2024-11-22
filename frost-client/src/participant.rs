@@ -66,15 +66,12 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
     let pargs = participant::args::ProcessedArgs {
         cli: false,
         http: true,
-        username: String::new(),
-        password: String::new(),
         key_package,
         ip: server_url_parsed
             .host_str()
             .ok_or_eyre("host missing in URL")?
             .to_owned(),
         port: server_url_parsed.port().unwrap_or(2744),
-        authentication_token: None,
         session_id: String::new(),
         comm_privkey: Some(
             config

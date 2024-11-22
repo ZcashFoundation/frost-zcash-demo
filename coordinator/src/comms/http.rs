@@ -264,12 +264,11 @@ pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
-    access_token: String,
+    access_token: Option<String>,
     num_signers: u16,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     pubkeys: HashMap<Vec<u8>, Identifier<C>>,
-    should_logout: bool,
     // The "send" Noise objects by pubkey of recipients.
     send_noise: Option<HashMap<Vec<u8>, Noise>>,
     // The "receive" Noise objects by pubkey of senders.
@@ -284,12 +283,11 @@ impl<C: Ciphersuite> HTTPComms<C> {
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: None,
-            access_token: args.authentication_token.clone().unwrap_or_default(),
+            access_token: None,
             num_signers: 0,
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
             pubkeys: Default::default(),
-            should_logout: args.authentication_token.is_none(),
             send_noise: None,
             recv_noise: None,
             _phantom: Default::default(),
@@ -368,29 +366,30 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         );
         let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
 
-        self.access_token = self
-            .client
-            .post(format!("{}/key_login", self.host_port))
-            .json(&server::KeyLoginArgs {
-                uuid: challenge,
-                pubkey: self
-                    .args
-                    .comm_pubkey
-                    .clone()
-                    .ok_or_eyre("comm_pubkey must be specified")?,
-                signature: signature.to_vec(),
-            })
-            .send()
-            .await?
-            .json::<server::LoginOutput>()
-            .await?
-            .access_token
-            .to_string();
+        self.access_token = Some(
+            self.client
+                .post(format!("{}/login", self.host_port))
+                .json(&server::KeyLoginArgs {
+                    uuid: challenge,
+                    pubkey: self
+                        .args
+                        .comm_pubkey
+                        .clone()
+                        .ok_or_eyre("comm_pubkey must be specified")?,
+                    signature: signature.to_vec(),
+                })
+                .send()
+                .await?
+                .json::<server::LoginOutput>()
+                .await?
+                .access_token
+                .to_string(),
+        );
 
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .json(&server::CreateNewSessionArgs {
                 pubkeys: self.args.signers.clone(),
                 num_signers,
@@ -458,7 +457,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let r = self
                 .client
                 .post(format!("{}/receive", self.host_port))
-                .bearer_auth(&self.access_token)
+                .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .json(&server::ReceiveArgs {
                     session_id: r.session_id,
                     as_coordinator: true,
@@ -509,7 +508,11 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let _r = self
                 .client
                 .post(format!("{}/send", self.host_port))
-                .bearer_auth(&self.access_token)
+                .bearer_auth(
+                    self.access_token
+                        .as_ref()
+                        .expect("must have been set before"),
+                )
                 .json(&server::SendArgs {
                     session_id: self.session_id.unwrap(),
                     recipients: vec![server::PublicKey(recipient.clone())],
@@ -527,7 +530,11 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let r = self
                 .client
                 .post(format!("{}/receive", self.host_port))
-                .bearer_auth(&self.access_token)
+                .bearer_auth(
+                    self.access_token
+                        .as_ref()
+                        .expect("must have been set before"),
+                )
                 .json(&server::ReceiveArgs {
                     session_id: self.session_id.unwrap(),
                     as_coordinator: true,
@@ -551,21 +558,27 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         let _r = self
             .client
             .post(format!("{}/close_session", self.host_port))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(
+                self.access_token
+                    .as_ref()
+                    .expect("must have been set before"),
+            )
             .json(&server::CloseSessionArgs {
                 session_id: self.session_id.unwrap(),
             })
             .send()
             .await?;
 
-        if self.should_logout {
-            let _r = self
-                .client
-                .post(format!("{}/logout", self.host_port))
-                .bearer_auth(&self.access_token)
-                .send()
-                .await?;
-        }
+        let _r = self
+            .client
+            .post(format!("{}/logout", self.host_port))
+            .bearer_auth(
+                self.access_token
+                    .as_ref()
+                    .expect("must have been set before"),
+            )
+            .send()
+            .await?;
 
         let signature_shares = self.state.signature_shares()?;
 
