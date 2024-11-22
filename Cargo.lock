@@ -306,9 +306,9 @@ dependencies = [
 
 [[package]]
 name = "axum-test"
-version = "16.3.0"
+version = "16.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6ba5211f2e0b77d1cbe1e1c7c826edc20fb1f69720a7fdb1d2a25289c98978e"
+checksum = "017cbca2776229a7100ebee44e065fcf5baccea6fc4cb9e5bea8328d83863a03"
 dependencies = [
  "anyhow",
  "assert-json-diff",
@@ -460,9 +460,9 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fca2be1d5c43812bae364ee3f30b3afcb7877cf59f4aeb94c66f313a41d2fac9"
+checksum = "9ac0150caa2ae65ca5bd83f25c7de183dea78d4d366469f148435e2acfbad0da"
 
 [[package]]
 name = "bytesize"
@@ -1442,9 +1442,9 @@ checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
 name = "hyper"
-version = "1.4.1"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50dfd22e0e76d0f662d429a5f80fcaf3855009297eab6a0a9f8543834744ba05"
+checksum = "97818827ef4f364230e16705d4706e2897df2bb60617d6ca15d598025a3c481f"
 dependencies = [
  "bytes",
  "futures-channel",
