@@ -34,7 +34,7 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
     "frost",
     "serde",
 ] }
-reqwest = { version = "0.12.8", features = ["json"] }
+reqwest = { version = "0.12.9", features = ["json"] }
 regex = "1.11.1"
 coordinator = { path = "../coordinator" }
 
