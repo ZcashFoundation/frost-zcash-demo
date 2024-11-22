@@ -46,8 +46,6 @@ async fn check_valid_round_1_inputs() {
         port: 80,
         session_id: "session-id".to_string(),
         http: false,
-        username: "".to_string(),
-        password: "".to_string(),
     };
     let input = SECRET_SHARE_JSON;
     let mut valid_input = input.as_bytes();

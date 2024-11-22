@@ -31,15 +31,6 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub http: bool,
 
-    /// The username to use in HTTP mode.
-    #[arg(short = 'u', long, default_value = "")]
-    pub username: String,
-
-    /// The password to use in HTTP mode. If specified, it will be read from the
-    /// environment variable with the given name.
-    #[arg(short = 'w', long, default_value = "")]
-    pub password: String,
-
     /// Public key package to use. Can be a file with a JSON-encoded
     /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
@@ -70,16 +61,6 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// FROST server.
     pub http: bool,
 
-    /// The username to use in HTTP mode.
-    pub username: String,
-
-    /// The (actual) password to use in HTTP mode.
-    pub password: String,
-
-    /// The authentication token to use in HTTP mode; if not specified
-    /// it will login with `password`
-    pub authentication_token: Option<String>,
-
     /// Key package to use.
     pub key_package: KeyPackage<C>,
 
@@ -94,15 +75,14 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// Optional Session ID
     pub session_id: String,
 
-    /// The participant's communication private key. Specifying this along with
-    /// `comm_coordinator_pubkey_getter` enables encryption.
+    /// The participant's communication private key for HTTP mode.
     pub comm_privkey: Option<Vec<u8>>,
 
-    /// The participant's communication public key.
+    /// The participant's communication public key for HTTP mode.
     pub comm_pubkey: Option<Vec<u8>>,
 
     /// A function that confirms that a public key from the server is trusted by
-    /// the user; returns the same public key.
+    /// the user; returns the same public key. For HTTP mode.
     // It is a `Rc<dyn Fn>` to make it easier to use;
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
@@ -119,12 +99,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         input: &mut dyn BufRead,
         output: &mut dyn Write,
     ) -> Result<Self, Box<dyn Error>> {
-        let password = if args.http {
-            read_password(&args.password)?
-        } else {
-            String::new()
-        };
-
         let bytes = read_from_file_or_stdin(input, output, "key package", &args.key_package)?;
 
         let key_package = if let Ok(secret_share) = serde_json::from_str::<SecretShare<C>>(&bytes) {
@@ -137,12 +111,9 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         Ok(ProcessedArgs {
             cli: args.cli,
             http: args.http,
-            username: args.username.clone(),
-            password,
             key_package,
             ip: args.ip.clone(),
             port: args.port,
-            authentication_token: None,
             session_id: args.session_id.clone(),
             comm_privkey: None,
             comm_pubkey: None,

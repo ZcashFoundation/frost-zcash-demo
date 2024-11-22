@@ -31,15 +31,6 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub http: bool,
 
-    /// The username to use in HTTP mode.
-    #[arg(short = 'u', long, default_value = "")]
-    pub username: String,
-
-    /// The password to use in HTTP mode. If specified, it will be read from the
-    /// environment variable with the given name.
-    #[arg(short = 'w', long, default_value = "")]
-    pub password: String,
-
     /// The comma-separated usernames of the signers to use in HTTP mode.
     /// If HTTP mode is enabled and this is empty, then the session ID
     /// will be printed and will have to be shared manually.
@@ -99,16 +90,6 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// FROST server.
     pub http: bool,
 
-    /// The username to use in HTTP mode.
-    pub username: String,
-
-    /// The (actual) password to use in HTTP mode.
-    pub password: String,
-
-    /// The authentication token to use in HTTP mode; if not specified
-    /// it will login with `password`
-    pub authentication_token: Option<String>,
-
     /// The comma-separated keys of the signers to use in
     /// HTTP mode. If HTTP mode is enabled and this is empty, then the session
     /// ID will be printed and will have to be shared manually.
@@ -138,15 +119,15 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// Port to connect to, if using HTTP mode.
     pub port: u16,
 
-    /// The coordinator's communication private key. Specifying this along with
-    /// `comm_participant_pubkey_getter` enables encryption.
+    /// The coordinator's communication private key for HTTP mode.
     pub comm_privkey: Option<Vec<u8>>,
 
-    /// The coordinator's communication public key.
+    /// The coordinator's communication public key for HTTP mode.
     pub comm_pubkey: Option<Vec<u8>>,
 
     /// A function that confirms if the public key of a participant is in the
-    /// user's contact book, returning the same public key, or None if not.
+    /// user's contact book, returning the same public key, or None if not. For
+    /// HTTP mode.
     // It is a `Rc<dyn Fn>` to make it easier to use;
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
@@ -163,12 +144,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         input: &mut dyn BufRead,
         output: &mut dyn Write,
     ) -> Result<Self, Box<dyn Error>> {
-        let password = if args.http {
-            read_password(&args.password)?
-        } else {
-            String::new()
-        };
-
         let num_signers = if !args.signers.is_empty() {
             args.signers.len() as u16
         } else if args.num_signers == 0 {
@@ -204,8 +179,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         Ok(ProcessedArgs {
             cli: args.cli,
             http: args.http,
-            username: args.username.clone(),
-            password,
             signers,
             num_signers,
             public_key_package,
@@ -214,7 +187,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             signature: args.signature.clone(),
             ip: args.ip.clone(),
             port: args.port,
-            authentication_token: None,
             comm_privkey: None,
             comm_pubkey: None,
             comm_participant_pubkey_getter: None,

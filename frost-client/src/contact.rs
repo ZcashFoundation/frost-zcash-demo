@@ -20,28 +20,17 @@ pub struct Contact {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub pubkey: Vec<u8>,
-    /// The URL of the server where the contact is registered, if any.
-    pub server_url: Option<String>,
-    /// The username of the contact on `server_url`, if registered.
-    pub username: Option<String>,
 }
 
 impl Contact {
     /// Returns a human-readable summary of the contact; used when it is
     /// printed to the terminal.
     pub fn as_human_readable_summary(&self) -> String {
-        let mut s = format!(
+        format!(
             "Name: {}\nPublic Key: {}\n",
             self.name,
             hex::encode(&self.pubkey)
-        );
-        if let Some(server_url) = &self.server_url {
-            s += format!("Server URL: {}\n", server_url).as_str();
-        }
-        if let Some(username) = &self.username {
-            s += format!("Username: {}\n", username).as_str();
-        }
-        s
+        )
     }
 
     /// Returns the contact encoded as a text string, with Bech32.
@@ -92,56 +81,11 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
 
 /// Export a contact from the user's address book in the config file.
 pub(crate) fn export(args: &Command) -> Result<(), Box<dyn Error>> {
-    let Command::Export {
-        name,
-        server_url,
-        config,
-    } = (*args).clone()
-    else {
+    let Command::Export { name, config } = (*args).clone() else {
         panic!("invalid Command");
     };
 
     let config = Config::read(config)?;
-
-    // Get the server_url to export depending on whether the user has registered
-    // in a server, or if they are registered in multiple servers.
-    let server_url = if config.registry.is_empty() && server_url.is_some() {
-        return Err(eyre!("User has not been registered yet").into());
-    } else if config.registry.is_empty() {
-        None
-    } else if config.registry.len() > 1 {
-        let Some(server_url) = &server_url else {
-            return Err(eyre!(
-                "More than one registry found. Specify which one with the server_url argument"
-            )
-            .into());
-        };
-        // There are multiple server registrations. Try to match one using
-        // `server_url` with a simple substring test.
-        let matches: Vec<_> = config
-            .registry
-            .keys()
-            .filter(|k| k.contains(server_url))
-            .collect();
-        if matches.is_empty() {
-            return Err(eyre!("server_url not found").into());
-        } else if matches.len() > 1 {
-            return Err(eyre!(
-                "Multiple registries matches the server_url argument; make it more specific"
-            )
-            .into());
-        }
-        Some(matches[0].clone())
-    } else {
-        Some(
-            config
-                .registry
-                .first_key_value()
-                .expect("should have an entry")
-                .0
-                .clone(),
-        )
-    };
 
     // Build the contact to export.
     let contact = Contact {
@@ -151,8 +95,6 @@ pub(crate) fn export(args: &Command) -> Result<(), Box<dyn Error>> {
             .communication_key
             .ok_or(eyre!("pubkey not generated yet"))?
             .pubkey,
-        server_url: server_url.clone(),
-        username: server_url.map(|s| config.registry[&s].username.clone()),
     };
 
     eprintln!("Exporting this information:");
