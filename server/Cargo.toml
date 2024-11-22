@@ -9,7 +9,7 @@ edition = "2021"
 axum = "0.7.9"
 axum-extra = { version = "0.9.4", features = ["typed-header"] }
 axum-macros = "0.4.2"
-clap = { version = "4.5.20", features = ["derive"] }
+clap = { version = "4.5.21", features = ["derive"] }
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0", features = ["serde"] }
