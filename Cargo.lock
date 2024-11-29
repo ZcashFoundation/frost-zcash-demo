@@ -2782,6 +2782,7 @@ dependencies = [
  "serdect",
  "snow",
  "sqlx",
+ "thiserror 2.0.3",
  "tokio",
  "tower-http",
  "tracing",
