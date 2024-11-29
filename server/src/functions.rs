@@ -1,5 +1,4 @@
-use axum::{extract::State, http::StatusCode, Json};
-use eyre::eyre;
+use axum::{extract::State, Json};
 use uuid::Uuid;
 use xeddsa::{xed25519, Verify as _};
 
@@ -33,35 +32,21 @@ pub(crate) async fn login(
 ) -> Result<Json<KeyLoginOutput>, AppError> {
     // Check if the user sent the credentials
     if args.signature.is_empty() || args.pubkey.is_empty() {
-        return Err(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("empty args").into(),
-        ));
+        return Err(AppError::InvalidArgument("signature or pubkey".into()));
     }
 
-    let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.clone()).map_err(|_| {
-        AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("invalid pubkey").into(),
-        )
-    })?;
+    let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.clone())
+        .map_err(|_| AppError::InvalidArgument("pubkey".into()))?;
     let pubkey = xed25519::PublicKey(pubkey);
-    let signature = TryInto::<[u8; 64]>::try_into(args.signature).map_err(|_| {
-        AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("invalid signature").into(),
-        )
-    })?;
+    let signature = TryInto::<[u8; 64]>::try_into(args.signature)
+        .map_err(|_| AppError::InvalidArgument("signature".into()))?;
     pubkey
         .verify(args.uuid.as_bytes(), &signature)
-        .map_err(|_| AppError(StatusCode::UNAUTHORIZED, eyre!("invalid signature").into()))?;
+        .map_err(|_| AppError::Unauthorized)?;
 
     let mut challenges = state.challenges.write().unwrap();
     if !challenges.remove(&args.uuid) {
-        return Err(AppError(
-            StatusCode::UNAUTHORIZED,
-            eyre!("invalid challenge").into(),
-        ));
+        return Err(AppError::Unauthorized);
     }
     drop(challenges);
 
@@ -97,10 +82,7 @@ pub(crate) async fn create_new_session(
     Json(args): Json<CreateNewSessionArgs>,
 ) -> Result<Json<CreateNewSessionOutput>, AppError> {
     if args.message_count == 0 {
-        return Err(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("invalid message_count").into(),
-        ));
+        return Err(AppError::InvalidArgument("message_count".into()));
     }
 
     // Create new session object.
@@ -157,22 +139,17 @@ pub(crate) async fn get_session_info(
     let sessions = state.sessions.sessions.read().unwrap();
     let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
-    let user_sessions = sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
-        StatusCode::NOT_FOUND,
-        eyre!("user is not in any session").into(),
-    ))?;
+    let user_sessions = sessions_by_pubkey
+        .get(&user.pubkey)
+        .ok_or(AppError::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("session ID not found").into(),
-        ));
+        return Err(AppError::SessionNotFound);
     }
 
-    let session = sessions.get(&args.session_id).ok_or(AppError(
-        StatusCode::NOT_FOUND,
-        eyre!("session ID not found").into(),
-    ))?;
+    let session = sessions
+        .get(&args.session_id)
+        .ok_or(AppError::SessionNotFound)?;
 
     Ok(Json(GetSessionInfoOutput {
         num_signers: session.num_signers,
@@ -195,10 +172,9 @@ pub(crate) async fn send(
 
     // TODO: change to get_mut and modify in-place, if HashMapDelay ever
     // adds support to it
-    let mut session = sessions.remove(&args.session_id).ok_or(AppError(
-        StatusCode::NOT_FOUND,
-        eyre!("session ID not found").into(),
-    ))?;
+    let mut session = sessions
+        .remove(&args.session_id)
+        .ok_or(AppError::SessionNotFound)?;
 
     let recipients = if args.recipients.is_empty() {
         vec![Vec::new()]
@@ -221,7 +197,6 @@ pub(crate) async fn send(
 }
 
 /// Implement the recv API
-// TODO: get identifier from channel rather from arguments
 #[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn receive(
     State(state): State<SharedState>,
@@ -235,10 +210,9 @@ pub(crate) async fn receive(
     // adds support to it. This will also simplify the code since
     // we have to do a workaround in order to not renew the timeout if there
     // are no messages. See https://github.com/AgeManning/delay_map/issues/26
-    let session = sessions.get(&args.session_id).ok_or(AppError(
-        StatusCode::NOT_FOUND,
-        eyre!("session ID not found").into(),
-    ))?;
+    let session = sessions
+        .get(&args.session_id)
+        .ok_or(AppError::SessionNotFound)?;
 
     let pubkey = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
         Vec::new()
@@ -252,10 +226,9 @@ pub(crate) async fn receive(
     let msgs = if session.queue.contains_key(&pubkey) {
         drop(sessions);
         let mut sessions = state.sessions.sessions.write().unwrap();
-        let mut session = sessions.remove(&args.session_id).ok_or(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("session ID not found").into(),
-        ))?;
+        let mut session = sessions
+            .remove(&args.session_id)
+            .ok_or(AppError::SessionNotFound)?;
         let msgs = session.queue.entry(pubkey).or_default().drain(..).collect();
         sessions.insert(args.session_id, session);
         msgs
@@ -276,28 +249,20 @@ pub(crate) async fn close_session(
     let mut sessions = state.sessions.sessions.write().unwrap();
     let mut sessions_by_pubkey = state.sessions.sessions_by_pubkey.write().unwrap();
 
-    let user_sessions = sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
-        StatusCode::NOT_FOUND,
-        eyre!("user is not in any session").into(),
-    ))?;
+    let user_sessions = sessions_by_pubkey
+        .get(&user.pubkey)
+        .ok_or(AppError::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("session ID not found").into(),
-        ));
+        return Err(AppError::SessionNotFound);
     }
 
-    let session = sessions.get(&args.session_id).ok_or(AppError(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        eyre!("invalid session ID").into(),
-    ))?;
+    let session = sessions
+        .get(&args.session_id)
+        .ok_or(AppError::SessionNotFound)?;
 
     if session.coordinator_pubkey != user.pubkey {
-        return Err(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("user is not the coordinator of the session").into(),
-        ));
+        return Err(AppError::NotCoordinator);
     }
 
     for username in session.pubkeys.clone() {
