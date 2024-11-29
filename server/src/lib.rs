@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 use axum_server::tls_rustls::RustlsConfig;
 use eyre::OptionExt;
 pub use state::{AppState, SharedState};
+use thiserror::Error;
 use tower_http::trace::TraceLayer;
 pub use types::*;
 
@@ -17,7 +18,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::post,
-    Router,
+    Json, Router,
 };
 
 /// Create the axum Router for the server.
@@ -74,12 +75,50 @@ pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
 
 /// An error. Wraps a StatusCode which is returned by the server when the
 /// error happens during a API call, and a generic eyre::Report.
-// TODO: create an enum with specific errors
-#[derive(Debug)]
-pub struct AppError(StatusCode, Box<dyn std::error::Error>);
+#[derive(Debug, Error)]
+pub(crate) enum AppError {
+    #[error("invalid or missing argument: {0}")]
+    InvalidArgument(String),
+    #[error("client did not provide proper authorization credentials")]
+    Unauthorized,
+    #[error("session was not found")]
+    SessionNotFound,
+    #[error("user is not the coordinator")]
+    NotCoordinator,
+}
+
+// These make it easier to clients to tell which error happened.
+pub const INVALID_ARGUMENT: usize = 1;
+pub const UNAUTHORIZED: usize = 2;
+pub const SESSION_NOT_FOUND: usize = 3;
+pub const NOT_COORDINATOR: usize = 4;
+
+impl AppError {
+    pub fn error_code(&self) -> usize {
+        match &self {
+            AppError::InvalidArgument(_) => INVALID_ARGUMENT,
+            AppError::Unauthorized => UNAUTHORIZED,
+            AppError::SessionNotFound => SESSION_NOT_FOUND,
+            AppError::NotCoordinator => NOT_COORDINATOR,
+        }
+    }
+}
+
+impl From<AppError> for types::Error {
+    fn from(err: AppError) -> Self {
+        types::Error {
+            code: err.error_code(),
+            msg: err.to_string(),
+        }
+    }
+}
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        (self.0, format!("{}", self.1)).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(Into::<types::Error>::into(self)),
+        )
+            .into_response()
     }
 }

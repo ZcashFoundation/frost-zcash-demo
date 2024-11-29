@@ -11,6 +11,7 @@ use server::{
 };
 
 use frost_core as frost;
+use uuid::Uuid;
 use xeddsa::{xed25519, Sign, Verify};
 
 #[tokio::test]
@@ -450,7 +451,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{}", r.text().await?)
+        panic!("{:?}", r.json::<server::Error>().await?)
     }
     let r = r.json::<server::ChallengeOutput>().await?;
     let alice_challenge = r.challenge;
@@ -469,7 +470,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{}", r.text().await?)
+        panic!("{:?}", r.json::<server::Error>().await?)
     }
     let r = r.json::<server::KeyLoginOutput>().await?;
     let access_token = r.access_token;
@@ -489,11 +490,26 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{}", r.text().await?)
+        panic!("{:?}", r.json::<server::Error>().await?)
     }
     let r = r.json::<server::CreateNewSessionOutput>().await?;
     let session_id = r.session_id;
     println!("Session ID: {}", session_id);
+
+    // Error test
+
+    let wrong_session_id = Uuid::new_v4();
+    let r = client
+        .post("http://127.0.0.1:2744/get_session_info")
+        .bearer_auth(access_token)
+        .json(&server::GetSessionInfoArgs {
+            session_id: wrong_session_id,
+        })
+        .send()
+        .await?;
+    assert_eq!(r.status(), reqwest::StatusCode::INTERNAL_SERVER_ERROR);
+    let r = r.json::<server::Error>().await?;
+    assert_eq!(r.code, server::SESSION_NOT_FOUND);
 
     Ok(())
 }

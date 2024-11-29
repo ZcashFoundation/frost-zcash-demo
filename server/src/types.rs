@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Error {
+    pub code: usize,
+    pub msg: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterArgs {
     pub username: String,
     pub password: String,
