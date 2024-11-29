@@ -10,8 +10,4 @@ pub struct Args {
     /// Port to bind to
     #[arg(short, long, default_value_t = 2744)]
     pub port: u16,
-
-    /// Database to use.
-    #[arg(short, long, default_value = "db.sqlite")]
-    pub database: String,
 }

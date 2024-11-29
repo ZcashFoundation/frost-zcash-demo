@@ -9,31 +9,9 @@ pub(crate) struct Args {
 
 #[derive(Subcommand, Clone)]
 pub(crate) enum Command {
-    /// Initializes the user, generating a communication key pair and optionally
-    /// registering with a FROST server. The key pair and additional information
-    /// are saved to the config file. You can rerun the command to register
-    /// in other servers; the communication key pair will not be regenerated.
-    Init {
-        /// The username to use when registering, if desired.
-        #[arg(short, long)]
-        username: Option<String>,
-        /// The server URL to use, if desired.
-        #[arg(short, long)]
-        server_url: Option<String>,
-        /// The path to the config file to manage. If not specified, it uses
-        /// $HOME/.local/frost/credentials.toml
-        #[arg(short, long)]
-        config: Option<String>,
-    },
-    /// Logs the user on the server and saves the returned authentication token
+    /// Initializes the user, generating a communication key pair and saving
     /// to the config file.
-    Login {
-        /// The username to use when logging in.
-        #[arg(short, long)]
-        username: String,
-        /// The server URL to use.
-        #[arg(short, long)]
-        server_url: String,
+    Init {
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
         #[arg(short, long)]
@@ -45,10 +23,6 @@ pub(crate) enum Command {
         /// The name to use when exporting.
         #[arg(short, long)]
         name: String,
-        /// The server URL for which to export a contact. You can use a
-        /// substring of the URL.
-        #[arg(short, long)]
-        server_url: Option<String>,
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
         #[arg(short, long)]
@@ -86,10 +60,6 @@ pub(crate) enum Command {
         /// The comma-separated name of each participant.
         #[arg(short = 'N', long, value_delimiter = ',')]
         names: Vec<String>,
-        /// The comma-separated username of each participant in the same order
-        /// as `names`. Note: these won't be checked in the server.
-        #[arg(short, long, value_delimiter = ',')]
-        usernames: Vec<String>,
         /// The server URL, if desired. Note that this does not connect to the
         /// server; it will just associated the server URL with the group in the
         /// config file.
