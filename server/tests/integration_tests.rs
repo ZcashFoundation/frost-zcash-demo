@@ -10,6 +10,7 @@ use server::{
 };
 
 use frost_core as frost;
+use xeddsa::{xed25519, Sign, Verify};
 
 #[tokio::test]
 async fn test_main_router_ed25519() -> Result<(), Box<dyn std::error::Error>> {
@@ -60,42 +61,50 @@ async fn test_main_router<
     // it currently it doesn't really matter who the user is, users are only
     // used to share session IDs. This will likely change soon.
 
-    let res = server
-        .post("/register")
-        .json(&server::RegisterArgs {
-            username: "alice".to_string(),
-            password: "passw0rd".to_string(),
-            pubkey: vec![],
-        })
-        .await;
-    res.assert_status_ok();
+    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
+    let alice_keypair = builder.generate_keypair().unwrap();
+    let bob_keypair = builder.generate_keypair().unwrap();
 
     let res = server
-        .post("/register")
-        .json(&server::RegisterArgs {
-            username: "bob".to_string(),
-            password: "passw0rd".to_string(),
-            pubkey: vec![],
-        })
+        .post("/challenge")
+        .json(&server::ChallengeArgs {})
         .await;
     res.assert_status_ok();
+    let r: server::ChallengeOutput = res.json();
+    let alice_challenge = r.challenge;
 
     let res = server
-        .post("/login")
-        .json(&server::LoginArgs {
-            username: "alice".to_string(),
-            password: "passw0rd".to_string(),
+        .post("/challenge")
+        .json(&server::ChallengeArgs {})
+        .await;
+    res.assert_status_ok();
+    let r: server::ChallengeOutput = res.json();
+    let bob_challenge = r.challenge;
+
+    let alice_private =
+        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
+    let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
+    let res = server
+        .post("/key_login")
+        .json(&server::KeyLoginArgs {
+            uuid: alice_challenge,
+            pubkey: alice_keypair.public.clone(),
+            signature: alice_signature.to_vec(),
         })
         .await;
     res.assert_status_ok();
     let r: server::LoginOutput = res.json();
     let alice_token = r.access_token;
 
+    let bob_private =
+        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
+    let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
     let res = server
-        .post("/login")
-        .json(&server::LoginArgs {
-            username: "bob".to_string(),
-            password: "passw0rd".to_string(),
+        .post("/key_login")
+        .json(&server::KeyLoginArgs {
+            uuid: bob_challenge,
+            pubkey: bob_keypair.public.clone(),
+            signature: bob_signature.to_vec(),
         })
         .await;
     res.assert_status_ok();
@@ -109,7 +118,10 @@ async fn test_main_router<
         .post("/create_new_session")
         .authorization_bearer(alice_token)
         .json(&server::CreateNewSessionArgs {
-            usernames: vec!["alice".to_string(), "bob".to_string()],
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             num_signers: 2,
             message_count: 2,
         })
@@ -228,7 +240,7 @@ async fn test_main_router<
         .authorization_bearer(alice_token)
         .json(&server::SendArgs {
             session_id,
-            recipients: usernames.keys().cloned().collect(),
+            recipients: usernames.keys().cloned().map(server::PublicKey).collect(),
             msg: serde_json::to_vec(&send_signing_package_args)?,
         })
         .await;
@@ -372,6 +384,7 @@ async fn test_main_router<
 #[tokio::test]
 async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
+    let mut rng = thread_rng();
 
     // Spawn server for testing
     tokio::spawn(async move {
@@ -391,45 +404,39 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Create a client to make requests
     let client = reqwest::Client::new();
 
-    // Call register to create users
-    let r = client
-        .post("http://127.0.0.1:2744/register")
-        .json(&server::RegisterArgs {
-            username: "alice".to_string(),
-            password: "passw0rd".to_string(),
-            pubkey: vec![],
-        })
-        .send()
-        .await?;
-    if r.status() != reqwest::StatusCode::OK {
-        panic!("{}", r.text().await?)
-    }
-    let r = client
-        .post("http://127.0.0.1:2744/register")
-        .json(&server::RegisterArgs {
-            username: "bob".to_string(),
-            password: "passw0rd".to_string(),
-            pubkey: vec![],
-        })
-        .send()
-        .await?;
-    if r.status() != reqwest::StatusCode::OK {
-        panic!("{}", r.text().await?)
-    }
+    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
+    let alice_keypair = builder.generate_keypair().unwrap();
+    let bob_keypair = builder.generate_keypair().unwrap();
 
-    // Call login to authenticate
+    // Get challenges for login
     let r = client
-        .post("http://127.0.0.1:2744/login")
-        .json(&server::LoginArgs {
-            username: "alice".to_string(),
-            password: "passw0rd".to_string(),
+        .post("http://127.0.0.1:2744/challenge")
+        .json(&server::ChallengeArgs {})
+        .send()
+        .await?;
+    if r.status() != reqwest::StatusCode::OK {
+        panic!("{}", r.text().await?)
+    }
+    let r = r.json::<server::ChallengeOutput>().await?;
+    let alice_challenge = r.challenge;
+
+    // Call key_login to authenticate
+    let alice_private =
+        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
+    let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
+    let r = client
+        .post("http://127.0.0.1:2744/key_login")
+        .json(&server::KeyLoginArgs {
+            uuid: alice_challenge,
+            pubkey: alice_keypair.public.clone(),
+            signature: alice_signature.to_vec(),
         })
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
         panic!("{}", r.text().await?)
     }
-    let r = r.json::<server::LoginOutput>().await?;
+    let r = r.json::<server::KeyLoginOutput>().await?;
     let access_token = r.access_token;
 
     // Call create_new_session
@@ -437,7 +444,10 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("http://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
         .json(&server::CreateNewSessionArgs {
-            usernames: vec!["alice".to_string(), "bob".to_string()],
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             message_count: 1,
             num_signers: 2,
         })
@@ -499,6 +509,24 @@ fn test_snow() -> Result<(), Box<dyn Error>> {
     let decrypted = &decrypted[0..len];
 
     println!("{}", str::from_utf8(decrypted).unwrap());
+
+    Ok(())
+}
+
+/// Test if signing with a snow keypair works.
+#[test]
+fn test_snow_keypair() -> Result<(), Box<dyn Error>> {
+    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
+    let keypair = builder.generate_keypair().unwrap();
+
+    let private =
+        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(keypair.private).unwrap());
+    let public = xed25519::PublicKey(TryInto::<[u8; 32]>::try_into(keypair.public).unwrap());
+    let msg: &[u8] = b"hello";
+
+    let rng = thread_rng();
+    let signature: [u8; 64] = private.sign(msg, rng);
+    public.verify(msg, &signature).unwrap();
 
     Ok(())
 }

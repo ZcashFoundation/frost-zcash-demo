@@ -125,7 +125,7 @@ pub(crate) enum Command {
         /// to list)
         #[arg(short, long)]
         group: String,
-        /// The comma-separated usernames of the signers to use.
+        /// The comma-separated hex-encoded public keys of the signers to use.
         #[arg(short = 'S', long, value_delimiter = ',')]
         signers: Vec<String>,
         /// The messages to sign. Each instance can be a file with the raw message,

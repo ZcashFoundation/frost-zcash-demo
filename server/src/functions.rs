@@ -1,13 +1,13 @@
 use axum::{extract::State, http::StatusCode, Json};
 use eyre::eyre;
 use uuid::Uuid;
+use xeddsa::{xed25519, Verify as _};
 
 use crate::{
     state::{Session, SharedState},
     types::*,
     user::{
-        add_access_token, authenticate_user, create_user, delete_user, get_user,
-        remove_access_token, User,
+        add_access_token, authenticate_user, create_user, delete_user, remove_access_token, User,
     },
     AppError,
 };
@@ -28,16 +28,76 @@ pub(crate) async fn register(
         ));
     }
 
-    let db = {
-        let state_lock = state.read().unwrap();
-        state_lock.db.clone()
-    };
-
-    create_user(db, username, password, args.pubkey)
+    create_user(state.db.clone(), username, password, args.pubkey)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     Ok(Json(()))
+}
+
+/// Implement the challenge API.
+#[tracing::instrument(ret, err(Debug), skip(state, _args))]
+pub(crate) async fn challenge(
+    State(state): State<SharedState>,
+    Json(_args): Json<ChallengeArgs>,
+) -> Result<Json<ChallengeOutput>, AppError> {
+    // Create new challenge.
+    let challenge = Uuid::new_v4();
+
+    state.challenges.write().unwrap().insert(challenge);
+
+    let output = ChallengeOutput { challenge };
+    Ok(Json(output))
+}
+
+/// Implement the key_login API.
+#[tracing::instrument(ret, err(Debug), skip(state, args))]
+pub(crate) async fn key_login(
+    State(state): State<SharedState>,
+    Json(args): Json<KeyLoginArgs>,
+) -> Result<Json<KeyLoginOutput>, AppError> {
+    // Check if the user sent the credentials
+    if args.signature.is_empty() || args.pubkey.is_empty() {
+        return Err(AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("empty args").into(),
+        ));
+    }
+
+    let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.clone()).map_err(|_| {
+        AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("invalid pubkey").into(),
+        )
+    })?;
+    let pubkey = xed25519::PublicKey(pubkey);
+    let signature = TryInto::<[u8; 64]>::try_into(args.signature).map_err(|_| {
+        AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            eyre!("invalid signature").into(),
+        )
+    })?;
+    pubkey
+        .verify(args.uuid.as_bytes(), &signature)
+        .map_err(|_| AppError(StatusCode::UNAUTHORIZED, eyre!("invalid signature").into()))?;
+
+    let mut challenges = state.challenges.write().unwrap();
+    if !challenges.remove(&args.uuid) {
+        return Err(AppError(
+            StatusCode::UNAUTHORIZED,
+            eyre!("invalid challenge").into(),
+        ));
+    }
+    drop(challenges);
+
+    let access_token = Uuid::new_v4();
+
+    let mut access_tokens = state.access_tokens.write().unwrap();
+    access_tokens.insert(access_token, args.pubkey);
+
+    let token = KeyLoginOutput { access_token };
+
+    Ok(Json(token))
 }
 
 /// Implement the login API.
@@ -54,12 +114,7 @@ pub(crate) async fn login(
         ));
     }
 
-    let db = {
-        let state_lock = state.read().unwrap();
-        state_lock.db.clone()
-    };
-
-    let user = authenticate_user(db.clone(), &args.username, &args.password)
+    let user = authenticate_user(state.db.clone(), &args.username, &args.password)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
@@ -73,7 +128,7 @@ pub(crate) async fn login(
         }
     };
 
-    let access_token = add_access_token(db.clone(), user.id)
+    let access_token = add_access_token(state.db.clone(), user.id)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
@@ -88,13 +143,14 @@ pub(crate) async fn logout(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<()>, AppError> {
-    let db = {
-        let state_lock = state.read().unwrap();
-        state_lock.db.clone()
-    };
+    state.access_tokens.write().unwrap().remove(
+        &user
+            .current_token
+            .expect("user is logged in so they must have a token"),
+    );
 
     remove_access_token(
-        db.clone(),
+        state.db.clone(),
         user.current_token
             .expect("user is logged in so they must have a token"),
     )
@@ -110,12 +166,7 @@ pub(crate) async fn unregister(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<()>, AppError> {
-    let db = {
-        let state_lock = state.read().unwrap();
-        state_lock.db.clone()
-    };
-
-    delete_user(db, user.id)
+    delete_user(state.db.clone(), user.id)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
@@ -135,39 +186,24 @@ pub(crate) async fn create_new_session(
             eyre!("invalid message_count").into(),
         ));
     }
-    let db = {
-        let state_lock = state.read().unwrap();
-        state_lock.db.clone()
-    };
-    for username in &args.usernames {
-        if get_user(db.clone(), username)
-            .await
-            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?
-            .is_none()
-        {
-            return Err(AppError(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("invalid user").into(),
-            ));
-        }
-    }
+
     // Create new session object.
     let id = Uuid::new_v4();
 
-    let mut state = state.write().unwrap();
+    let mut state = state.sessions.write().unwrap();
 
     // Save session ID in global state
-    for username in &args.usernames {
+    for pubkey in &args.pubkeys {
         state
-            .sessions_by_username
-            .entry(username.to_string())
+            .sessions_by_pubkey
+            .entry(pubkey.0.clone())
             .or_default()
             .insert(id);
     }
     // Create Session object
     let session = Session {
-        usernames: args.usernames,
-        coordinator: user.username,
+        pubkeys: args.pubkeys.into_iter().map(|p| p.0).collect(),
+        coordinator_pubkey: user.pubkey,
         num_signers: args.num_signers,
         message_count: args.message_count,
         queue: Default::default(),
@@ -185,11 +221,11 @@ pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<ListSessionsOutput>, AppError> {
-    let state = state.read().unwrap();
+    let state = state.sessions.read().unwrap();
 
     let session_ids = state
-        .sessions_by_username
-        .get(&user.username)
+        .sessions_by_pubkey
+        .get(&user.pubkey)
         .map(|s| s.iter().cloned().collect())
         .unwrap_or_default();
 
@@ -203,7 +239,7 @@ pub(crate) async fn get_session_info(
     user: User,
     Json(args): Json<GetSessionInfoArgs>,
 ) -> Result<Json<GetSessionInfoOutput>, AppError> {
-    let state_lock = state.read().unwrap();
+    let state_lock = state.sessions.read().unwrap();
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
@@ -213,8 +249,8 @@ pub(crate) async fn get_session_info(
     Ok(Json(GetSessionInfoOutput {
         num_signers: session.num_signers,
         message_count: session.message_count,
-        usernames: session.usernames.clone(),
-        coordinator: session.coordinator.clone(),
+        pubkeys: session.pubkeys.iter().cloned().map(PublicKey).collect(),
+        coordinator_pubkey: session.coordinator_pubkey.clone(),
     }))
 }
 
@@ -227,7 +263,7 @@ pub(crate) async fn send(
     Json(args): Json<SendArgs>,
 ) -> Result<(), AppError> {
     // Get the mutex lock to read and write from the state
-    let mut state_lock = state.write().unwrap();
+    let mut state_lock = state.sessions.write().unwrap();
 
     let session = state_lock
         .sessions
@@ -238,17 +274,17 @@ pub(crate) async fn send(
         ))?;
 
     let recipients = if args.recipients.is_empty() {
-        vec![String::new()]
+        vec![Vec::new()]
     } else {
-        args.recipients
+        args.recipients.into_iter().map(|p| p.0).collect()
     };
-    for username in &recipients {
+    for pubkey in &recipients {
         session
             .queue
-            .entry(username.clone())
+            .entry(pubkey.clone())
             .or_default()
             .push_back(Msg {
-                sender: user.username.clone(),
+                sender: user.pubkey.clone(),
                 msg: args.msg.clone(),
             });
     }
@@ -265,7 +301,7 @@ pub(crate) async fn receive(
     Json(args): Json<ReceiveArgs>,
 ) -> Result<Json<ReceiveOutput>, AppError> {
     // Get the mutex lock to read and write from the state
-    let mut state_lock = state.write().unwrap();
+    let mut state_lock = state.sessions.write().unwrap();
 
     let session = state_lock
         .sessions
@@ -275,18 +311,13 @@ pub(crate) async fn receive(
             eyre!("session ID not found").into(),
         ))?;
 
-    let username = if user.username == session.coordinator && args.as_coordinator {
-        String::new()
+    let pubkey = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
+        Vec::new()
     } else {
-        user.username
+        user.pubkey
     };
 
-    let msgs = session
-        .queue
-        .entry(username.to_string())
-        .or_default()
-        .drain(..)
-        .collect();
+    let msgs = session.queue.entry(pubkey).or_default().drain(..).collect();
 
     Ok(Json(ReceiveOutput { msgs }))
 }
@@ -298,7 +329,7 @@ pub(crate) async fn close_session(
     user: User,
     Json(args): Json<CloseSessionArgs>,
 ) -> Result<Json<()>, AppError> {
-    let mut state = state.write().unwrap();
+    let mut state = state.sessions.write().unwrap();
 
     for username in state
         .sessions
@@ -307,10 +338,10 @@ pub(crate) async fn close_session(
             StatusCode::INTERNAL_SERVER_ERROR,
             eyre!("invalid session ID").into(),
         ))?
-        .usernames
+        .pubkeys
         .clone()
     {
-        if let Some(v) = state.sessions_by_username.get_mut(&username) {
+        if let Some(v) = state.sessions_by_pubkey.get_mut(&username) {
             v.remove(&args.session_id);
         }
     }

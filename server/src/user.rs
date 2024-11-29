@@ -212,14 +212,27 @@ impl FromRequestParts<SharedState> for User {
             )
         })?;
 
-        let db = {
-            let state_lock = state.read().unwrap();
-            state_lock.db.clone()
-        };
+        let pubkey = state
+            .access_tokens
+            .read()
+            .unwrap()
+            .get(&access_token)
+            .cloned();
 
-        let user = get_user_for_access_token(db, access_token)
-            .await
-            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+        let user = if let Some(pubkey) = pubkey {
+            Some(User {
+                id: -1,
+                username: String::new(),
+                password: String::new(),
+                pubkey,
+                access_tokens: vec![],
+                current_token: Some(access_token),
+            })
+        } else {
+            get_user_for_access_token(state.db.clone(), access_token)
+                .await
+                .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?
+        };
 
         match user {
             Some(mut user) => {
