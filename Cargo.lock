@@ -2770,6 +2770,8 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
+ "futures",
+ "futures-util",
  "password-auth",
  "rand",
  "reddsa",
