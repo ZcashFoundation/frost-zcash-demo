@@ -118,7 +118,10 @@ async fn test_main_router<
         .post("/create_new_session")
         .authorization_bearer(alice_token)
         .json(&server::CreateNewSessionArgs {
-            pubkeys: vec![alice_keypair.public.clone(), bob_keypair.public.clone()],
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             num_signers: 2,
             message_count: 2,
         })
@@ -441,7 +444,10 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("http://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
         .json(&server::CreateNewSessionArgs {
-            pubkeys: vec![alice_keypair.public.clone(), bob_keypair.public.clone()],
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             message_count: 1,
             num_signers: 2,
         })

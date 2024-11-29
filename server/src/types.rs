@@ -57,7 +57,7 @@ pub struct LoginArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateNewSessionArgs {
-    pub pubkeys: Vec<Vec<u8>>,
+    pub pubkeys: Vec<PublicKey>,
     pub num_signers: u16,
     pub message_count: u8,
 }
@@ -81,11 +81,11 @@ pub struct GetSessionInfoArgs {
 pub struct GetSessionInfoOutput {
     pub num_signers: u16,
     pub message_count: u8,
-    pub pubkeys: Vec<Vec<u8>>,
+    pub pubkeys: Vec<PublicKey>,
     pub coordinator_pubkey: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PublicKey(
     #[serde(
@@ -94,6 +94,14 @@ pub struct PublicKey(
     )]
     pub Vec<u8>,
 );
+
+impl std::fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("PublicKey")
+            .field(&hex::encode(&self.0))
+            .finish()
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SendArgs {

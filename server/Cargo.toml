@@ -28,6 +28,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.11.0", features = ["v4", "fast-rng", "serde"] }
 xeddsa = "1.0.2"
+hex = "0.4.3"
 
 [dev-dependencies]
 axum-test = "16.4.0"

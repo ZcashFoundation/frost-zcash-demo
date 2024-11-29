@@ -18,7 +18,9 @@ use frost_core::{
 
 use participant::comms::http::Noise;
 use rand::thread_rng;
-use server::{Msg, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
+use server::{
+    Msg, PublicKey, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid,
+};
 use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
@@ -392,7 +394,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(&self.access_token)
             .json(&server::CreateNewSessionArgs {
-                pubkeys: self.args.signers.clone(),
+                pubkeys: self.args.signers.iter().cloned().map(PublicKey).collect(),
                 num_signers,
                 message_count: 1,
             })

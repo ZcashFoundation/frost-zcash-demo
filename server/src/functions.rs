@@ -196,13 +196,13 @@ pub(crate) async fn create_new_session(
     for pubkey in &args.pubkeys {
         state
             .sessions_by_pubkey
-            .entry(pubkey.clone())
+            .entry(pubkey.0.clone())
             .or_default()
             .insert(id);
     }
     // Create Session object
     let session = Session {
-        pubkeys: args.pubkeys,
+        pubkeys: args.pubkeys.into_iter().map(|p| p.0).collect(),
         coordinator_pubkey: user.pubkey,
         num_signers: args.num_signers,
         message_count: args.message_count,
@@ -249,7 +249,7 @@ pub(crate) async fn get_session_info(
     Ok(Json(GetSessionInfoOutput {
         num_signers: session.num_signers,
         message_count: session.message_count,
-        pubkeys: session.pubkeys.clone(),
+        pubkeys: session.pubkeys.iter().cloned().map(PublicKey).collect(),
         coordinator_pubkey: session.coordinator_pubkey.clone(),
     }))
 }
