@@ -132,29 +132,29 @@ where
         })
     }
 
-    // Encrypts a message for the coordinator if encryption is enabled.
-    fn encrypt_if_needed(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
-        if let Some(noise) = &mut self.send_noise {
-            let mut encrypted = vec![0; 65535];
-            let len = noise.write_message(&msg, &mut encrypted)?;
-            encrypted.truncate(len);
-            Ok(encrypted)
-        } else {
-            Ok(msg)
-        }
+    // Encrypts a message for the coordinator.
+    fn encrypt(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+        let noise = self
+            .send_noise
+            .as_mut()
+            .expect("send_noise must have been set previously");
+        let mut encrypted = vec![0; 65535];
+        let len = noise.write_message(&msg, &mut encrypted)?;
+        encrypted.truncate(len);
+        Ok(encrypted)
     }
 
-    // Decrypts a message from the coordinator if encryption is enabled.
-    fn decrypt_if_needed(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
-        if let Some(noise) = &mut self.recv_noise {
-            let mut decrypted = vec![0; 65535];
-            decrypted.resize(65535, 0);
-            let len = noise.read_message(&msg, &mut decrypted)?;
-            decrypted.truncate(len);
-            Ok(decrypted)
-        } else {
-            Ok(msg)
-        }
+    // Decrypts a message from the coordinator.
+    fn decrypt(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+        let noise = self
+            .recv_noise
+            .as_mut()
+            .expect("recv_noise must have been set previously");
+        let mut decrypted = vec![0; 65535];
+        decrypted.resize(65535, 0);
+        let len = noise.read_message(&msg, &mut decrypted)?;
+        decrypted.truncate(len);
+        Ok(decrypted)
     }
 }
 
@@ -241,60 +241,61 @@ where
         };
         self.session_id = Some(session_id);
 
-        // If encryption is enabled, create the Noise objects
-        (self.send_noise, self.recv_noise) = if let (
-            Some(comm_privkey),
-            Some(comm_coordinator_pubkey_getter),
-        ) = (
+        let (Some(comm_privkey), Some(comm_coordinator_pubkey_getter)) = (
             &self.args.comm_privkey,
             &self.args.comm_coordinator_pubkey_getter,
-        ) {
-            // We need to know what is the username of the coordinator in order
-            // to encrypt message to them.
-            let session_info = self
-                .client
-                .post(format!("{}/get_session_info", self.host_port))
-                .json(&server::GetSessionInfoArgs { session_id })
-                .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                .send()
-                .await?
-                .json::<server::GetSessionInfoOutput>()
-                .await?;
-
-            let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
-            let builder = snow::Builder::new(
-                "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                    .parse()
-                    .expect("should be a valid cipher"),
+        ) else {
+            return Err(
+                eyre!("comm_privkey and comm_coordinator_pubkey_getter must be specified").into(),
             );
-            let send_noise = Noise::new(
-                builder
-                    .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_coordinator_pubkey)
-                    .build_initiator()?,
-            );
-            let builder = snow::Builder::new(
-                "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                    .parse()
-                    .expect("should be a valid cipher"),
-            );
-            let recv_noise = Noise::new(
-                builder
-                    .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_coordinator_pubkey)
-                    .build_responder()?,
-            );
-            (Some(send_noise), Some(recv_noise))
-        } else {
-            (None, None)
         };
+
+        // If encryption is enabled, create the Noise objects
+
+        // We need to know what is the username of the coordinator in order
+        // to encrypt message to them.
+        let session_info = self
+            .client
+            .post(format!("{}/get_session_info", self.host_port))
+            .json(&server::GetSessionInfoArgs { session_id })
+            .bearer_auth(self.access_token.as_ref().expect("was just set"))
+            .send()
+            .await?
+            .json::<server::GetSessionInfoOutput>()
+            .await?;
+
+        let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
+        let builder = snow::Builder::new(
+            "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                .parse()
+                .expect("should be a valid cipher"),
+        );
+        let send_noise = Noise::new(
+            builder
+                .local_private_key(comm_privkey)
+                .remote_public_key(&comm_coordinator_pubkey)
+                .build_initiator()?,
+        );
+        let builder = snow::Builder::new(
+            "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                .parse()
+                .expect("should be a valid cipher"),
+        );
+        let recv_noise = Noise::new(
+            builder
+                .local_private_key(comm_privkey)
+                .remote_public_key(&comm_coordinator_pubkey)
+                .build_responder()?,
+        );
+        self.send_noise = Some(send_noise);
+        self.recv_noise = Some(recv_noise);
 
         // Send Commitments to Server
         let send_commitments_args = SendCommitmentsArgs {
             identifier,
             commitments: vec![commitments],
         };
-        let msg = self.encrypt_if_needed(serde_json::to_vec(&send_commitments_args)?)?;
+        let msg = self.encrypt(serde_json::to_vec(&send_commitments_args)?)?;
         self.client
             .post(format!("{}/send", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
@@ -329,7 +330,7 @@ where
                 eprint!(".");
             } else {
                 eprintln!("\nSigning package received");
-                let msg = self.decrypt_if_needed(r.msgs[0].msg.clone())?;
+                let msg = self.decrypt(r.msgs[0].msg.clone())?;
                 eprintln!("\n{}", String::from_utf8_lossy(&msg.clone()));
                 break serde_json::from_slice(&msg)?;
             }
@@ -365,7 +366,7 @@ where
             signature_share: vec![signature_share],
         };
 
-        let msg = self.encrypt_if_needed(serde_json::to_vec(&send_signature_shares_args)?)?;
+        let msg = self.encrypt(serde_json::to_vec(&send_signature_shares_args)?)?;
 
         let _r = self
             .client
