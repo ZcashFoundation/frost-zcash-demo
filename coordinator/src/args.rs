@@ -26,11 +26,6 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
-    /// HTTP mode. If enabled, it will use HTTP communication with a
-    /// FROST server.
-    #[arg(long, default_value_t = false)]
-    pub http: bool,
-
     /// The comma-separated usernames of the signers to use in HTTP mode.
     /// If HTTP mode is enabled and this is empty, then the session ID
     /// will be printed and will have to be shared manually.
@@ -178,7 +173,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
 
         Ok(ProcessedArgs {
             cli: args.cli,
-            http: args.http,
+            http: false,
             signers,
             num_signers,
             public_key_package,
