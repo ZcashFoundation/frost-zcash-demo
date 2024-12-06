@@ -80,9 +80,12 @@ pub struct CommunicationKey {
 }
 
 /// A FROST group the user belongs to.
-// TODO: add a textual name for the group?
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Group {
+    /// A human-readable description of the group to make it easier to select
+    /// groups
+    pub description: String,
+    /// The ciphersuite being used for the group
     pub ciphersuite: String,
     /// The encoded public key package for the group.
     #[serde(
@@ -90,13 +93,13 @@ pub struct Group {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub public_key_package: Vec<u8>,
-    /// The user's encodede key package for the group.
+    /// The user's encoded key package for the group.
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub key_package: Vec<u8>,
-    /// The server the participants are registered in, if any.
+    /// The default server the participants are using, if any.
     pub server_url: Option<String>,
     /// The group participants, keyed by hex-encoded identifier
     pub participant: BTreeMap<String, Participant>,
@@ -109,7 +112,8 @@ impl Group {
         let helper = ciphersuite_helper(&self.ciphersuite)?;
         let info = helper.group_info(&self.key_package, &self.public_key_package)?;
         let mut s = format!(
-            "Group with public key {}\nServer URL: {}\nThreshold: {}\nParticipants: {}\n",
+            "Group \"{}\"\nPublic key {}\nServer URL: {}\nThreshold: {}\nParticipants: {}\n",
+            self.description,
             info.hex_verifying_key,
             self.server_url.clone().unwrap_or_default(),
             info.threshold,
