@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
 use serde::{Deserialize, Serialize};
 
 use crate::{args::Command, config::Config};
@@ -121,6 +121,34 @@ pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         eprintln!("{}", contact.as_text()?);
         eprintln!();
     }
+
+    Ok(())
+}
+
+/// Remove a contact from the user's address book in the config file.
+pub(crate) fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
+    let Command::RemoveContact { config, pubkey } = (*args).clone() else {
+        panic!("invalid Command");
+    };
+
+    let mut config = Config::read(config)?;
+
+    let name = config
+        .contact
+        .iter()
+        .find_map(|(name, c)| {
+            if hex::encode(c.pubkey.clone()) == pubkey {
+                Some(name.clone())
+            } else {
+                None
+            }
+        })
+        .clone()
+        .ok_or_eyre("contact not found")?;
+
+    config.contact.remove(&name);
+
+    config.write()?;
 
     Ok(())
 }
