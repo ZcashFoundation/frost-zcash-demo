@@ -44,6 +44,16 @@ pub(crate) enum Command {
         #[arg(short, long)]
         config: Option<String>,
     },
+    /// Remove a contact from the user's address book.
+    RemoveContact {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// The public key of the contact to remove (list with `contacts`).
+        #[arg(short, long)]
+        pubkey: String,
+    },
     TrustedDealer {
         /// The path to the config file to manage.
         ///
@@ -80,6 +90,17 @@ pub(crate) enum Command {
         /// $HOME/.local/frost/credentials.toml
         #[arg(short, long)]
         config: Option<String>,
+    },
+    /// Remove a group from the config.
+    RemoveGroup {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// The group to remove, identified by the group public key (use
+        /// `groups` to list)
+        #[arg(short, long)]
+        group: String,
     },
     Coordinator {
         /// The path to the config file to manage. If not specified, it uses

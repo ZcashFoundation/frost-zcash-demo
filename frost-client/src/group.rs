@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use eyre::OptionExt;
+
 use crate::{args::Command, config::Config};
 
 pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
@@ -13,6 +15,21 @@ pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         eprint!("{}", group.as_human_readable_summary(&config)?);
         eprintln!();
     }
+
+    Ok(())
+}
+
+/// Remove a group from the user's config file.
+pub(crate) fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
+    let Command::RemoveGroup { config, group } = (*args).clone() else {
+        panic!("invalid Command");
+    };
+
+    let mut config = Config::read(config)?;
+
+    config.group.remove(&group).ok_or_eyre("group not found")?;
+
+    config.write()?;
 
     Ok(())
 }
