@@ -98,7 +98,7 @@ impl Group {
         );
         for participant in self.participant.values() {
             let contact = config.contact_by_pubkey(&participant.pubkey)?;
-            s += &format!("\t{} ({})\n", contact.name, hex::encode(contact.pubkey));
+            s += &format!("\t{}\t({})\n", contact.name, hex::encode(contact.pubkey));
         }
         Ok(s)
     }

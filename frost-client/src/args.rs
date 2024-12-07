@@ -106,6 +106,21 @@ pub(crate) enum Command {
         #[arg(short, long)]
         group: String,
     },
+    /// Lists the active FROST signing sessions the user is in.
+    Sessions {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// The server URL to use. If `group` is specified and `server_url`
+        /// is not, it will use the server URL associated with `group` if any.
+        #[arg(short, long)]
+        server_url: Option<String>,
+        /// Optional group whose associated server URL will be used, identified
+        /// by the group public key (use `groups` to list).
+        #[arg(short, long)]
+        group: Option<String>,
+    },
     Coordinator {
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
@@ -155,5 +170,9 @@ pub(crate) enum Command {
         /// to list)
         #[arg(short, long)]
         group: String,
+        /// The session ID to use (use `sessions` to list). Can be omitted in
+        /// case there is a single active session.
+        #[arg(short = 'S', long)]
+        session: Option<String>,
     },
 }

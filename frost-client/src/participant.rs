@@ -40,6 +40,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
         config,
         server_url,
         group,
+        session,
     } = (*args).clone()
     else {
         panic!("invalid Command");
@@ -72,7 +73,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
             .ok_or_eyre("host missing in URL")?
             .to_owned(),
         port: server_url_parsed.port().unwrap_or(2744),
-        session_id: String::new(),
+        session_id: session.unwrap_or_default(),
         comm_privkey: Some(
             config
                 .communication_key

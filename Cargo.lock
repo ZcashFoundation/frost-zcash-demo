@@ -1112,6 +1112,7 @@ dependencies = [
  "tokio",
  "toml",
  "trusted-dealer",
+ "xeddsa",
 ]
 
 [[package]]
