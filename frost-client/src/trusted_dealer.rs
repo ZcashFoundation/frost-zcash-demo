@@ -33,6 +33,7 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
 ) -> Result<(), Box<dyn Error>> {
     let Command::TrustedDealer {
         config,
+        description,
         ciphersuite: _,
         threshold,
         num_signers,
@@ -107,6 +108,7 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         let key_package: KeyPackage<C> = share.clone().try_into()?;
         let group = Group {
             ciphersuite: C::ID.to_string(),
+            description: description.clone(),
             key_package: postcard::to_allocvec(&key_package)?,
             public_key_package: postcard::to_allocvec(&public_key_package)?,
             participant: participants.clone(),

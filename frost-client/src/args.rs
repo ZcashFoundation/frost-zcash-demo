@@ -83,6 +83,10 @@ pub(crate) enum Command {
         /// dealer process via the FROST server (TODO: this is not supported yet)
         #[arg(short, long)]
         config: Vec<String>,
+        /// A description of the group being created. Will be written to the
+        /// participant's config files and will help them identify groups.
+        #[arg(short, long)]
+        description: String,
         /// The comma-separated name of each participant.
         #[arg(short = 'N', long, value_delimiter = ',')]
         names: Vec<String>,
