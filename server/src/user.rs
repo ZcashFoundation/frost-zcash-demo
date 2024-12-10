@@ -11,13 +11,12 @@ use axum_extra::{
     TypedHeader,
 };
 use eyre::eyre;
-use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{state::SharedState, AppError};
 
 /// An User
-#[derive(Debug, FromRow)]
+#[derive(Debug)]
 #[allow(dead_code)]
 pub struct User {
     pub(crate) pubkey: Vec<u8>,

@@ -15,13 +15,11 @@ derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
-password-auth = "1.0.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.2.0" }
 serde_json = "1.0.133"
 snow = "0.9.6"
-sqlx = { version = "0.8.2", features = ["sqlite", "time", "runtime-tokio", "uuid"] }
 tokio = { version = "1.42", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1"
