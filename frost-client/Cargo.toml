@@ -31,3 +31,4 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
 rand = "0.8"
 stable-eyre = "0.2"
 itertools = "0.13.0"
+xeddsa = "1.0.2"
