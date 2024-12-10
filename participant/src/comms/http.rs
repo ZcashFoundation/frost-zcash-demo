@@ -122,7 +122,7 @@ where
         let client = reqwest::Client::new();
         Ok(Self {
             client,
-            host_port: format!("http://{}:{}", args.ip, args.port),
+            host_port: format!("https://{}:{}", args.ip, args.port),
             session_id: Uuid::parse_str(&args.session_id).ok(),
             access_token: None,
             args: args.clone(),
