@@ -98,13 +98,16 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// `comm_coordinator_pubkey_getter` enables encryption.
     pub comm_privkey: Option<Vec<u8>>,
 
-    /// A function that returns the public key for the given username of the
-    /// coordinator, or None if not available.
+    /// The participant's communication public key.
+    pub comm_pubkey: Option<Vec<u8>>,
+
+    /// A function that confirms that a public key from the server is trusted by
+    /// the user; returns the same public key.
     // It is a `Rc<dyn Fn>` to make it easier to use;
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
-    pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&str) -> Option<Vec<u8>>>>,
+    pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
@@ -142,6 +145,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             authentication_token: None,
             session_id: args.session_id.clone(),
             comm_privkey: None,
+            comm_pubkey: None,
             comm_coordinator_pubkey_getter: None,
         })
     }

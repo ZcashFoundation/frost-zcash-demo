@@ -10,6 +10,7 @@ axum = "0.7.9"
 axum-extra = { version = "0.9.6", features = ["typed-header"] }
 axum-macros = "0.4.2"
 clap = { version = "4.5.23", features = ["derive"] }
+delay_map = "0.4.0"
 derivative = "2.2.0"
 eyre = "0.6.11"
 frost-core = { version = "2.0.0", features = ["serde"] }
@@ -26,6 +27,8 @@ tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.11.0", features = ["v4", "fast-rng", "serde"] }
+xeddsa = "1.0.2"
+hex = "0.4.3"
 
 [dev-dependencies]
 axum-test = "16.4.0"

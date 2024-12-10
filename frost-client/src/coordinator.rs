@@ -58,24 +58,28 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
     let mut input = Box::new(std::io::stdin().lock());
     let mut output = std::io::stdout();
 
-    let server_url =
-        server_url.unwrap_or(group.server_url.clone().ok_or_eyre("server-url required")?);
+    let server_url = if let Some(server_url) = server_url {
+        server_url
+    } else {
+        group.server_url.clone().ok_or_eyre("server-url required")?
+    };
     let server_url_parsed =
         Url::parse(&format!("http://{}", server_url)).wrap_err("error parsing server-url")?;
 
-    let registry = config
-        .registry
-        .get(&server_url)
-        .ok_or_eyre("Not registered in the given server")?;
+    let signers = signers
+        .iter()
+        .map(|s| Ok(hex::decode(s)?.to_vec()))
+        .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
+    let num_signers = signers.len() as u16;
 
     let group_participants = group.participant.clone();
     let pargs = coordinator::args::ProcessedArgs {
         cli: false,
         http: true,
-        username: registry.username.clone(),
+        username: String::new(),
         password: String::new(),
-        signers: signers.clone(),
-        num_signers: signers.len() as u16,
+        signers,
+        num_signers,
         public_key_package,
         messages: coordinator::args::read_messages(&message, &mut output, &mut input)?,
         randomizers: coordinator::args::read_randomizers(&randomizer, &mut output, &mut input)?,
@@ -85,23 +89,26 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
             .ok_or_eyre("host missing in URL")?
             .to_owned(),
         port: server_url_parsed.port().unwrap_or(2744),
-        authentication_token: Some(
-            registry
-                .token
-                .clone()
-                .ok_or_eyre("Not logged in in the given server")?,
-        ),
+        authentication_token: None,
         comm_privkey: Some(
             config
                 .communication_key
+                .clone()
                 .ok_or_eyre("user not initialized")?
                 .privkey
                 .clone(),
         ),
-        comm_participant_pubkey_getter: Some(Rc::new(move |participant_username| {
+        comm_pubkey: Some(
+            config
+                .communication_key
+                .ok_or_eyre("user not initialized")?
+                .pubkey
+                .clone(),
+        ),
+        comm_participant_pubkey_getter: Some(Rc::new(move |participant_pubkey| {
             group_participants
                 .values()
-                .find(|p| p.username == Some(participant_username.to_string()))
+                .find(|p| p.pubkey == *participant_pubkey)
                 .map(|p| p.pubkey.clone())
         })),
     };
