@@ -1,17 +1,17 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    str::FromStr,
     sync::{Arc, RwLock},
 };
 
 use delay_map::{HashMapDelay, HashSetDelay};
-use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    SqlitePool,
-};
 use uuid::Uuid;
 
 use crate::Msg;
+
+/// How long a challenge can be replied to.
+const CHALLENGE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+/// How long an acesss token lasts.
+const ACCESS_TOKEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
 /// A particular signing session.
 #[derive(Debug)]
@@ -36,7 +36,6 @@ pub struct AppState {
     pub(crate) sessions: Arc<RwLock<SessionState>>,
     pub(crate) challenges: Arc<RwLock<HashSetDelay<Uuid>>>,
     pub(crate) access_tokens: Arc<RwLock<HashMapDelay<Uuid, Vec<u8>>>>,
-    pub(crate) db: SqlitePool,
 }
 
 #[derive(Debug, Default)]
@@ -47,22 +46,15 @@ pub struct SessionState {
 }
 
 impl AppState {
-    pub async fn new(database: &str) -> Result<SharedState, Box<dyn std::error::Error>> {
-        tracing::event!(tracing::Level::INFO, "opening database {}", database);
-        let options = SqliteConnectOptions::from_str(database)?.create_if_missing(true);
-        let db = SqlitePoolOptions::new().connect_with(options).await?;
-        sqlx::migrate!().run(&db).await?;
+    pub async fn new() -> Result<SharedState, Box<dyn std::error::Error>> {
         let state = Self {
             sessions: Default::default(),
-            challenges: RwLock::new(HashSetDelay::new(std::time::Duration::from_secs(10))).into(),
-            access_tokens: RwLock::new(HashMapDelay::new(std::time::Duration::from_secs(60 * 60)))
-                .into(),
-            db,
+            challenges: RwLock::new(HashSetDelay::new(CHALLENGE_TIMEOUT)).into(),
+            access_tokens: RwLock::new(HashMapDelay::new(ACCESS_TOKEN_TIMEOUT)).into(),
         };
         Ok(Arc::new(state))
     }
 }
 
-/// Type alias for the global state under a reference-counted RW mutex,
-/// which allows reading and writing the state across different handlers.
+/// Type alias for the global state under a reference-counted pointer.
 pub type SharedState = Arc<AppState>;

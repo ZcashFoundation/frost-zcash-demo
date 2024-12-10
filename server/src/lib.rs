@@ -22,12 +22,9 @@ use axum::{
 pub fn router(shared_state: SharedState) -> Router {
     // Shared state that is passed to each handler by axum
     Router::new()
-        .route("/register", post(functions::register))
         .route("/challenge", post(functions::challenge))
         .route("/login", post(functions::login))
-        .route("/key_login", post(functions::key_login))
         .route("/logout", post(functions::logout))
-        .route("/unregister", post(functions::unregister))
         .route("/create_new_session", post(functions::create_new_session))
         .route("/list_sessions", post(functions::list_sessions))
         .route("/get_session_info", post(functions::get_session_info))
@@ -40,7 +37,7 @@ pub fn router(shared_state: SharedState) -> Router {
 
 /// Run the server with the specified arguments.
 pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
-    let shared_state = AppState::new(&args.database).await?;
+    let shared_state = AppState::new().await?;
     let app = router(shared_state.clone());
 
     let addr = format!("{}:{}", args.ip, args.port);

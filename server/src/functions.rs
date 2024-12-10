@@ -6,34 +6,9 @@ use xeddsa::{xed25519, Verify as _};
 use crate::{
     state::{Session, SharedState},
     types::*,
-    user::{
-        add_access_token, authenticate_user, create_user, delete_user, remove_access_token, User,
-    },
+    user::User,
     AppError,
 };
-
-/// Implement the register API.
-#[tracing::instrument(ret, err(Debug), skip(state,args), fields(args.username = %args.username))]
-pub(crate) async fn register(
-    State(state): State<SharedState>,
-    Json(args): Json<RegisterArgs>,
-) -> Result<Json<()>, AppError> {
-    let username = args.username.trim();
-    let password = args.password.trim();
-
-    if username.is_empty() || password.is_empty() {
-        return Err(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("empty args").into(),
-        ));
-    }
-
-    create_user(state.db.clone(), username, password, args.pubkey)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    Ok(Json(()))
-}
 
 /// Implement the challenge API.
 #[tracing::instrument(ret, err(Debug), skip(state, _args))]
@@ -52,7 +27,7 @@ pub(crate) async fn challenge(
 
 /// Implement the key_login API.
 #[tracing::instrument(ret, err(Debug), skip(state, args))]
-pub(crate) async fn key_login(
+pub(crate) async fn login(
     State(state): State<SharedState>,
     Json(args): Json<KeyLoginArgs>,
 ) -> Result<Json<KeyLoginOutput>, AppError> {
@@ -100,81 +75,22 @@ pub(crate) async fn key_login(
     Ok(Json(token))
 }
 
-/// Implement the login API.
-#[tracing::instrument(ret, err(Debug), skip(state,args), fields(args.username = %args.username))]
-pub(crate) async fn login(
-    State(state): State<SharedState>,
-    Json(args): Json<LoginArgs>,
-) -> Result<Json<LoginOutput>, AppError> {
-    // Check if the user sent the credentials
-    if args.username.is_empty() || args.password.is_empty() {
-        return Err(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("empty args").into(),
-        ));
-    }
-
-    let user = authenticate_user(state.db.clone(), &args.username, &args.password)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    let user = match user {
-        Some(user) => user,
-        None => {
-            return Err(AppError(
-                StatusCode::UNAUTHORIZED,
-                eyre!("invalid user or password").into(),
-            ))
-        }
-    };
-
-    let access_token = add_access_token(state.db.clone(), user.id)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    let token = LoginOutput { access_token };
-
-    Ok(Json(token))
-}
-
 /// Implement the logout API.
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn logout(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<()>, AppError> {
-    state.access_tokens.write().unwrap().remove(
-        &user
-            .current_token
-            .expect("user is logged in so they must have a token"),
-    );
-
-    remove_access_token(
-        state.db.clone(),
-        user.current_token
-            .expect("user is logged in so they must have a token"),
-    )
-    .await
-    .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    Ok(Json(()))
-}
-
-/// Implement the unregister API.
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
-pub(crate) async fn unregister(
-    State(state): State<SharedState>,
-    user: User,
-) -> Result<Json<()>, AppError> {
-    delete_user(state.db.clone(), user.id)
-        .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
+    state
+        .access_tokens
+        .write()
+        .unwrap()
+        .remove(&user.current_token);
     Ok(Json(()))
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     user: User,
@@ -216,7 +132,7 @@ pub(crate) async fn create_new_session(
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
@@ -233,13 +149,28 @@ pub(crate) async fn list_sessions(
 }
 
 /// Implement the get_session_info API
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<GetSessionInfoArgs>,
 ) -> Result<Json<GetSessionInfoOutput>, AppError> {
     let state_lock = state.sessions.read().unwrap();
+
+    let sessions = state_lock
+        .sessions_by_pubkey
+        .get(&user.pubkey)
+        .ok_or(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("user is not in any session").into(),
+        ))?;
+
+    if !sessions.contains(&args.session_id) {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("session ID not found").into(),
+        ));
+    }
 
     let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
@@ -256,7 +187,7 @@ pub(crate) async fn get_session_info(
 
 /// Implement the send API
 // TODO: get identifier from channel rather from arguments
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn send(
     State(state): State<SharedState>,
     user: User,
@@ -294,7 +225,7 @@ pub(crate) async fn send(
 
 /// Implement the recv API
 // TODO: get identifier from channel rather from arguments
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn receive(
     State(state): State<SharedState>,
     user: User,
@@ -323,7 +254,7 @@ pub(crate) async fn receive(
 }
 
 /// Implement the close_session API.
-#[tracing::instrument(ret, err(Debug), skip(state,user), fields(user.username = %user.username))]
+#[tracing::instrument(ret, err(Debug), skip(state, user))]
 pub(crate) async fn close_session(
     State(state): State<SharedState>,
     user: User,
@@ -331,16 +262,31 @@ pub(crate) async fn close_session(
 ) -> Result<Json<()>, AppError> {
     let mut state = state.sessions.write().unwrap();
 
-    for username in state
-        .sessions
-        .get(&args.session_id)
-        .ok_or(AppError(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            eyre!("invalid session ID").into(),
-        ))?
-        .pubkeys
-        .clone()
-    {
+    let sessions = state.sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
+        StatusCode::NOT_FOUND,
+        eyre!("user is not in any session").into(),
+    ))?;
+
+    if !sessions.contains(&args.session_id) {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("session ID not found").into(),
+        ));
+    }
+
+    let session = state.sessions.get(&args.session_id).ok_or(AppError(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        eyre!("invalid session ID").into(),
+    ))?;
+
+    if session.coordinator_pubkey != user.pubkey {
+        return Err(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("user is not the coordinator of the session").into(),
+        ));
+    }
+
+    for username in session.pubkeys.clone() {
         if let Some(v) = state.sessions_by_pubkey.get_mut(&username) {
             v.remove(&args.session_id);
         }
