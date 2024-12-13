@@ -88,7 +88,7 @@ async fn test_main_router<
     let res = server
         .post("/login")
         .json(&server::KeyLoginArgs {
-            uuid: alice_challenge,
+            challenge: alice_challenge,
             pubkey: alice_keypair.public.clone(),
             signature: alice_signature.to_vec(),
         })
@@ -103,7 +103,7 @@ async fn test_main_router<
     let res = server
         .post("/login")
         .json(&server::KeyLoginArgs {
-            uuid: bob_challenge,
+            challenge: bob_challenge,
             pubkey: bob_keypair.public.clone(),
             signature: bob_signature.to_vec(),
         })
@@ -119,8 +119,10 @@ async fn test_main_router<
         .post("/create_new_session")
         .authorization_bearer(alice_token)
         .json(&server::CreateNewSessionArgs {
-            pubkeys: vec![alice_keypair.public.clone(), bob_keypair.public.clone()],
-            num_signers: 2,
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             message_count: 2,
         })
         .await;
@@ -459,7 +461,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let r = client
         .post("https://127.0.0.1:2744/login")
         .json(&server::KeyLoginArgs {
-            uuid: alice_challenge,
+            challenge: alice_challenge,
             pubkey: alice_keypair.public.clone(),
             signature: alice_signature.to_vec(),
         })
@@ -476,9 +478,11 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("https://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
         .json(&server::CreateNewSessionArgs {
-            pubkeys: vec![alice_keypair.public.clone(), bob_keypair.public.clone()],
+            pubkeys: vec![
+                server::PublicKey(alice_keypair.public.clone()),
+                server::PublicKey(bob_keypair.public.clone()),
+            ],
             message_count: 1,
-            num_signers: 2,
         })
         .send()
         .await?;

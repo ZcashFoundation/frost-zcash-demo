@@ -26,7 +26,7 @@ pub struct ChallengeOutput {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyLoginArgs {
-    pub uuid: Uuid,
+    pub challenge: Uuid,
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
@@ -57,8 +57,7 @@ pub struct LoginArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateNewSessionArgs {
-    pub pubkeys: Vec<Vec<u8>>,
-    pub num_signers: u16,
+    pub pubkeys: Vec<PublicKey>,
     pub message_count: u8,
 }
 
@@ -79,13 +78,12 @@ pub struct GetSessionInfoArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GetSessionInfoOutput {
-    pub num_signers: u16,
     pub message_count: u8,
-    pub pubkeys: Vec<Vec<u8>>,
+    pub pubkeys: Vec<PublicKey>,
     pub coordinator_pubkey: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PublicKey(
     #[serde(
@@ -94,6 +92,12 @@ pub struct PublicKey(
     )]
     pub Vec<u8>,
 );
+
+impl std::fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&hex::encode(&self.0))
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SendArgs {

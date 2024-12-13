@@ -2976,6 +2976,7 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
+ "hex",
  "password-auth",
  "rand",
  "rcgen",
