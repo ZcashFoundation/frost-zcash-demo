@@ -265,7 +265,6 @@ pub struct HTTPComms<C: Ciphersuite> {
     host_port: String,
     session_id: Option<Uuid>,
     access_token: Option<String>,
-    num_signers: u16,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     pubkeys: HashMap<Vec<u8>, Identifier<C>>,
@@ -284,7 +283,6 @@ impl<C: Ciphersuite> HTTPComms<C> {
             host_port: format!("https://{}:{}", args.ip, args.port),
             session_id: None,
             access_token: None,
-            num_signers: 0,
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
             pubkeys: Default::default(),
@@ -342,7 +340,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
         _pub_key_package: &PublicKeyPackage<C>,
-        num_signers: u16,
+        _num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
         let mut rng = thread_rng();
         let challenge = self
@@ -370,7 +368,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             self.client
                 .post(format!("{}/login", self.host_port))
                 .json(&server::KeyLoginArgs {
-                    uuid: challenge,
+                    challenge,
                     pubkey: self
                         .args
                         .comm_pubkey
@@ -391,8 +389,12 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .json(&server::CreateNewSessionArgs {
-                pubkeys: self.args.signers.clone(),
-                num_signers,
+                pubkeys: self
+                    .args
+                    .signers
+                    .iter()
+                    .map(|p| server::PublicKey(p.clone()))
+                    .collect(),
                 message_count: 1,
             })
             .send()
@@ -407,7 +409,6 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             );
         }
         self.session_id = Some(r.session_id);
-        self.num_signers = num_signers;
 
         // If encryption is enabled, create the Noise objects
         (self.send_noise, self.recv_noise) = if let (

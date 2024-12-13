@@ -42,7 +42,7 @@ pub struct Args {
     pub ip: String,
 
     /// Port to connect to, if using online comms
-    #[arg(short, long, default_value_t = 2744)]
+    #[arg(short, long, default_value_t = 443)]
     pub port: u16,
 
     /// Optional Session ID
