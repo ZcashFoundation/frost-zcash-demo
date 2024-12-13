@@ -42,8 +42,6 @@ pub struct Session {
     pub(crate) pubkeys: Vec<Vec<u8>>,
     /// The public key of the coordinator
     pub(crate) coordinator_pubkey: Vec<u8>,
-    /// The number of signers in the session.
-    pub(crate) num_signers: u16,
     /// The number of messages being simultaneously signed.
     pub(crate) message_count: u8,
     /// The message queue.

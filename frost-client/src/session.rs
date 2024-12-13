@@ -66,7 +66,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     let access_token = client
         .post(format!("{}/login", host_port))
         .json(&server::KeyLoginArgs {
-            uuid: challenge,
+            challenge,
             pubkey: comm_pubkey.clone(),
             signature: signature.to_vec(),
         })
@@ -102,7 +102,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
             let participants: Vec<_> = r
                 .pubkeys
                 .iter()
-                .map(|pubkey| config.contact_by_pubkey(pubkey))
+                .map(|pubkey| config.contact_by_pubkey(&pubkey.0))
                 .collect();
             eprintln!("Session with ID {}", session_id);
             eprintln!(

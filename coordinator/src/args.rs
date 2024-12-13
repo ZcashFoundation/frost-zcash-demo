@@ -70,7 +70,7 @@ pub struct Args {
 
     /// Port to bind to, if using socket comms.
     /// Port to connect to, if using HTTP mode.
-    #[arg(short, long, default_value_t = 2744)]
+    #[arg(short, long, default_value_t = 443)]
     pub port: u16,
 }
 

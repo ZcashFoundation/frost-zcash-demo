@@ -49,9 +49,10 @@ pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
 
     if args.no_tls_very_insecure {
         tracing::warn!(
-            "starting an INSECURE HTTP server. This should be done only for \
-            testing or if you are providing TLS/HTTPS with a separate \
-            mechanism (e.g. reverse proxy such as nginx)"
+            "starting an INSECURE HTTP server at {}. This should be done only \
+            for testing or if you are providing TLS/HTTPS with a separate \
+            mechanism (e.g. reverse proxy such as nginx)",
+            addr,
         );
         let listener = tokio::net::TcpListener::bind(addr).await?;
         Ok(axum::serve(listener, app).await?)
