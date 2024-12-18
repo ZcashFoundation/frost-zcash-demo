@@ -12,7 +12,9 @@ use eyre::{eyre, OptionExt};
 use frost_core::{
     self as frost, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
 };
+use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
+use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
@@ -177,21 +179,46 @@ where
         ),
         Box<dyn Error>,
     > {
-        if self.access_token.is_empty() {
-            self.access_token = self
-                .client
-                .post(format!("{}/login", self.host_port))
-                .json(&server::LoginArgs {
-                    username: self.args.username.clone(),
-                    password: self.args.password.clone(),
-                })
-                .send()
-                .await?
-                .json::<server::LoginOutput>()
-                .await?
-                .access_token
-                .to_string();
-        }
+        let mut rng = thread_rng();
+        let challenge = self
+            .client
+            .post(format!("{}/challenge", self.host_port))
+            .json(&server::ChallengeArgs {})
+            .send()
+            .await?
+            .json::<server::ChallengeOutput>()
+            .await?
+            .challenge;
+
+        let privkey = xed25519::PrivateKey::from(
+            &TryInto::<[u8; 32]>::try_into(
+                self.args
+                    .comm_privkey
+                    .clone()
+                    .ok_or_eyre("comm_privkey must be specified")?,
+            )
+            .map_err(|_| eyre!("invalid comm_privkey"))?,
+        );
+        let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+
+        self.access_token = self
+            .client
+            .post(format!("{}/key_login", self.host_port))
+            .json(&server::KeyLoginArgs {
+                uuid: challenge,
+                pubkey: self
+                    .args
+                    .comm_pubkey
+                    .clone()
+                    .ok_or_eyre("comm_pubkey must be specified")?,
+                signature: signature.to_vec(),
+            })
+            .send()
+            .await?
+            .json::<server::LoginOutput>()
+            .await?
+            .access_token
+            .to_string();
 
         let session_id = match self.session_id {
             Some(s) => s,
@@ -235,7 +262,7 @@ where
                 .json::<server::GetSessionInfoOutput>()
                 .await?;
 
-            let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
+            let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
             let builder = snow::Builder::new(
                 "Noise_K_25519_ChaChaPoly_BLAKE2s"
                     .parse()

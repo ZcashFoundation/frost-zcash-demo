@@ -28,6 +28,7 @@ tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
 rpassword = "7.3.1"
 snow = "0.9.6"
+xeddsa = "1.0.2"
 
 [features]
 default = []

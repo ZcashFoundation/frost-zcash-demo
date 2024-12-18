@@ -109,10 +109,10 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// it will login with `password`
     pub authentication_token: Option<String>,
 
-    /// The comma-separated usernames of the signers to use in HTTP mode.
-    /// If HTTP mode is enabled and this is empty, then the session ID
-    /// will be printed and will have to be shared manually.
-    pub signers: Vec<String>,
+    /// The comma-separated keys of the signers to use in
+    /// HTTP mode. If HTTP mode is enabled and this is empty, then the session
+    /// ID will be printed and will have to be shared manually.
+    pub signers: Vec<Vec<u8>>,
 
     /// The number of participants.
     pub num_signers: u16,
@@ -142,13 +142,16 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// `comm_participant_pubkey_getter` enables encryption.
     pub comm_privkey: Option<Vec<u8>>,
 
-    /// A function that returns the public key for a given username, or None
-    /// if not available.
+    /// The coordinator's communication public key.
+    pub comm_pubkey: Option<Vec<u8>>,
+
+    /// A function that confirms if the public key of a participant is in the
+    /// user's contact book, returning the same public key, or None if not.
     // It is a `Rc<dyn Fn>` to make it easier to use;
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
-    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&str) -> Option<Vec<u8>>>>,
+    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
@@ -185,6 +188,12 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             &args.public_key_package,
         )?;
 
+        let signers = args
+            .signers
+            .iter()
+            .map(|s| Ok(hex::decode(s)?.to_vec()))
+            .collect::<Result<_, Box<dyn Error>>>()?;
+
         let public_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
 
         let messages = read_messages(&args.message, output, input)?;
@@ -197,7 +206,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             http: args.http,
             username: args.username.clone(),
             password,
-            signers: args.signers.clone(),
+            signers,
             num_signers,
             public_key_package,
             messages,
@@ -207,6 +216,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             port: args.port,
             authentication_token: None,
             comm_privkey: None,
+            comm_pubkey: None,
             comm_participant_pubkey_getter: None,
         })
     }

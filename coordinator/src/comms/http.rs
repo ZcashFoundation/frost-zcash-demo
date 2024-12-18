@@ -17,7 +17,11 @@ use frost_core::{
 };
 
 use participant::comms::http::Noise;
-use server::{Msg, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
+use rand::thread_rng;
+use server::{
+    Msg, PublicKey, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid,
+};
+use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
@@ -42,7 +46,7 @@ pub enum SessionState<C: Ciphersuite> {
         /// Commitments sent by participants so far, for each message being
         /// signed.
         commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
-        usernames: HashMap<String, Identifier<C>>,
+        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
     },
     /// Commitments have been sent by all participants. Coordinator can create
     /// SigningPackage and send to participants. Waiting for participants to
@@ -52,8 +56,8 @@ pub enum SessionState<C: Ciphersuite> {
         args: SessionStateArgs,
         /// All commitments sent by participants, for each message being signed.
         commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
-        /// Username -> Identifier mapping.
-        usernames: HashMap<String, Identifier<C>>,
+        /// Pubkey -> Identifier mapping.
+        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
         /// Signature shares sent by participants so far, for each message being
         /// signed.
         signature_shares: HashMap<Identifier<C>, Vec<SignatureShare<C>>>,
@@ -78,7 +82,7 @@ impl<C: Ciphersuite> SessionState<C> {
         Self::WaitingForCommitments {
             args,
             commitments: Default::default(),
-            usernames: Default::default(),
+            pubkeys: Default::default(),
         }
     }
 
@@ -108,13 +112,13 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle commitments sent by a participant.
     fn handle_commitments(
         &mut self,
-        username: String,
+        pubkey: Vec<u8>,
         send_commitments_args: SendCommitmentsArgs<C>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForCommitments {
             args,
             commitments,
-            usernames,
+            pubkeys: usernames,
         } = self
         {
             if send_commitments_args.commitments.len() != args.num_messages {
@@ -129,14 +133,14 @@ impl<C: Ciphersuite> SessionState<C> {
                 send_commitments_args.identifier,
                 send_commitments_args.commitments,
             );
-            usernames.insert(username, send_commitments_args.identifier);
+            usernames.insert(pubkey, send_commitments_args.identifier);
 
             // If complete, advance to next state
             if commitments.len() == args.num_signers {
                 *self = SessionState::WaitingForSignatureShares {
                     args: args.clone(),
                     commitments: commitments.clone(),
-                    usernames: usernames.clone(),
+                    pubkeys: usernames.clone(),
                     signature_shares: Default::default(),
                 }
             }
@@ -162,14 +166,14 @@ impl<C: Ciphersuite> SessionState<C> {
     ) -> Result<
         (
             Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>>,
-            HashMap<String, Identifier<C>>,
+            HashMap<Vec<u8>, Identifier<C>>,
         ),
         Box<dyn Error>,
     > {
         if let SessionState::WaitingForSignatureShares {
             args,
             commitments,
-            usernames,
+            pubkeys,
             ..
         } = self
         {
@@ -180,7 +184,7 @@ impl<C: Ciphersuite> SessionState<C> {
                 .num_messages)
                 .map(|i| commitments.iter().map(|(id, c)| (*id, c[i])).collect())
                 .collect();
-            Ok((commitments, usernames.clone()))
+            Ok((commitments, pubkeys.clone()))
         } else {
             panic!("wrong state");
         }
@@ -195,7 +199,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle signature share sent by a participant.
     fn handle_signature_share(
         &mut self,
-        _username: String,
+        _username: Vec<u8>,
         send_signature_shares_args: SendSignatureSharesArgs<C>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForSignatureShares {
@@ -266,12 +270,12 @@ pub struct HTTPComms<C: Ciphersuite> {
     num_signers: u16,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
-    usernames: HashMap<String, Identifier<C>>,
+    pubkeys: HashMap<Vec<u8>, Identifier<C>>,
     should_logout: bool,
-    // The "send" Noise objects by username of recipients.
-    send_noise: Option<HashMap<String, Noise>>,
-    // The "receive" Noise objects by username of senders.
-    recv_noise: Option<HashMap<String, Noise>>,
+    // The "send" Noise objects by pubkey of recipients.
+    send_noise: Option<HashMap<Vec<u8>, Noise>>,
+    // The "receive" Noise objects by pubkey of senders.
+    recv_noise: Option<HashMap<Vec<u8>, Noise>>,
     _phantom: PhantomData<C>,
 }
 
@@ -286,7 +290,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
             num_signers: 0,
             args: args.clone(),
             state: SessionState::new(args.messages.len(), args.num_signers as usize),
-            usernames: Default::default(),
+            pubkeys: Default::default(),
             should_logout: args.authentication_token.is_none(),
             send_noise: None,
             recv_noise: None,
@@ -297,7 +301,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
     // Encrypts a message for a given recipient if encryption is enabled.
     fn encrypt_if_needed(
         &mut self,
-        recipient: &str,
+        recipient: &Vec<u8>,
         msg: Vec<u8>,
     ) -> Result<Vec<u8>, Box<dyn Error>> {
         if let Some(noise_map) = &mut self.send_noise {
@@ -344,28 +348,53 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _pub_key_package: &PublicKeyPackage<C>,
         num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
-        if self.access_token.is_empty() {
-            self.access_token = self
-                .client
-                .post(format!("{}/login", self.host_port))
-                .json(&server::LoginArgs {
-                    username: self.args.username.clone(),
-                    password: self.args.password.clone(),
-                })
-                .send()
-                .await?
-                .json::<server::LoginOutput>()
-                .await?
-                .access_token
-                .to_string();
-        }
+        let mut rng = thread_rng();
+        let challenge = self
+            .client
+            .post(format!("{}/challenge", self.host_port))
+            .json(&server::ChallengeArgs {})
+            .send()
+            .await?
+            .json::<server::ChallengeOutput>()
+            .await?
+            .challenge;
+
+        let privkey = xed25519::PrivateKey::from(
+            &TryInto::<[u8; 32]>::try_into(
+                self.args
+                    .comm_privkey
+                    .clone()
+                    .ok_or_eyre("comm_privkey must be specified")?,
+            )
+            .map_err(|_| eyre!("invalid comm_privkey"))?,
+        );
+        let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+
+        self.access_token = self
+            .client
+            .post(format!("{}/key_login", self.host_port))
+            .json(&server::KeyLoginArgs {
+                uuid: challenge,
+                pubkey: self
+                    .args
+                    .comm_pubkey
+                    .clone()
+                    .ok_or_eyre("comm_pubkey must be specified")?,
+                signature: signature.to_vec(),
+            })
+            .send()
+            .await?
+            .json::<server::LoginOutput>()
+            .await?
+            .access_token
+            .to_string();
 
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(&self.access_token)
             .json(&server::CreateNewSessionArgs {
-                usernames: self.args.signers.clone(),
+                pubkeys: self.args.signers.iter().cloned().map(PublicKey).collect(),
                 num_signers,
                 message_count: 1,
             })
@@ -393,8 +422,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         ) {
             let mut send_noise_map = HashMap::new();
             let mut recv_noise_map = HashMap::new();
-            for username in &self.args.signers {
-                let comm_participant_pubkey = comm_participant_pubkey_getter(username).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
+            for pubkey in &self.args.signers {
+                let comm_participant_pubkey = comm_participant_pubkey_getter(pubkey).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
                 let builder = snow::Builder::new(
                     "Noise_K_25519_ChaChaPoly_BLAKE2s"
                         .parse()
@@ -417,8 +446,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                         .remote_public_key(&comm_participant_pubkey)
                         .build_responder()?,
                 );
-                send_noise_map.insert(username.clone(), send_noise);
-                recv_noise_map.insert(username.clone(), recv_noise);
+                send_noise_map.insert(pubkey.clone(), send_noise);
+                recv_noise_map.insert(pubkey.clone(), recv_noise);
             }
             (Some(send_noise_map), Some(recv_noise_map))
         } else {
@@ -452,8 +481,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         }
         eprintln!();
 
-        let (commitments, usernames) = self.state.commitments()?;
-        self.usernames = usernames;
+        let (commitments, pubkeys) = self.state.commitments()?;
+        self.pubkeys = pubkeys;
 
         // TODO: support more than 1
         Ok(commitments[0].clone())
@@ -475,8 +504,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         // We need to send a message separately for each recipient even if the
         // message is the same, because they are (possibly) encrypted
         // individually for each recipient.
-        let usernames: Vec<_> = self.usernames.keys().cloned().collect();
-        for recipient in usernames {
+        let pubkeys: Vec<_> = self.pubkeys.keys().cloned().collect();
+        for recipient in pubkeys {
             let msg = self
                 .encrypt_if_needed(&recipient, serde_json::to_vec(&send_signing_package_args)?)?;
             let _r = self
@@ -485,7 +514,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .bearer_auth(&self.access_token)
                 .json(&server::SendArgs {
                     session_id: self.session_id.unwrap(),
-                    recipients: vec![recipient.clone()],
+                    recipients: vec![server::PublicKey(recipient.clone())],
                     msg,
                 })
                 .send()
