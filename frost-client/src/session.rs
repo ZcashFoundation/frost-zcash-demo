@@ -50,10 +50,10 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
 
     let challenge = client
         .post(format!("{}/challenge", host_port))
-        .json(&server::ChallengeArgs {})
+        .json(&frostd::ChallengeArgs {})
         .send()
         .await?
-        .json::<server::ChallengeOutput>()
+        .json::<frostd::ChallengeOutput>()
         .await?
         .challenge;
 
@@ -65,14 +65,14 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
 
     let access_token = client
         .post(format!("{}/login", host_port))
-        .json(&server::KeyLoginArgs {
+        .json(&frostd::KeyLoginArgs {
             challenge,
             pubkey: comm_pubkey.clone(),
             signature: signature.to_vec(),
         })
         .send()
         .await?
-        .json::<server::LoginOutput>()
+        .json::<frostd::LoginOutput>()
         .await?
         .access_token
         .to_string();
@@ -83,7 +83,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         .bearer_auth(&access_token)
         .send()
         .await?
-        .json::<server::ListSessionsOutput>()
+        .json::<frostd::ListSessionsOutput>()
         .await?;
 
     if r.session_ids.is_empty() {
@@ -93,10 +93,10 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
             let r = client
                 .post(format!("{}/get_session_info", host_port))
                 .bearer_auth(&access_token)
-                .json(&server::GetSessionInfoArgs { session_id })
+                .json(&frostd::GetSessionInfoArgs { session_id })
                 .send()
                 .await?
-                .json::<server::GetSessionInfoOutput>()
+                .json::<frostd::GetSessionInfoOutput>()
                 .await?;
             let coordinator = config.contact_by_pubkey(&r.coordinator_pubkey);
             let participants: Vec<_> = r

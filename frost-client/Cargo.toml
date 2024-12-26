@@ -9,7 +9,7 @@ reqwest = { version = "0.12.9", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 snow = "0.9.6"
 toml = "0.8.19"
-server = { path = "../server" }
+frostd = { path = "../frostd" }
 trusted-dealer = { path = "../trusted-dealer" }
 coordinator = { path = "../coordinator" }
 participant = { path = "../participant" }
