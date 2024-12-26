@@ -106,12 +106,12 @@ pub(crate) async fn create_new_session(
     // Create new session object.
     let id = Uuid::new_v4();
 
-    let mut state = state.sessions.write().unwrap();
+    let mut sessions = state.sessions.sessions.write().unwrap();
+    let mut sessions_by_pubkey = state.sessions.sessions_by_pubkey.write().unwrap();
 
     // Save session ID in global state
     for pubkey in &args.pubkeys {
-        state
-            .sessions_by_pubkey
+        sessions_by_pubkey
             .entry(pubkey.0.clone())
             .or_default()
             .insert(id);
@@ -125,7 +125,7 @@ pub(crate) async fn create_new_session(
         queue: Default::default(),
     };
     // Save session into global state.
-    state.sessions.insert(id, session);
+    sessions.insert(id, session);
 
     let user = CreateNewSessionOutput { session_id: id };
     Ok(Json(user))
@@ -137,10 +137,9 @@ pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
 ) -> Result<Json<ListSessionsOutput>, AppError> {
-    let state = state.sessions.read().unwrap();
+    let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
-    let session_ids = state
-        .sessions_by_pubkey
+    let session_ids = sessions_by_pubkey
         .get(&user.pubkey)
         .map(|s| s.iter().cloned().collect())
         .unwrap_or_default();
@@ -155,24 +154,22 @@ pub(crate) async fn get_session_info(
     user: User,
     Json(args): Json<GetSessionInfoArgs>,
 ) -> Result<Json<GetSessionInfoOutput>, AppError> {
-    let state_lock = state.sessions.read().unwrap();
+    let sessions = state.sessions.sessions.read().unwrap();
+    let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
-    let sessions = state_lock
-        .sessions_by_pubkey
-        .get(&user.pubkey)
-        .ok_or(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("user is not in any session").into(),
-        ))?;
+    let user_sessions = sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
+        StatusCode::NOT_FOUND,
+        eyre!("user is not in any session").into(),
+    ))?;
 
-    if !sessions.contains(&args.session_id) {
+    if !user_sessions.contains(&args.session_id) {
         return Err(AppError(
             StatusCode::NOT_FOUND,
             eyre!("session ID not found").into(),
         ));
     }
 
-    let session = state_lock.sessions.get(&args.session_id).ok_or(AppError(
+    let session = sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::NOT_FOUND,
         eyre!("session ID not found").into(),
     ))?;
@@ -194,15 +191,14 @@ pub(crate) async fn send(
     Json(args): Json<SendArgs>,
 ) -> Result<(), AppError> {
     // Get the mutex lock to read and write from the state
-    let mut state_lock = state.sessions.write().unwrap();
+    let mut sessions = state.sessions.sessions.write().unwrap();
 
-    let session = state_lock
-        .sessions
-        .get_mut(&args.session_id)
-        .ok_or(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("session ID not found").into(),
-        ))?;
+    // TODO: change to get_mut and modify in-place, if HashMapDelay ever
+    // adds support to it
+    let mut session = sessions.remove(&args.session_id).ok_or(AppError(
+        StatusCode::NOT_FOUND,
+        eyre!("session ID not found").into(),
+    ))?;
 
     let recipients = if args.recipients.is_empty() {
         vec![Vec::new()]
@@ -219,6 +215,7 @@ pub(crate) async fn send(
                 msg: args.msg.clone(),
             });
     }
+    sessions.insert(args.session_id, session);
 
     Ok(())
 }
@@ -232,15 +229,16 @@ pub(crate) async fn receive(
     Json(args): Json<ReceiveArgs>,
 ) -> Result<Json<ReceiveOutput>, AppError> {
     // Get the mutex lock to read and write from the state
-    let mut state_lock = state.sessions.write().unwrap();
+    let sessions = state.sessions.sessions.read().unwrap();
 
-    let session = state_lock
-        .sessions
-        .get_mut(&args.session_id)
-        .ok_or(AppError(
-            StatusCode::NOT_FOUND,
-            eyre!("session ID not found").into(),
-        ))?;
+    // TODO: change to get_mut and modify in-place, if HashMapDelay ever
+    // adds support to it. This will also simplify the code since
+    // we have to do a workaround in order to not renew the timeout if there
+    // are no messages. See https://github.com/AgeManning/delay_map/issues/26
+    let session = sessions.get(&args.session_id).ok_or(AppError(
+        StatusCode::NOT_FOUND,
+        eyre!("session ID not found").into(),
+    ))?;
 
     let pubkey = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
         Vec::new()
@@ -248,7 +246,22 @@ pub(crate) async fn receive(
         user.pubkey
     };
 
-    let msgs = session.queue.entry(pubkey).or_default().drain(..).collect();
+    // If there are no new messages, we don't want to renew the timeout.
+    // Thus only if there are new messages we drop the read-only lock
+    // to get the write lock and re-insert the updated session.
+    let msgs = if session.queue.contains_key(&pubkey) {
+        drop(sessions);
+        let mut sessions = state.sessions.sessions.write().unwrap();
+        let mut session = sessions.remove(&args.session_id).ok_or(AppError(
+            StatusCode::NOT_FOUND,
+            eyre!("session ID not found").into(),
+        ))?;
+        let msgs = session.queue.entry(pubkey).or_default().drain(..).collect();
+        sessions.insert(args.session_id, session);
+        msgs
+    } else {
+        vec![]
+    };
 
     Ok(Json(ReceiveOutput { msgs }))
 }
@@ -260,21 +273,22 @@ pub(crate) async fn close_session(
     user: User,
     Json(args): Json<CloseSessionArgs>,
 ) -> Result<Json<()>, AppError> {
-    let mut state = state.sessions.write().unwrap();
+    let mut sessions = state.sessions.sessions.write().unwrap();
+    let mut sessions_by_pubkey = state.sessions.sessions_by_pubkey.write().unwrap();
 
-    let sessions = state.sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
+    let user_sessions = sessions_by_pubkey.get(&user.pubkey).ok_or(AppError(
         StatusCode::NOT_FOUND,
         eyre!("user is not in any session").into(),
     ))?;
 
-    if !sessions.contains(&args.session_id) {
+    if !user_sessions.contains(&args.session_id) {
         return Err(AppError(
             StatusCode::NOT_FOUND,
             eyre!("session ID not found").into(),
         ));
     }
 
-    let session = state.sessions.get(&args.session_id).ok_or(AppError(
+    let session = sessions.get(&args.session_id).ok_or(AppError(
         StatusCode::INTERNAL_SERVER_ERROR,
         eyre!("invalid session ID").into(),
     ))?;
@@ -287,10 +301,10 @@ pub(crate) async fn close_session(
     }
 
     for username in session.pubkeys.clone() {
-        if let Some(v) = state.sessions_by_pubkey.get_mut(&username) {
+        if let Some(v) = sessions_by_pubkey.get_mut(&username) {
             v.remove(&args.session_id);
         }
     }
-    state.sessions.remove(&args.session_id);
+    sessions.remove(&args.session_id);
     Ok(Json(()))
 }
