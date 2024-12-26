@@ -501,7 +501,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Test if passing the wrong session ID returns an error
     let wrong_session_id = Uuid::new_v4();
     let r = client
-        .post("http://127.0.0.1:2744/get_session_info")
+        .post("https://127.0.0.1:2744/get_session_info")
         .bearer_auth(access_token)
         .json(&server::GetSessionInfoArgs {
             session_id: wrong_session_id,
@@ -516,7 +516,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Attempt to close the session as a participant (Bob)
     // Log in as Bob
     let r = client
-        .post("http://127.0.0.1:2744/challenge")
+        .post("https://127.0.0.1:2744/challenge")
         .json(&server::ChallengeArgs {})
         .send()
         .await?;
@@ -526,7 +526,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
     let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
     let r = client
-        .post("http://127.0.0.1:2744/login")
+        .post("https://127.0.0.1:2744/login")
         .json(&server::KeyLoginArgs {
             uuid: bob_challenge,
             pubkey: bob_keypair.public.clone(),
@@ -538,7 +538,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let bob_access_token = r.access_token;
     // Try to close the session
     let r = client
-        .post("http://127.0.0.1:2744/close_session")
+        .post("https://127.0.0.1:2744/close_session")
         .bearer_auth(bob_access_token)
         .json(&server::CloseSessionArgs { session_id })
         .send()

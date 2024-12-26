@@ -296,44 +296,40 @@ impl<C: Ciphersuite> HTTPComms<C> {
         })
     }
 
-    // Encrypts a message for a given recipient if encryption is enabled.
-    fn encrypt_if_needed(
-        &mut self,
-        recipient: &Vec<u8>,
-        msg: Vec<u8>,
-    ) -> Result<Vec<u8>, Box<dyn Error>> {
-        if let Some(noise_map) = &mut self.send_noise {
-            let noise = noise_map
-                .get_mut(recipient)
-                .ok_or_eyre("unknown recipient")?;
-            let mut encrypted = vec![0; 65535];
-            let len = noise.write_message(&msg, &mut encrypted)?;
-            encrypted.truncate(len);
-            Ok(encrypted)
-        } else {
-            Ok(msg)
-        }
+    // Encrypts a message for a given recipient.
+    fn encrypt(&mut self, recipient: &Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+        let noise_map = self
+            .send_noise
+            .as_mut()
+            .expect("send_noise must have been set previously");
+        let noise = noise_map
+            .get_mut(recipient)
+            .ok_or_eyre("unknown recipient")?;
+        let mut encrypted = vec![0; 65535];
+        let len = noise.write_message(&msg, &mut encrypted)?;
+        encrypted.truncate(len);
+        Ok(encrypted)
     }
 
-    // Decrypts a message if encryption is enabled.
+    // Decrypts a message.
     // Note that this authenticates the `sender` in the `Msg` struct; if the
     // sender is tampered with, the message would fail to decrypt.
-    fn decrypt_if_needed(&mut self, msg: Msg) -> Result<Msg, Box<dyn Error>> {
-        if let Some(noise_map) = &mut self.recv_noise {
-            let noise = noise_map
-                .get_mut(&msg.sender)
-                .ok_or_eyre("unknown sender")?;
-            let mut decrypted = vec![0; 65535];
-            decrypted.resize(65535, 0);
-            let len = noise.read_message(&msg.msg, &mut decrypted)?;
-            decrypted.truncate(len);
-            Ok(Msg {
-                sender: msg.sender,
-                msg: decrypted,
-            })
-        } else {
-            Ok(msg)
-        }
+    fn decrypt(&mut self, msg: Msg) -> Result<Msg, Box<dyn Error>> {
+        let noise_map = self
+            .recv_noise
+            .as_mut()
+            .expect("recv_noise must have been set previously");
+        let noise = noise_map
+            .get_mut(&msg.sender)
+            .ok_or_eyre("unknown sender")?;
+        let mut decrypted = vec![0; 65535];
+        decrypted.resize(65535, 0);
+        let len = noise.read_message(&msg.msg, &mut decrypted)?;
+        decrypted.truncate(len);
+        Ok(Msg {
+            sender: msg.sender,
+            msg: decrypted,
+        })
     }
 }
 
@@ -411,47 +407,48 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         self.session_id = Some(r.session_id);
         self.num_signers = num_signers;
 
-        // If encryption is enabled, create the Noise objects
-        (self.send_noise, self.recv_noise) = if let (
-            Some(comm_privkey),
-            Some(comm_participant_pubkey_getter),
-        ) = (
+        let (Some(comm_privkey), Some(comm_participant_pubkey_getter)) = (
             &self.args.comm_privkey,
             &self.args.comm_participant_pubkey_getter,
-        ) {
-            let mut send_noise_map = HashMap::new();
-            let mut recv_noise_map = HashMap::new();
-            for pubkey in &self.args.signers {
-                let comm_participant_pubkey = comm_participant_pubkey_getter(pubkey).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
-                let builder = snow::Builder::new(
-                    "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                        .parse()
-                        .expect("should be a valid cipher"),
-                );
-                let send_noise = Noise::new(
-                    builder
-                        .local_private_key(comm_privkey)
-                        .remote_public_key(&comm_participant_pubkey)
-                        .build_initiator()?,
-                );
-                let builder = snow::Builder::new(
-                    "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                        .parse()
-                        .expect("should be a valid cipher"),
-                );
-                let recv_noise = Noise::new(
-                    builder
-                        .local_private_key(comm_privkey)
-                        .remote_public_key(&comm_participant_pubkey)
-                        .build_responder()?,
-                );
-                send_noise_map.insert(pubkey.clone(), send_noise);
-                recv_noise_map.insert(pubkey.clone(), recv_noise);
-            }
-            (Some(send_noise_map), Some(recv_noise_map))
-        } else {
-            (None, None)
+        ) else {
+            return Err(
+                eyre!("comm_privkey and comm_participant_pubkey_getter must be specified").into(),
+            );
         };
+
+        // If encryption is enabled, create the Noise objects
+
+        let mut send_noise_map = HashMap::new();
+        let mut recv_noise_map = HashMap::new();
+        for pubkey in &self.args.signers {
+            let comm_participant_pubkey = comm_participant_pubkey_getter(pubkey).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
+            let builder = snow::Builder::new(
+                "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                    .parse()
+                    .expect("should be a valid cipher"),
+            );
+            let send_noise = Noise::new(
+                builder
+                    .local_private_key(comm_privkey)
+                    .remote_public_key(&comm_participant_pubkey)
+                    .build_initiator()?,
+            );
+            let builder = snow::Builder::new(
+                "Noise_K_25519_ChaChaPoly_BLAKE2s"
+                    .parse()
+                    .expect("should be a valid cipher"),
+            );
+            let recv_noise = Noise::new(
+                builder
+                    .local_private_key(comm_privkey)
+                    .remote_public_key(&comm_participant_pubkey)
+                    .build_responder()?,
+            );
+            send_noise_map.insert(pubkey.clone(), send_noise);
+            recv_noise_map.insert(pubkey.clone(), recv_noise);
+        }
+        self.send_noise = Some(send_noise_map);
+        self.recv_noise = Some(recv_noise_map);
 
         eprint!("Waiting for participants to send their commitments...");
 
@@ -469,7 +466,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                let msg = self.decrypt_if_needed(msg)?;
+                let msg = self.decrypt(msg)?;
                 self.state.recv(msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
@@ -505,8 +502,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         // individually for each recipient.
         let pubkeys: Vec<_> = self.pubkeys.keys().cloned().collect();
         for recipient in pubkeys {
-            let msg = self
-                .encrypt_if_needed(&recipient, serde_json::to_vec(&send_signing_package_args)?)?;
+            let msg = self.encrypt(&recipient, serde_json::to_vec(&send_signing_package_args)?)?;
             let _r = self
                 .client
                 .post(format!("{}/send", self.host_port))
@@ -546,7 +542,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<server::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                let msg = self.decrypt_if_needed(msg)?;
+                let msg = self.decrypt(msg)?;
                 self.state.recv(msg)?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;

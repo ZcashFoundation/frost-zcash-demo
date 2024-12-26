@@ -26,11 +26,6 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cli: bool,
 
-    /// HTTP mode. If enabled, it will use HTTP communication with a
-    /// FROST server.
-    #[arg(long, default_value_t = false)]
-    pub http: bool,
-
     /// Public key package to use. Can be a file with a JSON-encoded
     /// package, or "". If the file does not exist or if "" is specified,
     /// then it will be read from standard input.
@@ -110,7 +105,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
 
         Ok(ProcessedArgs {
             cli: args.cli,
-            http: args.http,
+            http: false,
             key_package,
             ip: args.ip.clone(),
             port: args.port,
