@@ -6,6 +6,7 @@ pub mod coordinator;
 pub mod group;
 pub mod init;
 pub mod participant;
+pub mod session;
 pub mod trusted_dealer;
 pub mod write_atomic;
 
@@ -27,6 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::RemoveContact { .. } => contact::remove(&args.command),
         Command::Groups { .. } => group::list(&args.command),
         Command::RemoveGroup { .. } => group::remove(&args.command),
+        Command::Sessions { .. } => session::list(&args.command).await,
         Command::TrustedDealer { .. } => trusted_dealer::trusted_dealer(&args.command),
         Command::Coordinator { .. } => crate::coordinator::run(&args.command).await,
         Command::Participant { .. } => crate::participant::run(&args.command).await,
