@@ -283,7 +283,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
         let client = reqwest::Client::new();
         Ok(Self {
             client,
-            host_port: format!("http://{}:{}", args.ip, args.port),
+            host_port: format!("https://{}:{}", args.ip, args.port),
             session_id: None,
             access_token: None,
             num_signers: 0,

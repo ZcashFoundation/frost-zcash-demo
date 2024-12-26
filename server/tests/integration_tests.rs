@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, error::Error, time::Duration};
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
 use rand::thread_rng;
+use reqwest::Certificate;
 use server::{
     args::Args, router, AppState, SendCommitmentsArgs, SendSignatureSharesArgs,
     SendSigningPackageArgs,
@@ -386,11 +387,41 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
     let mut rng = thread_rng();
 
+    // For this test, we generate a self-signed certificate.
+    // If you're deploying a real server, generate a proper certificate;
+    // refer to the documentation.
+    use rcgen::{generate_simple_self_signed, CertifiedKey};
+    let subject_alt_names = vec!["127.0.0.1".to_string(), "localhost".to_string()];
+    let CertifiedKey { cert, key_pair } = generate_simple_self_signed(subject_alt_names).unwrap();
+    let temp_dir = tempfile::tempdir()?;
+    std::fs::write(temp_dir.path().join("cert.pem"), cert.pem())?;
+    std::fs::write(
+        temp_dir.path().join("cert.key.pem"),
+        key_pair.serialize_pem(),
+    )?;
+
     // Spawn server for testing
     tokio::spawn(async move {
         server::run(&Args {
             ip: "127.0.0.1".to_string(),
             port: 2744,
+            tls_cert: Some(
+                temp_dir
+                    .path()
+                    .join("cert.pem")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ),
+            tls_key: Some(
+                temp_dir
+                    .path()
+                    .join("cert.key.pem")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            ),
+            no_tls_very_insecure: false,
         })
         .await
         .unwrap();
@@ -400,8 +431,13 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: this could possibly be not enough, use some retry logic instead
     tokio::time::sleep(Duration::from_secs(2)).await;
 
-    // Create a client to make requests
-    let client = reqwest::Client::new();
+    // Create a client to make requests. To make HTTPS work in the test, we add
+    // the self-signed certificate as the root certificate. For regular use, you
+    // should just use `reqwest::Client::new()`, if the server has a proper web
+    // certificate.
+    let client = reqwest::Client::builder()
+        .add_root_certificate(Certificate::from_pem(cert.pem().as_bytes())?)
+        .build()?;
 
     let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
     let alice_keypair = builder.generate_keypair().unwrap();
@@ -409,7 +445,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get challenges for login
     let r = client
-        .post("http://127.0.0.1:2744/challenge")
+        .post("https://127.0.0.1:2744/challenge")
         .json(&server::ChallengeArgs {})
         .send()
         .await?;
@@ -424,7 +460,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
     let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
     let r = client
-        .post("http://127.0.0.1:2744/login")
+        .post("https://127.0.0.1:2744/login")
         .json(&server::KeyLoginArgs {
             uuid: alice_challenge,
             pubkey: alice_keypair.public.clone(),
@@ -440,7 +476,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
 
     // Call create_new_session
     let r = client
-        .post("http://127.0.0.1:2744/create_new_session")
+        .post("https://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
         .json(&server::CreateNewSessionArgs {
             pubkeys: vec![
