@@ -203,7 +203,7 @@ where
             self.client
                 .post(format!("{}/login", self.host_port))
                 .json(&server::KeyLoginArgs {
-                    uuid: challenge,
+                    challenge,
                     pubkey: self
                         .args
                         .comm_pubkey

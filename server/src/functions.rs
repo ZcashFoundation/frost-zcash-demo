@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Implement the challenge API.
-#[tracing::instrument(ret, err(Debug), skip(state, _args))]
+#[tracing::instrument(level = "debug", err(Debug), skip(state, _args))]
 pub(crate) async fn challenge(
     State(state): State<SharedState>,
     Json(_args): Json<ChallengeArgs>,
@@ -25,7 +25,7 @@ pub(crate) async fn challenge(
 }
 
 /// Implement the key_login API.
-#[tracing::instrument(ret, err(Debug), skip(state, args))]
+#[tracing::instrument(level = "debug", err(Debug), skip(state, args))]
 pub(crate) async fn login(
     State(state): State<SharedState>,
     Json(args): Json<KeyLoginArgs>,
@@ -41,11 +41,11 @@ pub(crate) async fn login(
     let signature = TryInto::<[u8; 64]>::try_into(args.signature)
         .map_err(|_| AppError::InvalidArgument("signature".into()))?;
     pubkey
-        .verify(args.uuid.as_bytes(), &signature)
+        .verify(args.challenge.as_bytes(), &signature)
         .map_err(|_| AppError::Unauthorized)?;
 
     let mut challenges = state.challenges.write().unwrap();
-    if !challenges.remove(&args.uuid) {
+    if !challenges.remove(&args.challenge) {
         return Err(AppError::Unauthorized);
     }
     drop(challenges);
@@ -61,7 +61,7 @@ pub(crate) async fn login(
 }
 
 /// Implement the logout API.
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn logout(
     State(state): State<SharedState>,
     user: User,
@@ -75,7 +75,7 @@ pub(crate) async fn logout(
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     user: User,
@@ -94,7 +94,7 @@ pub(crate) async fn create_new_session(
     // Save session ID in global state
     for pubkey in &args.pubkeys {
         sessions_by_pubkey
-            .entry(pubkey.0.clone())
+            .entry(pubkey.clone().0)
             .or_default()
             .insert(id);
     }
@@ -102,7 +102,6 @@ pub(crate) async fn create_new_session(
     let session = Session {
         pubkeys: args.pubkeys.into_iter().map(|p| p.0).collect(),
         coordinator_pubkey: user.pubkey,
-        num_signers: args.num_signers,
         message_count: args.message_count,
         queue: Default::default(),
     };
@@ -114,7 +113,7 @@ pub(crate) async fn create_new_session(
 }
 
 /// Implement the create_new_session API.
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
@@ -130,7 +129,7 @@ pub(crate) async fn list_sessions(
 }
 
 /// Implement the get_session_info API
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     user: User,
@@ -152,7 +151,6 @@ pub(crate) async fn get_session_info(
         .ok_or(AppError::SessionNotFound)?;
 
     Ok(Json(GetSessionInfoOutput {
-        num_signers: session.num_signers,
         message_count: session.message_count,
         pubkeys: session.pubkeys.iter().cloned().map(PublicKey).collect(),
         coordinator_pubkey: session.coordinator_pubkey.clone(),
@@ -161,7 +159,7 @@ pub(crate) async fn get_session_info(
 
 /// Implement the send API
 // TODO: get identifier from channel rather from arguments
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn send(
     State(state): State<SharedState>,
     user: User,
@@ -197,7 +195,7 @@ pub(crate) async fn send(
 }
 
 /// Implement the recv API
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn receive(
     State(state): State<SharedState>,
     user: User,
@@ -240,7 +238,7 @@ pub(crate) async fn receive(
 }
 
 /// Implement the close_session API.
-#[tracing::instrument(ret, err(Debug), skip(state, user))]
+#[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn close_session(
     State(state): State<SharedState>,
     user: User,
