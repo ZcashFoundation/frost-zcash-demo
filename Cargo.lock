@@ -2688,6 +2688,7 @@ dependencies = [
  "serde_json",
  "serdect",
  "snow",
+ "thiserror 2.0.4",
  "tempfile",
  "tokio",
  "tower-http",

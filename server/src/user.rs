@@ -1,16 +1,10 @@
 use std::str::FromStr;
 
-use axum::{
-    async_trait,
-    extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
-    RequestPartsExt,
-};
+use axum::{async_trait, extract::FromRequestParts, http::request::Parts, RequestPartsExt};
 use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use eyre::eyre;
 use uuid::Uuid;
 
 use crate::{state::SharedState, AppError};
@@ -18,7 +12,7 @@ use crate::{state::SharedState, AppError};
 /// An User
 #[derive(Debug)]
 #[allow(dead_code)]
-pub struct User {
+pub(crate) struct User {
     pub(crate) pubkey: Vec<u8>,
     pub(crate) current_token: Uuid,
 }
@@ -42,19 +36,9 @@ impl FromRequestParts<SharedState> for User {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|_| {
-                AppError(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    eyre!("Bearer token missing").into(),
-                )
-            })?;
+            .map_err(|_| AppError::Unauthorized)?;
         // Decode the user data
-        let access_token = Uuid::from_str(bearer.token()).map_err(|_| {
-            AppError(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("invalid access token").into(),
-            )
-        })?;
+        let access_token = Uuid::from_str(bearer.token()).map_err(|_| AppError::Unauthorized)?;
 
         let pubkey = state
             .access_tokens
@@ -69,10 +53,7 @@ impl FromRequestParts<SharedState> for User {
                 current_token: access_token,
             })
         } else {
-            return Err(AppError(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                eyre!("user not found").into(),
-            ));
+            return Err(AppError::Unauthorized);
         }
     }
 }
