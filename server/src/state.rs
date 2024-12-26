@@ -25,7 +25,7 @@ const ACCESS_TOKEN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs
 // From https://users.rust-lang.org/t/how-do-i-poll-a-stream-behind-a-rwlock/121787/2
 struct RwLockStream<'a, T>(pub &'a RwLock<T>);
 
-impl<'a, T: Stream + Unpin> Stream for RwLockStream<'a, T> {
+impl<T: Stream + Unpin> Stream for RwLockStream<'_, T> {
     type Item = T::Item;
     fn poll_next(
         self: Pin<&mut Self>,
@@ -44,8 +44,6 @@ pub struct Session {
     pub(crate) coordinator_pubkey: Vec<u8>,
     /// The number of signers in the session.
     pub(crate) num_signers: u16,
-    /// The set of identifiers for the session.
-    // pub(crate) identifiers: BTreeSet<SerializedIdentifier>,
     /// The number of messages being simultaneously signed.
     pub(crate) message_count: u8,
     /// The message queue.
