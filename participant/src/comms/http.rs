@@ -104,8 +104,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     client: reqwest::Client,
     host_port: String,
     session_id: Option<Uuid>,
-    access_token: String,
-    should_logout: bool,
+    access_token: Option<String>,
     args: ProcessedArgs<C>,
     send_noise: Option<Noise>,
     recv_noise: Option<Noise>,
@@ -125,8 +124,7 @@ where
             client,
             host_port: format!("http://{}:{}", args.ip, args.port),
             session_id: Uuid::parse_str(&args.session_id).ok(),
-            access_token: args.authentication_token.clone().unwrap_or_default(),
-            should_logout: args.authentication_token.is_none(),
+            access_token: None,
             args: args.clone(),
             send_noise: None,
             recv_noise: None,
@@ -201,24 +199,25 @@ where
         );
         let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
 
-        self.access_token = self
-            .client
-            .post(format!("{}/key_login", self.host_port))
-            .json(&server::KeyLoginArgs {
-                uuid: challenge,
-                pubkey: self
-                    .args
-                    .comm_pubkey
-                    .clone()
-                    .ok_or_eyre("comm_pubkey must be specified")?,
-                signature: signature.to_vec(),
-            })
-            .send()
-            .await?
-            .json::<server::LoginOutput>()
-            .await?
-            .access_token
-            .to_string();
+        self.access_token = Some(
+            self.client
+                .post(format!("{}/login", self.host_port))
+                .json(&server::KeyLoginArgs {
+                    uuid: challenge,
+                    pubkey: self
+                        .args
+                        .comm_pubkey
+                        .clone()
+                        .ok_or_eyre("comm_pubkey must be specified")?,
+                    signature: signature.to_vec(),
+                })
+                .send()
+                .await?
+                .json::<server::LoginOutput>()
+                .await?
+                .access_token
+                .to_string(),
+        );
 
         let session_id = match self.session_id {
             Some(s) => s,
@@ -227,7 +226,7 @@ where
                 let r = self
                     .client
                     .post(format!("{}/list_sessions", self.host_port))
-                    .bearer_auth(&self.access_token)
+                    .bearer_auth(self.access_token.as_ref().expect("was just set"))
                     .send()
                     .await?
                     .json::<server::ListSessionsOutput>()
@@ -256,7 +255,7 @@ where
                 .client
                 .post(format!("{}/get_session_info", self.host_port))
                 .json(&server::GetSessionInfoArgs { session_id })
-                .bearer_auth(&self.access_token)
+                .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .send()
                 .await?
                 .json::<server::GetSessionInfoOutput>()
@@ -298,7 +297,7 @@ where
         let msg = self.encrypt_if_needed(serde_json::to_vec(&send_commitments_args)?)?;
         self.client
             .post(format!("{}/send", self.host_port))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .json(&server::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
@@ -316,7 +315,7 @@ where
             let r = self
                 .client
                 .post(format!("{}/receive", self.host_port))
-                .bearer_auth(&self.access_token)
+                .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .json(&server::ReceiveArgs {
                     session_id,
                     as_coordinator: false,
@@ -371,7 +370,7 @@ where
         let _r = self
             .client
             .post(format!("{}/send", self.host_port))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(self.access_token.as_ref().expect("must be set before"))
             .json(&server::SendArgs {
                 session_id: self.session_id.unwrap(),
                 // Empty recipients: Coordinator
@@ -381,14 +380,12 @@ where
             .send()
             .await?;
 
-        if self.should_logout {
-            let _r = self
-                .client
-                .post(format!("{}/logout", self.host_port))
-                .bearer_auth(&self.access_token)
-                .send()
-                .await?;
-        }
+        let _r = self
+            .client
+            .post(format!("{}/logout", self.host_port))
+            .bearer_auth(self.access_token.as_ref().expect("must be set before"))
+            .send()
+            .await?;
 
         Ok(())
     }

@@ -18,10 +18,6 @@ pub struct Config {
     #[serde(skip)]
     path: Option<PathBuf>,
     pub version: u8,
-    /// The registry of servers the user has registered into, keyed by server
-    /// URL.
-    #[serde(default)]
-    pub registry: BTreeMap<String, Registry>,
     /// The communication key pair for the user.
     pub communication_key: Option<CommunicationKey>,
     /// The address book of the user, keyed by each contact's name.
@@ -41,25 +37,6 @@ impl Config {
             .cloned()
             .ok_or_eyre("contact not found")?)
     }
-
-    pub fn username_by_server_url(&self, server_url: &str) -> Result<String, Box<dyn Error>> {
-        Ok(self
-            .registry
-            .get(server_url)
-            .ok_or_eyre("Not logged in in the giver server")?
-            .username
-            .clone())
-    }
-}
-
-/// A registry entry. Note that the server URL is not in the struct;
-/// it is the key in the `registry` map in Config.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Registry {
-    /// The authentication token, if the user is logged in.
-    pub token: Option<String>,
-    /// The username of the user
-    pub username: String,
 }
 
 /// The communication key pair for the user.
@@ -117,7 +94,7 @@ impl Group {
         );
         for participant in self.participant.values() {
             let contact = config.contact_by_pubkey(&participant.pubkey)?;
-            s += &format!("\t{}\n", contact.name);
+            s += &format!("\t{} ({})\n", contact.name, hex::encode(contact.pubkey));
         }
         Ok(s)
     }
@@ -138,8 +115,6 @@ pub struct Participant {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub pubkey: Vec<u8>,
-    /// The username of the participant in the server, if any.
-    pub username: Option<String>,
 }
 
 impl Config {

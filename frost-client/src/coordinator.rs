@@ -76,8 +76,6 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
     let pargs = coordinator::args::ProcessedArgs {
         cli: false,
         http: true,
-        username: String::new(),
-        password: String::new(),
         signers,
         num_signers,
         public_key_package,
@@ -89,7 +87,6 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
             .ok_or_eyre("host missing in URL")?
             .to_owned(),
         port: server_url_parsed.port().unwrap_or(2744),
-        authentication_token: None,
         comm_privkey: Some(
             config
                 .communication_key

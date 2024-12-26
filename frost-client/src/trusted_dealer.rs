@@ -37,7 +37,6 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         threshold,
         num_signers,
         names,
-        usernames,
         server_url,
     } = (*args).clone()
     else {
@@ -67,36 +66,21 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
     // First pass over configs; create participants map
     let mut participants = BTreeMap::new();
     let mut contacts = Vec::new();
-    for (idx, (identifier, path, name)) in
-        izip!(shares.keys(), config.iter(), names.iter()).enumerate()
-    {
+    for (identifier, path, name) in izip!(shares.keys(), config.iter(), names.iter()) {
         let config = Config::read(Some(path.to_string()))?;
         let pubkey = config
             .communication_key
             .ok_or_eyre("config not initialized")?
             .pubkey;
-        let username = if server_url.is_some() {
-            Some(
-                usernames
-                    .get(idx)
-                    .ok_or_eyre("must specify usernames of all users")?
-                    .clone(),
-            )
-        } else {
-            None
-        };
         let participant = Participant {
             identifier: identifier.serialize(),
             pubkey: pubkey.clone(),
-            username,
         };
         participants.insert(hex::encode(identifier.serialize()), participant);
         let contact = Contact {
             version: None,
             name: name.clone(),
             pubkey,
-            server_url: None,
-            username: None,
         };
         contacts.push(contact);
     }

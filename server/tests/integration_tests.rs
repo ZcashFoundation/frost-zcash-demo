@@ -53,7 +53,7 @@ async fn test_main_router<
         .collect();
 
     // Instantiate test server using axum_test
-    let shared_state = AppState::new(":memory:").await?;
+    let shared_state = AppState::new().await?;
     let router = router(shared_state);
     let server = TestServer::new(router)?;
 
@@ -85,7 +85,7 @@ async fn test_main_router<
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
     let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
     let res = server
-        .post("/key_login")
+        .post("/login")
         .json(&server::KeyLoginArgs {
             uuid: alice_challenge,
             pubkey: alice_keypair.public.clone(),
@@ -100,7 +100,7 @@ async fn test_main_router<
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
     let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
     let res = server
-        .post("/key_login")
+        .post("/login")
         .json(&server::KeyLoginArgs {
             uuid: bob_challenge,
             pubkey: bob_keypair.public.clone(),
@@ -389,7 +389,6 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Spawn server for testing
     tokio::spawn(async move {
         server::run(&Args {
-            database: ":memory:".to_string(),
             ip: "127.0.0.1".to_string(),
             port: 2744,
         })
@@ -425,7 +424,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
     let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
     let r = client
-        .post("http://127.0.0.1:2744/key_login")
+        .post("http://127.0.0.1:2744/login")
         .json(&server::KeyLoginArgs {
             uuid: alice_challenge,
             pubkey: alice_keypair.public.clone(),
