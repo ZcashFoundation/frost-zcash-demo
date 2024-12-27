@@ -18,8 +18,8 @@ You will need to have [Rust and Cargo](https://doc.rust-lang.org/cargo/getting-s
 To compile and run:
 
 1. Clone the repo. Run `git clone https://github.com/ZcashFoundation/frost-zcash-demo.git`
-2. Run `cargo build --release --bin server`
-3. Run `./target/release/server -h` to learn about the command line arguments.
+2. Run `cargo build --release --bin frostd`
+3. Run `./target/release/frostd -h` to learn about the command line arguments.
 
 You will need to specify a TLS certificate and key with the `--tls-cert`
 and `--tls-key` arguments.

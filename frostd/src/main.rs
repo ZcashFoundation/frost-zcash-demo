@@ -1,6 +1,6 @@
 use clap::Parser;
-use server::args::Args;
-use server::run;
+use frostd::args::Args;
+use frostd::run;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 

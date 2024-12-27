@@ -3,12 +3,12 @@ use std::{collections::BTreeMap, error::Error, time::Duration};
 
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
-use rand::thread_rng;
-use reqwest::Certificate;
-use server::{
+use frostd::{
     args::Args, router, AppState, SendCommitmentsArgs, SendSignatureSharesArgs,
     SendSigningPackageArgs,
 };
+use rand::thread_rng;
+use reqwest::Certificate;
 
 use frost_core as frost;
 use uuid::Uuid;
@@ -69,18 +69,18 @@ async fn test_main_router<
 
     let res = server
         .post("/challenge")
-        .json(&server::ChallengeArgs {})
+        .json(&frostd::ChallengeArgs {})
         .await;
     res.assert_status_ok();
-    let r: server::ChallengeOutput = res.json();
+    let r: frostd::ChallengeOutput = res.json();
     let alice_challenge = r.challenge;
 
     let res = server
         .post("/challenge")
-        .json(&server::ChallengeArgs {})
+        .json(&frostd::ChallengeArgs {})
         .await;
     res.assert_status_ok();
-    let r: server::ChallengeOutput = res.json();
+    let r: frostd::ChallengeOutput = res.json();
     let bob_challenge = r.challenge;
 
     let alice_private =
@@ -88,14 +88,14 @@ async fn test_main_router<
     let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
     let res = server
         .post("/login")
-        .json(&server::KeyLoginArgs {
+        .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
             pubkey: alice_keypair.public.clone(),
             signature: alice_signature.to_vec(),
         })
         .await;
     res.assert_status_ok();
-    let r: server::LoginOutput = res.json();
+    let r: frostd::LoginOutput = res.json();
     let alice_token = r.access_token;
 
     let bob_private =
@@ -103,14 +103,14 @@ async fn test_main_router<
     let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
     let res = server
         .post("/login")
-        .json(&server::KeyLoginArgs {
+        .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
             pubkey: bob_keypair.public.clone(),
             signature: bob_signature.to_vec(),
         })
         .await;
     res.assert_status_ok();
-    let r: server::LoginOutput = res.json();
+    let r: frostd::LoginOutput = res.json();
     let bob_token = r.access_token;
     let tokens = [alice_token, bob_token];
 
@@ -119,16 +119,16 @@ async fn test_main_router<
     let res = server
         .post("/create_new_session")
         .authorization_bearer(alice_token)
-        .json(&server::CreateNewSessionArgs {
+        .json(&frostd::CreateNewSessionArgs {
             pubkeys: vec![
-                server::PublicKey(alice_keypair.public.clone()),
-                server::PublicKey(bob_keypair.public.clone()),
+                frostd::PublicKey(alice_keypair.public.clone()),
+                frostd::PublicKey(bob_keypair.public.clone()),
             ],
             message_count: 2,
         })
         .await;
     res.assert_status_ok();
-    let r: server::CreateNewSessionOutput = res.json();
+    let r: frostd::CreateNewSessionOutput = res.json();
     let session_id = r.session_id;
 
     // Generate commitments (one SigningCommitments for each message)
@@ -144,10 +144,10 @@ async fn test_main_router<
         let res = server
             .post("/get_session_info")
             .authorization_bearer(token)
-            .json(&server::GetSessionInfoArgs { session_id })
+            .json(&frostd::GetSessionInfoArgs { session_id })
             .await;
         res.assert_status_ok();
-        let r: server::GetSessionInfoOutput = res.json();
+        let r: frostd::GetSessionInfoOutput = res.json();
 
         // Generate SigningCommitments and SigningNonces for each message
         let mut nonces_vec = Vec::new();
@@ -170,7 +170,7 @@ async fn test_main_router<
         let res = server
             .post("/send")
             .authorization_bearer(token)
-            .json(&server::SendArgs {
+            .json(&frostd::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
@@ -188,13 +188,13 @@ async fn test_main_router<
         let res = server
             .post("/receive")
             .authorization_bearer(alice_token)
-            .json(&server::ReceiveArgs {
+            .json(&frostd::ReceiveArgs {
                 session_id,
                 as_coordinator: true,
             })
             .await;
         res.assert_status_ok();
-        let r: server::ReceiveOutput = res.json();
+        let r: frostd::ReceiveOutput = res.json();
         for msg in r.msgs {
             coordinator_state.recv(msg)?;
         }
@@ -239,9 +239,9 @@ async fn test_main_router<
     let res = server
         .post("/send")
         .authorization_bearer(alice_token)
-        .json(&server::SendArgs {
+        .json(&frostd::SendArgs {
             session_id,
-            recipients: usernames.keys().cloned().map(server::PublicKey).collect(),
+            recipients: usernames.keys().cloned().map(frostd::PublicKey).collect(),
             msg: serde_json::to_vec(&send_signing_package_args)?,
         })
         .await;
@@ -257,12 +257,12 @@ async fn test_main_router<
             let r = server
                 .post("/receive")
                 .authorization_bearer(token)
-                .json(&server::ReceiveArgs {
+                .json(&frostd::ReceiveArgs {
                     session_id,
                     as_coordinator: false,
                 })
                 .await
-                .json::<server::ReceiveOutput>();
+                .json::<frostd::ReceiveOutput>();
             if r.msgs.is_empty() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
             } else {
@@ -303,7 +303,7 @@ async fn test_main_router<
         let res = server
             .post("/send")
             .authorization_bearer(token)
-            .json(&server::SendArgs {
+            .json(&frostd::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
@@ -318,12 +318,12 @@ async fn test_main_router<
         let r = server
             .post("/receive")
             .authorization_bearer(alice_token)
-            .json(&server::ReceiveArgs {
+            .json(&frostd::ReceiveArgs {
                 session_id,
                 as_coordinator: true,
             })
             .await
-            .json::<server::ReceiveOutput>();
+            .json::<frostd::ReceiveOutput>();
         for msg in r.msgs {
             coordinator_state.recv(msg)?;
         }
@@ -361,7 +361,7 @@ async fn test_main_router<
     let res = server
         .post("/close_session")
         .authorization_bearer(alice_token)
-        .json(&server::CloseSessionArgs { session_id })
+        .json(&frostd::CloseSessionArgs { session_id })
         .await;
     res.assert_status_ok();
 
@@ -402,7 +402,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn server for testing
     tokio::spawn(async move {
-        server::run(&Args {
+        frostd::run(&Args {
             ip: "127.0.0.1".to_string(),
             port: 2744,
             tls_cert: Some(
@@ -446,13 +446,13 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Get challenges for login
     let r = client
         .post("https://127.0.0.1:2744/challenge")
-        .json(&server::ChallengeArgs {})
+        .json(&frostd::ChallengeArgs {})
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<server::Error>().await?)
+        panic!("{:?}", r.json::<frostd::Error>().await?)
     }
-    let r = r.json::<server::ChallengeOutput>().await?;
+    let r = r.json::<frostd::ChallengeOutput>().await?;
     let alice_challenge = r.challenge;
 
     // Call key_login to authenticate
@@ -461,7 +461,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
     let r = client
         .post("https://127.0.0.1:2744/login")
-        .json(&server::KeyLoginArgs {
+        .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
             pubkey: alice_keypair.public.clone(),
             signature: alice_signature.to_vec(),
@@ -469,28 +469,28 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<server::Error>().await?)
+        panic!("{:?}", r.json::<frostd::Error>().await?)
     }
-    let r = r.json::<server::KeyLoginOutput>().await?;
+    let r = r.json::<frostd::KeyLoginOutput>().await?;
     let access_token = r.access_token;
 
     // Call create_new_session
     let r = client
         .post("https://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
-        .json(&server::CreateNewSessionArgs {
+        .json(&frostd::CreateNewSessionArgs {
             pubkeys: vec![
-                server::PublicKey(alice_keypair.public.clone()),
-                server::PublicKey(bob_keypair.public.clone()),
+                frostd::PublicKey(alice_keypair.public.clone()),
+                frostd::PublicKey(bob_keypair.public.clone()),
             ],
             message_count: 1,
         })
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<server::Error>().await?)
+        panic!("{:?}", r.json::<frostd::Error>().await?)
     }
-    let r = r.json::<server::CreateNewSessionOutput>().await?;
+    let r = r.json::<frostd::CreateNewSessionOutput>().await?;
     let session_id = r.session_id;
     println!("Session ID: {}", session_id);
 
@@ -501,49 +501,49 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let r = client
         .post("https://127.0.0.1:2744/get_session_info")
         .bearer_auth(access_token)
-        .json(&server::GetSessionInfoArgs {
+        .json(&frostd::GetSessionInfoArgs {
             session_id: wrong_session_id,
         })
         .send()
         .await?;
     assert_eq!(r.status(), reqwest::StatusCode::INTERNAL_SERVER_ERROR);
-    let r = r.json::<server::Error>().await?;
-    assert_eq!(r.code, server::SESSION_NOT_FOUND);
+    let r = r.json::<frostd::Error>().await?;
+    assert_eq!(r.code, frostd::SESSION_NOT_FOUND);
 
     // Test if trying to close the session as a participant fails
     // Attempt to close the session as a participant (Bob)
     // Log in as Bob
     let r = client
         .post("https://127.0.0.1:2744/challenge")
-        .json(&server::ChallengeArgs {})
+        .json(&frostd::ChallengeArgs {})
         .send()
         .await?;
-    let r = r.json::<server::ChallengeOutput>().await?;
+    let r = r.json::<frostd::ChallengeOutput>().await?;
     let bob_challenge = r.challenge;
     let bob_private =
         xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
     let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
     let r = client
         .post("https://127.0.0.1:2744/login")
-        .json(&server::KeyLoginArgs {
+        .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
             pubkey: bob_keypair.public.clone(),
             signature: bob_signature.to_vec(),
         })
         .send()
         .await?;
-    let r = r.json::<server::KeyLoginOutput>().await?;
+    let r = r.json::<frostd::KeyLoginOutput>().await?;
     let bob_access_token = r.access_token;
     // Try to close the session
     let r = client
         .post("https://127.0.0.1:2744/close_session")
         .bearer_auth(bob_access_token)
-        .json(&server::CloseSessionArgs { session_id })
+        .json(&frostd::CloseSessionArgs { session_id })
         .send()
         .await?;
     assert_eq!(r.status(), reqwest::StatusCode::INTERNAL_SERVER_ERROR);
-    let r = r.json::<server::Error>().await?;
-    assert_eq!(r.code, server::NOT_COORDINATOR);
+    let r = r.json::<frostd::Error>().await?;
+    assert_eq!(r.code, frostd::NOT_COORDINATOR);
 
     Ok(())
 }

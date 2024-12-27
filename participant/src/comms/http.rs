@@ -111,7 +111,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     _phantom: PhantomData<C>,
 }
 
-use server::{SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
+use frostd::{SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -181,10 +181,10 @@ where
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
-            .json(&server::ChallengeArgs {})
+            .json(&frostd::ChallengeArgs {})
             .send()
             .await?
-            .json::<server::ChallengeOutput>()
+            .json::<frostd::ChallengeOutput>()
             .await?
             .challenge;
 
@@ -202,7 +202,7 @@ where
         self.access_token = Some(
             self.client
                 .post(format!("{}/login", self.host_port))
-                .json(&server::KeyLoginArgs {
+                .json(&frostd::KeyLoginArgs {
                     challenge,
                     pubkey: self
                         .args
@@ -213,7 +213,7 @@ where
                 })
                 .send()
                 .await?
-                .json::<server::LoginOutput>()
+                .json::<frostd::LoginOutput>()
                 .await?
                 .access_token
                 .to_string(),
@@ -229,7 +229,7 @@ where
                     .bearer_auth(self.access_token.as_ref().expect("was just set"))
                     .send()
                     .await?
-                    .json::<server::ListSessionsOutput>()
+                    .json::<frostd::ListSessionsOutput>()
                     .await?;
                 if r.session_ids.len() > 1 {
                     return Err(eyre!("user has more than one FROST session active; use `frost-client sessions` to list them and specify the session ID with `-S`").into());
@@ -257,11 +257,11 @@ where
         let session_info = self
             .client
             .post(format!("{}/get_session_info", self.host_port))
-            .json(&server::GetSessionInfoArgs { session_id })
+            .json(&frostd::GetSessionInfoArgs { session_id })
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .send()
             .await?
-            .json::<server::GetSessionInfoOutput>()
+            .json::<frostd::GetSessionInfoOutput>()
             .await?;
 
         let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
@@ -299,7 +299,7 @@ where
         self.client
             .post(format!("{}/send", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
-            .json(&server::SendArgs {
+            .json(&frostd::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
@@ -317,13 +317,13 @@ where
                 .client
                 .post(format!("{}/receive", self.host_port))
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                .json(&server::ReceiveArgs {
+                .json(&frostd::ReceiveArgs {
                     session_id,
                     as_coordinator: false,
                 })
                 .send()
                 .await?
-                .json::<server::ReceiveOutput>()
+                .json::<frostd::ReceiveOutput>()
                 .await?;
             if r.msgs.is_empty() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
@@ -372,7 +372,7 @@ where
             .client
             .post(format!("{}/send", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("must be set before"))
-            .json(&server::SendArgs {
+            .json(&frostd::SendArgs {
                 session_id: self.session_id.unwrap(),
                 // Empty recipients: Coordinator
                 recipients: vec![],

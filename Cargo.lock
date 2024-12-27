@@ -680,6 +680,7 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
+ "frostd",
  "hex",
  "itertools 0.13.0",
  "message-io",
@@ -690,7 +691,6 @@ dependencies = [
  "rpassword",
  "serde_json",
  "serdect",
- "server",
  "snow",
  "thiserror 2.0.9",
  "tokio",
@@ -1094,6 +1094,7 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
+ "frostd",
  "hex",
  "itertools 0.13.0",
  "participant",
@@ -1105,7 +1106,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serdect",
- "server",
  "snow",
  "stable-eyre",
  "tempfile",
@@ -1163,6 +1163,45 @@ dependencies = [
  "frost-core",
  "hex",
  "rand_core",
+]
+
+[[package]]
+name = "frostd"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-extra",
+ "axum-macros",
+ "axum-server",
+ "axum-test",
+ "clap",
+ "coordinator",
+ "delay_map",
+ "derivative",
+ "eyre",
+ "frost-core",
+ "frost-ed25519",
+ "frost-rerandomized",
+ "futures",
+ "futures-util",
+ "hex",
+ "rand",
+ "rcgen",
+ "reddsa",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serdect",
+ "snow",
+ "tempfile",
+ "thiserror 2.0.9",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "xeddsa",
 ]
 
 [[package]]
@@ -2024,6 +2063,7 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
+ "frostd",
  "hex",
  "message-io",
  "rand",
@@ -2032,7 +2072,6 @@ dependencies = [
  "rpassword",
  "serde_json",
  "serdect",
- "server",
  "snow",
  "tokio",
  "xeddsa",
@@ -2661,45 +2700,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-extra",
- "axum-macros",
- "axum-server",
- "axum-test",
- "clap",
- "coordinator",
- "delay_map",
- "derivative",
- "eyre",
- "frost-core",
- "frost-ed25519",
- "frost-rerandomized",
- "futures",
- "futures-util",
- "hex",
- "rand",
- "rcgen",
- "reddsa",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serdect",
- "snow",
- "tempfile",
- "thiserror 2.0.9",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "xeddsa",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2956,12 +2956,12 @@ dependencies = [
  "dkg",
  "exitcode",
  "frost-ed25519",
+ "frostd",
  "hex",
  "participant",
  "rand",
  "reddsa",
  "serde_json",
- "server",
  "tokio",
  "trusted-dealer",
 ]

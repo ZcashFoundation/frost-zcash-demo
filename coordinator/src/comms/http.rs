@@ -16,11 +16,11 @@ use frost_core::{
     Identifier, SigningPackage,
 };
 
-use participant::comms::http::Noise;
-use rand::thread_rng;
-use server::{
+use frostd::{
     Msg, PublicKey, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid,
 };
+use participant::comms::http::Noise;
+use rand::thread_rng;
 use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
@@ -344,10 +344,10 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
-            .json(&server::ChallengeArgs {})
+            .json(&frostd::ChallengeArgs {})
             .send()
             .await?
-            .json::<server::ChallengeOutput>()
+            .json::<frostd::ChallengeOutput>()
             .await?
             .challenge;
 
@@ -365,7 +365,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         self.access_token = Some(
             self.client
                 .post(format!("{}/login", self.host_port))
-                .json(&server::KeyLoginArgs {
+                .json(&frostd::KeyLoginArgs {
                     challenge,
                     pubkey: self
                         .args
@@ -376,7 +376,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 })
                 .send()
                 .await?
-                .json::<server::LoginOutput>()
+                .json::<frostd::LoginOutput>()
                 .await?
                 .access_token
                 .to_string(),
@@ -386,13 +386,13 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .client
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
-            .json(&server::CreateNewSessionArgs {
+            .json(&frostd::CreateNewSessionArgs {
                 pubkeys: self.args.signers.iter().cloned().map(PublicKey).collect(),
                 message_count: 1,
             })
             .send()
             .await?
-            .json::<server::CreateNewSessionOutput>()
+            .json::<frostd::CreateNewSessionOutput>()
             .await?;
 
         if self.args.signers.is_empty() {
@@ -453,13 +453,13 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .client
                 .post(format!("{}/receive", self.host_port))
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                .json(&server::ReceiveArgs {
+                .json(&frostd::ReceiveArgs {
                     session_id: r.session_id,
                     as_coordinator: true,
                 })
                 .send()
                 .await?
-                .json::<server::ReceiveOutput>()
+                .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
                 let msg = self.decrypt(msg)?;
@@ -507,9 +507,9 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                         .as_ref()
                         .expect("must have been set before"),
                 )
-                .json(&server::SendArgs {
+                .json(&frostd::SendArgs {
                     session_id: self.session_id.unwrap(),
-                    recipients: vec![server::PublicKey(recipient.clone())],
+                    recipients: vec![frostd::PublicKey(recipient.clone())],
                     msg,
                 })
                 .send()
@@ -529,13 +529,13 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                         .as_ref()
                         .expect("must have been set before"),
                 )
-                .json(&server::ReceiveArgs {
+                .json(&frostd::ReceiveArgs {
                     session_id: self.session_id.unwrap(),
                     as_coordinator: true,
                 })
                 .send()
                 .await?
-                .json::<server::ReceiveOutput>()
+                .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
                 let msg = self.decrypt(msg)?;
@@ -557,7 +557,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                     .as_ref()
                     .expect("must have been set before"),
             )
-            .json(&server::CloseSessionArgs {
+            .json(&frostd::CloseSessionArgs {
                 session_id: self.session_id.unwrap(),
             })
             .send()
