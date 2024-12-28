@@ -1,5 +1,6 @@
 use frost_core::{
-    round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier, SigningPackage,
+    keys::dkg::round1, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
+    SigningPackage,
 };
 use frost_rerandomized::Randomizer;
 use serde::{Deserialize, Serialize};
@@ -170,4 +171,11 @@ pub struct SendSigningPackageArgs<C: Ciphersuite> {
 pub struct SendSignatureSharesArgs<C: Ciphersuite> {
     pub identifier: Identifier<C>,
     pub signature_share: Vec<SignatureShare<C>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "C: Ciphersuite")]
+pub struct SendRound1PackageArgs<C: Ciphersuite> {
+    pub identifier: Identifier<C>,
+    pub round1_package: round1::Package<C>,
 }

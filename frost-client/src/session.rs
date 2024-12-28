@@ -44,7 +44,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         .clone();
 
     let client = reqwest::Client::new();
-    let host_port = format!("http://{}", server_url);
+    let host_port = format!("https://{}", server_url);
 
     let mut rng = thread_rng();
 

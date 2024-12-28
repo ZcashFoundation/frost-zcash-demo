@@ -35,7 +35,7 @@ fn check_dkg() {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
+async fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
     let mut input_writers = Vec::new();
     let mut output_readers = Vec::new();
     let mut join_handles = Vec::new();
@@ -45,8 +45,10 @@ fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
 
         let (mut input_reader, input_writer) = pipe::pipe();
         let (output_reader, mut output_writer) = pipe::pipe();
-        join_handles.push(thread::spawn(move || {
-            cli::<C>(&mut input_reader, &mut output_writer).unwrap()
+        join_handles.push(thread::spawn(async move || {
+            cli::<C>(&mut input_reader, &mut output_writer)
+                .await
+                .unwrap()
         }));
         input_writers.push(input_writer);
         output_readers.push(output_reader);

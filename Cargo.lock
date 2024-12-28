@@ -917,18 +917,25 @@ dependencies = [
 name = "dkg"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "exitcode",
  "eyre",
  "frost-core",
  "frost-ed25519",
+ "frostd",
  "hex",
  "itertools 0.13.0",
+ "participant",
  "pipe",
  "rand",
  "reddsa",
+ "reqwest",
  "serde_json",
+ "snow",
  "thiserror 2.0.9",
+ "tokio",
+ "xeddsa",
 ]
 
 [[package]]
@@ -1090,6 +1097,7 @@ dependencies = [
  "coordinator",
  "directories",
  "dirs",
+ "dkg",
  "eyre",
  "frost-core",
  "frost-ed25519",

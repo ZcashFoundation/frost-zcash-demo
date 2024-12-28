@@ -1,12 +1,18 @@
+use eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
-use frost_core::{self as frost, Ciphersuite};
+use frost_core::{self as frost, Ciphersuite, Identifier};
 
 use rand::thread_rng;
 use reddsa::frost::redpallas::keys::EvenY;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::error::Error;
 use std::io::{BufRead, Write};
 
-use crate::inputs::{read_round1_package, read_round2_package, request_inputs};
+use crate::args::ProcessedArgs;
+use crate::comms::cli::CLIComms;
+use crate::comms::http::HTTPComms;
+use crate::comms::Comms;
+use crate::inputs::request_inputs;
 
 // The redpallas ciphersuite, when used for generating Orchard spending key
 // signatures, requires ensuring public key have an even Y coordinate. Since the
@@ -39,80 +45,15 @@ impl MaybeIntoEvenY for reddsa::frost::redpallas::PallasBlake2b512 {
     }
 }
 
-pub fn cli<C: Ciphersuite + 'static + MaybeIntoEvenY>(
+pub async fn cli<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     reader: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config = request_inputs::<C>(reader, logger)?;
+    let pargs = ProcessedArgs::<C>::new(&config);
 
-    let rng = thread_rng();
-
-    let (secret_package, package) = frost::keys::dkg::part1(
-        config.identifier,
-        config.max_signers,
-        config.min_signers,
-        rng,
-    )?;
-
-    writeln!(logger, "\n=== ROUND 1: SEND PACKAGES ===\n")?;
-
-    writeln!(
-        logger,
-        "Round 1 Package to send to all other participants (your identifier: {}):\n\n{}\n",
-        serde_json::to_string(&config.identifier)?,
-        serde_json::to_string(&package)?
-    )?;
-
-    writeln!(logger, "=== ROUND 1: RECEIVE PACKAGES ===\n")?;
-
-    writeln!(
-        logger,
-        "Input Round 1 Packages from the other {} participants.\n",
-        config.max_signers - 1,
-    )?;
-    let mut received_round1_packages = BTreeMap::new();
-    for _ in 0..config.max_signers - 1 {
-        let (identifier, round1_package) = read_round1_package(reader, logger)?;
-        received_round1_packages.insert(identifier, round1_package);
-        writeln!(logger)?;
-    }
-
-    let (round2_secret_package, round2_packages) =
-        frost::keys::dkg::part2(secret_package, &received_round1_packages)?;
-
-    writeln!(logger, "=== ROUND 2: SEND PACKAGES ===\n")?;
-
-    for (identifier, package) in round2_packages {
-        writeln!(
-            logger,
-            "Round 2 Package to send to participant {} (your identifier: {}):\n\n{}\n",
-            serde_json::to_string(&identifier)?,
-            serde_json::to_string(&config.identifier)?,
-            serde_json::to_string(&package)?
-        )?;
-    }
-
-    writeln!(logger, "=== ROUND 2: RECEIVE PACKAGES ===\n")?;
-
-    writeln!(
-        logger,
-        "Input Round 2 Packages from the other {} participants.\n",
-        config.max_signers - 1,
-    )?;
-    let mut received_round2_packages = BTreeMap::new();
-    for _ in 0..config.max_signers - 1 {
-        let (identifier, round2_package) = read_round2_package(reader, logger)?;
-        received_round2_packages.insert(identifier, round2_package);
-        writeln!(logger)?;
-    }
-
-    writeln!(logger, "=== DKG FINISHED ===")?;
-
-    let (key_package, public_key_package) = MaybeIntoEvenY::into_even_y(frost::keys::dkg::part3(
-        &round2_secret_package,
-        &received_round1_packages,
-        &received_round2_packages,
-    )?);
+    let (key_package, public_key_package, _) =
+        cli_for_processed_args(pargs, reader, logger).await?;
 
     writeln!(
         logger,
@@ -126,4 +67,53 @@ pub fn cli<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     )?;
 
     Ok(())
+}
+
+pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
+    pargs: ProcessedArgs<C>,
+    input: &mut impl BufRead,
+    logger: &mut impl Write,
+) -> Result<
+    (
+        KeyPackage<C>,
+        PublicKeyPackage<C>,
+        HashMap<Vec<u8>, Identifier<C>>,
+    ),
+    Box<dyn Error>,
+> {
+    let mut comms: Box<dyn Comms<C>> = if pargs.cli {
+        Box::new(CLIComms::new(&pargs))
+    } else if pargs.http {
+        Box::new(HTTPComms::new(&pargs)?)
+    } else {
+        return Err(eyre!("either --cli or --http must be specified").into());
+    };
+
+    let rng = thread_rng();
+
+    let (identifier, max_signers) = comms.get_identifier(input, logger).await?;
+
+    let (round1_secret_package, round1_package) =
+        frost::keys::dkg::part1(identifier, max_signers, pargs.min_signers, rng)?;
+
+    let received_round1_packages = comms
+        .get_round1_packages(input, logger, round1_package)
+        .await?;
+
+    let (round2_secret_package, round2_packages) =
+        frost::keys::dkg::part2(round1_secret_package, &received_round1_packages)?;
+
+    let received_round2_packages = comms
+        .get_round2_packages(input, logger, round2_packages)
+        .await?;
+
+    let (key_package, public_key_package) = MaybeIntoEvenY::into_even_y(frost::keys::dkg::part3(
+        &round2_secret_package,
+        &received_round1_packages,
+        &received_round2_packages,
+    )?);
+
+    let pubkey_map = comms.get_pubkey_identifier_map()?;
+
+    Ok((key_package, public_key_package, pubkey_map))
 }
