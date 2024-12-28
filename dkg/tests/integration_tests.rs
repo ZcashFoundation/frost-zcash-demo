@@ -4,7 +4,6 @@ use dkg::cli::{cli, MaybeIntoEvenY};
 
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
-use std::thread;
 
 use frost::keys::{KeyPackage, PublicKeyPackage};
 use frost::Identifier;
@@ -28,14 +27,14 @@ fn read_line(mut reader: impl BufRead) -> Result<String, std::io::Error> {
 // writing to a CLI instead of reading, or vice-versa. Use `debug` to find
 // where in the function it's getting stuck and check if the test at that point
 // is correct.
-#[test]
-fn check_dkg() {
-    check_dkg_for_ciphersuite::<frost_ed25519::Ed25519Sha512>();
-    check_dkg_for_ciphersuite::<reddsa::frost::redpallas::PallasBlake2b512>();
+#[tokio::test]
+async fn check_dkg() {
+    check_dkg_for_ciphersuite::<frost_ed25519::Ed25519Sha512>().await;
+    check_dkg_for_ciphersuite::<reddsa::frost::redpallas::PallasBlake2b512>().await;
 }
 
 #[allow(clippy::needless_range_loop)]
-fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
+async fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
     let mut input_writers = Vec::new();
     let mut output_readers = Vec::new();
     let mut join_handles = Vec::new();
@@ -45,8 +44,10 @@ fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
 
         let (mut input_reader, input_writer) = pipe::pipe();
         let (output_reader, mut output_writer) = pipe::pipe();
-        join_handles.push(thread::spawn(move || {
-            cli::<C>(&mut input_reader, &mut output_writer).unwrap()
+        join_handles.push(tokio::spawn(async {
+            cli::<C>(&mut input_reader, &mut output_writer)
+                .await
+                .unwrap()
         }));
         input_writers.push(input_writer);
         output_readers.push(output_reader);
@@ -240,6 +241,6 @@ fn check_dkg_for_ciphersuite<C: Ciphersuite + 'static + MaybeIntoEvenY>() {
 
     // Wait for threads, which should terminate at this point
     for jh in join_handles {
-        jh.join().unwrap();
+        jh.await.unwrap();
     }
 }

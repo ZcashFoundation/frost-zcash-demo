@@ -3,6 +3,7 @@ pub mod ciphersuite_helper;
 pub mod config;
 pub mod contact;
 pub mod coordinator;
+pub mod dkg;
 pub mod group;
 pub mod init;
 pub mod participant;
@@ -30,6 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::RemoveGroup { .. } => group::remove(&args.command),
         Command::Sessions { .. } => session::list(&args.command).await,
         Command::TrustedDealer { .. } => trusted_dealer::trusted_dealer(&args.command),
+        Command::Dkg { .. } => dkg::dkg(&args.command).await,
         Command::Coordinator { .. } => crate::coordinator::run(&args.command).await,
         Command::Participant { .. } => crate::participant::run(&args.command).await,
     }?;

@@ -13,6 +13,7 @@ frostd = { path = "../frostd" }
 trusted-dealer = { path = "../trusted-dealer" }
 coordinator = { path = "../coordinator" }
 participant = { path = "../participant" }
+dkg = { path = "../dkg" }
 eyre = "0.6.12"
 rpassword = "7.3.1"
 directories = "5.0.1"
