@@ -3,11 +3,12 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     error::Error,
-    io::{BufRead, Write},
     marker::PhantomData,
     time::Duration,
     vec,
 };
+
+use tokio::io::{AsyncBufRead as BufRead, AsyncWrite as Write};
 
 use async_trait::async_trait;
 use eyre::{eyre, OptionExt};
@@ -272,14 +273,13 @@ impl<C: Ciphersuite> HTTPComms<C> {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
     async fn get_identifier(
         &mut self,
-        _input: &mut dyn BufRead,
-        _output: &mut dyn Write,
+        _input: &mut (dyn BufRead + Send + Sync + Unpin),
+        _output: &mut (dyn Write + Send + Sync + Unpin),
     ) -> Result<(Identifier<C>, u16), Box<dyn Error>> {
-        let mut rng = thread_rng();
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
@@ -299,7 +299,10 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             )
             .map_err(|_| eyre!("invalid comm_privkey"))?,
         );
-        let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+        let signature: [u8; 64] = {
+            let mut rng = thread_rng();
+            privkey.sign(challenge.as_bytes(), &mut rng)
+        };
         let comm_pubkey = self
             .args
             .comm_pubkey
@@ -407,8 +410,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
 
     async fn get_round1_packages(
         &mut self,
-        _input: &mut dyn BufRead,
-        _output: &mut dyn Write,
+        _input: &mut (dyn BufRead + Send + Sync + Unpin),
+        _output: &mut (dyn Write + Send + Sync + Unpin),
         round1_package: round1::Package<C>,
     ) -> Result<BTreeMap<Identifier<C>, round1::Package<C>>, Box<dyn Error>> {
         let (Some(comm_privkey), Some(comm_participant_pubkey_getter)) = (
@@ -506,8 +509,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
 
     async fn get_round2_packages(
         &mut self,
-        _input: &mut dyn BufRead,
-        _output: &mut dyn Write,
+        _input: &mut (dyn BufRead + Send + Sync + Unpin),
+        _output: &mut (dyn Write + Send + Sync + Unpin),
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     ) -> Result<BTreeMap<Identifier<C>, round2::Package<C>>, Box<dyn Error>> {
         // Send Round 2 Packages to all other participants

@@ -1126,8 +1126,6 @@ dependencies = [
 [[package]]
 name = "frost-core"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5afd375261c34d31ff24dad068382f4bc3c95010c919d4fb8d483dc3d85c023"
 dependencies = [
  "byteorder",
  "const-crc32-nostd",
@@ -1140,7 +1138,7 @@ dependencies = [
  "rand_core",
  "serde",
  "serdect",
- "thiserror 1.0.69",
+ "thiserror 2.0.9",
  "thiserror-nostd-notrait",
  "visibility",
  "zeroize",
@@ -1149,8 +1147,6 @@ dependencies = [
 [[package]]
 name = "frost-ed25519"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4186731878c57b4e4d5d1103c8e0d2a827d3cb63cf577826ce29d52c34be7d39"
 dependencies = [
  "curve25519-dalek",
  "document-features",
@@ -1163,8 +1159,6 @@ dependencies = [
 [[package]]
 name = "frost-rerandomized"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a9d77595060546b53543d96b83dbeacaf3907e40a89763a8bb22124812b0cb6"
 dependencies = [
  "derive-getters",
  "document-features",
@@ -2318,7 +2312,6 @@ dependencies = [
 [[package]]
 name = "reddsa"
 version = "0.5.1"
-source = "git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead#ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -2329,7 +2322,7 @@ dependencies = [
  "pasta_curves",
  "rand_core",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.9",
  "zeroize",
 ]
 

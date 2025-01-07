@@ -1,6 +1,5 @@
-use std::io;
-
 use clap::Parser;
+use tokio::io;
 
 use dkg::{args::Args, cli::cli};
 
@@ -8,7 +7,7 @@ use dkg::{args::Args, cli::cli};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let mut reader = Box::new(io::stdin().lock());
+    let mut reader = io::BufReader::new(io::stdin());
     let mut logger = io::stdout();
 
     if args.ciphersuite == "ed25519" {

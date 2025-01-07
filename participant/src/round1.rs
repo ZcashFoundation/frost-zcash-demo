@@ -6,7 +6,6 @@ use frost::{
     keys::{KeyPackage, SecretShare},
     round1::SigningCommitments,
     round1::SigningNonces,
-    Error,
 };
 use rand::rngs::ThreadRng;
 use std::io::{BufRead, Write};
@@ -32,8 +31,7 @@ pub async fn request_inputs<C: Ciphersuite + 'static>(
             KeyPackage::try_from(secret_share)?
         } else {
             // TODO: Improve error
-            serde_json::from_str::<KeyPackage<C>>(&secret_share)
-                .map_err(|_| Error::<C>::InvalidSecretShare)?
+            serde_json::from_str::<KeyPackage<C>>(&secret_share)?
         };
 
     Ok(Round1Config { key_package })

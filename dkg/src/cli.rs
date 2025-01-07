@@ -1,4 +1,4 @@
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{self as frost, Ciphersuite, Identifier};
 
@@ -6,7 +6,8 @@ use rand::thread_rng;
 use reddsa::frost::redpallas::keys::EvenY;
 use std::collections::HashMap;
 use std::error::Error;
-use std::io::{BufRead, Write};
+use tokio::io::AsyncWriteExt as WriteExt;
+use tokio::io::{AsyncBufRead as BufRead, AsyncWrite as Write};
 
 use crate::args::ProcessedArgs;
 use crate::comms::cli::CLIComms;
@@ -46,33 +47,41 @@ impl MaybeIntoEvenY for reddsa::frost::redpallas::PallasBlake2b512 {
 }
 
 pub async fn cli<C: Ciphersuite + 'static + MaybeIntoEvenY>(
-    reader: &mut impl BufRead,
-    logger: &mut impl Write,
+    reader: &mut (impl BufRead + Send + Sync + Unpin),
+    logger: &mut (impl Write + Send + Sync + Unpin),
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config = request_inputs::<C>(reader, logger)?;
+    let config = request_inputs::<C>(reader, logger).await?;
     let pargs = ProcessedArgs::<C>::new(&config);
 
     let (key_package, public_key_package, _) =
         cli_for_processed_args(pargs, reader, logger).await?;
 
-    writeln!(
-        logger,
-        "Participant key package:\n\n{}\n",
-        serde_json::to_string(&key_package)?,
-    )?;
-    writeln!(
-        logger,
-        "Participant public key package:\n\n{}\n",
-        serde_json::to_string(&public_key_package)?,
-    )?;
+    logger
+        .write_all(
+            format!(
+                "Participant key package:\n\n{}\n\n",
+                serde_json::to_string(&key_package)?,
+            )
+            .as_bytes(),
+        )
+        .await?;
+    logger
+        .write_all(
+            format!(
+                "Participant public key package:\n\n{}\n\n",
+                serde_json::to_string(&public_key_package)?,
+            )
+            .as_bytes(),
+        )
+        .await?;
 
     Ok(())
 }
 
 pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     pargs: ProcessedArgs<C>,
-    input: &mut impl BufRead,
-    logger: &mut impl Write,
+    input: &mut (impl BufRead + Send + Sync + Unpin),
+    logger: &mut (impl Write + Send + Sync + Unpin),
 ) -> Result<
     (
         KeyPackage<C>,
@@ -89,10 +98,16 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
         return Err(eyre!("either --cli or --http must be specified").into());
     };
 
-    let rng = thread_rng();
-
     let (identifier, max_signers) = comms.get_identifier(input, logger).await?;
+    let max_signers = if max_signers != 0 {
+        max_signers
+    } else {
+        pargs
+            .max_signers
+            .ok_or_eyre("max_signers must be specified")?
+    };
 
+    let rng = thread_rng();
     let (round1_secret_package, round1_package) =
         frost::keys::dkg::part1(identifier, max_signers, pargs.min_signers, rng)?;
 

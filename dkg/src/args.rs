@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use clap::Parser;
 use frost_core::{Ciphersuite, Identifier};
@@ -38,7 +38,8 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
-    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
+    pub comm_participant_pubkey_getter:
+        Option<Arc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>> + Send + Sync>>,
 
     /// The threshold to use for the shares
     pub min_signers: u16,

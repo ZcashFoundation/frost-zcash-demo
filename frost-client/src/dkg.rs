@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     error::Error,
-    rc::Rc,
+    sync::Arc,
 };
 
 use eyre::{eyre, Context as _, OptionExt};
@@ -10,6 +10,7 @@ use dkg::cli::MaybeIntoEvenY;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use reqwest::Url;
+use tokio::io::BufReader;
 
 use crate::{
     args::Command,
@@ -45,8 +46,8 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
         panic!("invalid Command");
     };
 
-    let mut input = Box::new(std::io::stdin().lock());
-    let mut output = std::io::stdout();
+    let mut input = BufReader::new(tokio::io::stdin());
+    let mut output = tokio::io::stdout();
 
     let config = Config::read(config_path.clone())?;
 
@@ -84,7 +85,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
                 .privkey,
         ),
         comm_pubkey: Some(comm_pubkey),
-        comm_participant_pubkey_getter: Some(Rc::new(move |participant_pubkey| {
+        comm_participant_pubkey_getter: Some(Arc::new(move |participant_pubkey| {
             config
                 .contact_by_pubkey(participant_pubkey)
                 .map(|p| p.pubkey.clone())
