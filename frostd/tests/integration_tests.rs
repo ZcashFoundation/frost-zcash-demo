@@ -1,12 +1,13 @@
 use core::str;
-use std::{collections::BTreeMap, error::Error, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    error::Error,
+    time::Duration,
+};
 
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
-use frostd::{
-    args::Args, router, AppState, SendCommitmentsArgs, SendSignatureSharesArgs,
-    SendSigningPackageArgs,
-};
+use frostd::{args::Args, router, AppState, SendSigningPackageArgs};
 use rand::thread_rng;
 use reqwest::Certificate;
 
@@ -163,10 +164,6 @@ async fn test_main_router<
         nonces_map.insert(*identifier, nonces_vec);
 
         // Send commitments to server
-        let send_commitments_args = SendCommitmentsArgs {
-            identifier: *identifier,
-            commitments: commitments_vec,
-        };
         let res = server
             .post("/send")
             .authorization_bearer(token)
@@ -174,7 +171,7 @@ async fn test_main_router<
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_commitments_args)?,
+                msg: serde_json::to_vec(&commitments_vec)?,
             })
             .await;
         if res.status_code() != 200 {
@@ -183,7 +180,17 @@ async fn test_main_router<
     }
 
     // As the coordinator, get the commitments
-    let mut coordinator_state = SessionState::<C>::new(2, 2);
+    let pubkey_identifier_map = HashMap::from([
+        (
+            alice_keypair.public.clone(),
+            *key_packages.first_key_value().unwrap().0,
+        ),
+        (
+            bob_keypair.public.clone(),
+            *key_packages.last_key_value().unwrap().0,
+        ),
+    ]);
+    let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
     loop {
         let res = server
             .post("/receive")
@@ -296,10 +303,6 @@ async fn test_main_router<
         };
 
         // Send SignatureShares to the server
-        let send_signature_shares_args = SendSignatureSharesArgs {
-            identifier: *identifier,
-            signature_share: signature_shares,
-        };
         let res = server
             .post("/send")
             .authorization_bearer(token)
@@ -307,7 +310,7 @@ async fn test_main_router<
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_signature_shares_args)?,
+                msg: serde_json::to_vec(&signature_shares)?,
             })
             .await;
         res.assert_status_ok();

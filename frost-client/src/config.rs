@@ -7,6 +7,7 @@ use std::{
 };
 
 use eyre::{eyre, OptionExt};
+use frost_core::{Ciphersuite, Identifier};
 use serde::{Deserialize, Serialize};
 
 use crate::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
@@ -102,6 +103,16 @@ impl Group {
         }
         Ok(s)
     }
+
+    /// Get a group participant by their pubkey.
+    pub fn participant_by_pubkey(&self, pubkey: &[u8]) -> Result<Participant, Box<dyn Error>> {
+        Ok(self
+            .participant
+            .values()
+            .find(|p| p.pubkey == pubkey)
+            .cloned()
+            .ok_or_eyre("Participant not found")?)
+    }
 }
 
 /// A FROST group participant.
@@ -119,6 +130,13 @@ pub struct Participant {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub pubkey: Vec<u8>,
+}
+
+impl Participant {
+    /// Return the parsed identifier for the participant.
+    pub fn identifier<C: Ciphersuite>(&self) -> Result<Identifier<C>, Box<dyn std::error::Error>> {
+        Ok(Identifier::<C>::deserialize(&self.identifier)?)
+    }
 }
 
 impl Config {
