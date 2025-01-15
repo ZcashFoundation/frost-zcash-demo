@@ -54,6 +54,7 @@ pub(crate) enum Command {
         #[arg(short, long)]
         pubkey: String,
     },
+    /// Generate FROST shares using a trusted dealer.
     TrustedDealer {
         /// The path to the config file to manage.
         ///
@@ -79,6 +80,7 @@ pub(crate) enum Command {
         /// config file.
         #[arg(short, long)]
         server_url: Option<String>,
+        /// The ciphersuite to use.
         #[arg(short = 'C', long, default_value = "ed25519")]
         ciphersuite: String,
         /// The threshold (minimum number of signers).
@@ -87,6 +89,30 @@ pub(crate) enum Command {
         /// The total number of participants (maximum number of signers).
         #[arg(short = 'n', long, default_value_t = 3)]
         num_signers: u16,
+    },
+    /// Generate FROST shares using Distributed Key Generation.
+    Dkg {
+        /// The path to the config file to manage. If not specified, it uses
+        /// $HOME/.local/frost/credentials.toml
+        #[arg(short, long)]
+        config: Option<String>,
+        /// A description of the group being created. Will be written to the
+        /// participant's config files and will help them identify groups.
+        #[arg(short, long)]
+        description: String,
+        /// The server URL through which DKG will be run.
+        #[arg(short, long)]
+        server_url: String,
+        #[arg(short = 'C', long, default_value = "ed25519")]
+        ciphersuite: String,
+        /// The threshold (minimum number of signers).
+        #[arg(short = 't', long)]
+        threshold: u16,
+        /// The comma-separated hex-encoded public keys of the other
+        /// participants to use. Must be specified only for the first participant
+        /// who creates the DKG session.
+        #[arg(short = 'S', long, value_delimiter = ',')]
+        participants: Vec<String>,
     },
     /// Lists the groups the user is in.
     Groups {
