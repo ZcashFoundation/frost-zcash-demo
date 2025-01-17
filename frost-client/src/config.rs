@@ -30,6 +30,13 @@ pub struct Config {
 
 impl Config {
     pub fn contact_by_pubkey(&self, pubkey: &[u8]) -> Result<Contact, Box<dyn Error>> {
+        if Some(pubkey) == self.communication_key.as_ref().map(|c| c.pubkey.as_slice()) {
+            return Ok(Contact {
+                version: Some(0),
+                name: "".to_string(),
+                pubkey: pubkey.to_vec(),
+            });
+        }
         Ok(self
             .contact
             .values()
