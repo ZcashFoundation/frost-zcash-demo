@@ -13,7 +13,7 @@ use zcash_client_backend::address::UnifiedAddress;
 use zcash_keys::keys::UnifiedFullViewingKey;
 use zcash_protocol::consensus::MainNetwork;
 
-use frost_zcash_sign::transaction_plan::TransactionPlan;
+use zcash_sign::transaction_plan::TransactionPlan;
 
 use args::{Args, Command};
 
@@ -31,7 +31,7 @@ fn generate(args: &Command) -> Result<(), Box<dyn Error>> {
 
     let mut rng = rand::thread_rng();
 
-    let fvk = frost_zcash_sign::generate(&mut rng, &ak);
+    let fvk = zcash_sign::generate(&mut rng, &ak);
 
     let orchard_address = fvk.address_at(0u64, Scope::External);
     let unified_address = UnifiedAddress::from_receivers(Some(orchard_address), None, None)
@@ -77,7 +77,7 @@ fn sign(args: &Command) -> Result<(), Box<dyn Error>> {
 
     let mut rng = thread_rng();
 
-    let tx = frost_zcash_sign::sign(&mut rng, &tx_plan, &ufvk)?;
+    let tx = zcash_sign::sign(&mut rng, &tx_plan, &ufvk)?;
 
     let mut tx_bytes = vec![];
     tx.write(&mut tx_bytes).unwrap();

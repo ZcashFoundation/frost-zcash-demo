@@ -1,5 +1,5 @@
 [package]
-name = "frost-zcash-sign"
+name = "zcash-sign"
 version = "0.1.0"
 edition = "2021"
 
