@@ -60,9 +60,7 @@ async fn test_main_router<
     let router = router(shared_state);
     let server = TestServer::new(router)?;
 
-    // Create a dummy user. We make all requests with the same user since
-    // it currently it doesn't really matter who the user is, users are only
-    // used to share session IDs. This will likely change soon.
+    // Log in as two different users, Alice and Bob
 
     let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
     let alice_keypair = builder.generate_keypair().unwrap();
@@ -180,16 +178,12 @@ async fn test_main_router<
     }
 
     // As the coordinator, get the commitments
-    let pubkey_identifier_map = HashMap::from([
-        (
-            alice_keypair.public.clone(),
-            *key_packages.first_key_value().unwrap().0,
-        ),
-        (
-            bob_keypair.public.clone(),
-            *key_packages.last_key_value().unwrap().0,
-        ),
-    ]);
+    let comm_pubkeys = [&alice_keypair.public, &bob_keypair.public];
+    let pubkey_identifier_map = comm_pubkeys
+        .into_iter()
+        .cloned()
+        .zip(key_packages.keys().take(2).copied())
+        .collect::<HashMap<_, _>>();
     let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
     loop {
         let res = server
