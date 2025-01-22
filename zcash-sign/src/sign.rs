@@ -158,7 +158,7 @@ pub fn sign(
 
     let transparent_bundle = transparent_builder.build();
     let sapling_bundle = sapling_builder
-        .build::<LocalTxProver, LocalTxProver, _, Amount>(&mut rng)
+        .build::<LocalTxProver, LocalTxProver, _, Amount>(&[], &mut rng)
         .unwrap();
     let orchard_bundle = orchard_builder.build(&mut rng).unwrap();
 
@@ -197,9 +197,11 @@ pub fn sign(
     // to the Authorized state, which we do by calling `apply_signatures()`
     // (which does not take arguments since the transparent-inputs feature is
     // not enabled)
-    let transparent_bundle = unauthed_tx
-        .transparent_bundle()
-        .map(|tb| tb.clone().apply_signatures());
+    let transparent_bundle = unauthed_tx.transparent_bundle().map(|tb| {
+        tb.clone()
+            .apply_signatures(|_| [0; 32], &Default::default())
+            .unwrap()
+    });
 
     // There are no Sapling spends to sign, but we need to move the Bundle to
     // the Authorized state, which we do by applying an empty vector of
