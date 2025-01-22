@@ -1,5 +1,5 @@
+use std::collections::HashMap;
 use std::error::Error;
-use std::rc::Rc;
 
 use coordinator::cli::cli_for_processed_args;
 use eyre::eyre;
@@ -68,11 +68,14 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
 
     let signers = signers
         .iter()
-        .map(|s| Ok(hex::decode(s)?.to_vec()))
-        .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
+        .map(|s| {
+            let pubkey = hex::decode(s)?.to_vec();
+            let contact = group.participant_by_pubkey(&pubkey)?;
+            Ok((pubkey, contact.identifier()?))
+        })
+        .collect::<Result<HashMap<_, _>, Box<dyn Error>>>()?;
     let num_signers = signers.len() as u16;
 
-    let group_participants = group.participant.clone();
     let pargs = coordinator::args::ProcessedArgs {
         cli: false,
         http: true,
@@ -102,12 +105,6 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
                 .pubkey
                 .clone(),
         ),
-        comm_participant_pubkey_getter: Some(Rc::new(move |participant_pubkey| {
-            group_participants
-                .values()
-                .find(|p| p.pubkey == *participant_pubkey)
-                .map(|p| p.pubkey.clone())
-        })),
     };
 
     cli_for_processed_args(pargs, &mut input, &mut output).await?;

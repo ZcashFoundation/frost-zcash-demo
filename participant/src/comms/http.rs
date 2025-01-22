@@ -111,7 +111,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     _phantom: PhantomData<C>,
 }
 
-use frostd::{SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid};
+use frostd::{SendSigningPackageArgs, Uuid};
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -168,7 +168,7 @@ where
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
         commitments: SigningCommitments<C>,
-        identifier: Identifier<C>,
+        _identifier: Identifier<C>,
         rerandomized: bool,
     ) -> Result<
         (
@@ -250,9 +250,7 @@ where
             );
         };
 
-        // If encryption is enabled, create the Noise objects
-
-        // We need to know what is the username of the coordinator in order
+        // We need to know what is the pubkey of the coordinator in order
         // to encrypt message to them.
         let session_info = self
             .client
@@ -291,10 +289,7 @@ where
         self.recv_noise = Some(recv_noise);
 
         // Send Commitments to Server
-        let send_commitments_args = SendCommitmentsArgs {
-            identifier,
-            commitments: vec![commitments],
-        };
+        let send_commitments_args = vec![commitments];
         let msg = self.encrypt(serde_json::to_vec(&send_commitments_args)?)?;
         self.client
             .post(format!("{}/send", self.host_port))
@@ -354,17 +349,14 @@ where
 
     async fn send_signature_share(
         &mut self,
-        identifier: Identifier<C>,
+        _identifier: Identifier<C>,
         signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>> {
         // Send signature share to Coordinator
 
         eprintln!("Sending signature share to coordinator...");
 
-        let send_signature_shares_args = SendSignatureSharesArgs {
-            identifier,
-            signature_share: vec![signature_share],
-        };
+        let send_signature_shares_args = vec![signature_share];
 
         let msg = self.encrypt(serde_json::to_vec(&send_signature_shares_args)?)?;
 

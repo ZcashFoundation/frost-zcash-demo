@@ -16,9 +16,7 @@ use frost_core::{
     Identifier, SigningPackage,
 };
 
-use frostd::{
-    Msg, PublicKey, SendCommitmentsArgs, SendSignatureSharesArgs, SendSigningPackageArgs, Uuid,
-};
+use frostd::{Msg, PublicKey, SendSigningPackageArgs, Uuid};
 use participant::comms::http::Noise;
 use rand::thread_rng;
 use xeddsa::{xed25519, Sign as _};
@@ -36,8 +34,7 @@ pub struct SessionStateArgs {
 ///
 /// This can be used by a Coordinator to help maitain state and handle
 /// messages from the Participants.
-#[derive(derivative::Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 pub enum SessionState<C: Ciphersuite> {
     /// Waiting for participants to send their commitments.
     WaitingForCommitments {
@@ -74,7 +71,11 @@ pub enum SessionState<C: Ciphersuite> {
 
 impl<C: Ciphersuite> SessionState<C> {
     /// Create a new SessionState for the given number of messages and signers.
-    pub fn new(num_messages: usize, num_signers: usize) -> Self {
+    pub fn new(
+        num_messages: usize,
+        num_signers: usize,
+        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+    ) -> Self {
         let args = SessionStateArgs {
             num_messages,
             num_signers,
@@ -82,7 +83,7 @@ impl<C: Ciphersuite> SessionState<C> {
         Self::WaitingForCommitments {
             args,
             commitments: Default::default(),
-            pubkeys: Default::default(),
+            pubkeys,
         }
     }
 
@@ -95,12 +96,12 @@ impl<C: Ciphersuite> SessionState<C> {
     pub fn recv(&mut self, msg: Msg) -> Result<(), Box<dyn Error>> {
         match self {
             SessionState::WaitingForCommitments { .. } => {
-                let send_commitments_args: SendCommitmentsArgs<C> =
+                let send_commitments_args: Vec<SigningCommitments<C>> =
                     serde_json::from_slice(&msg.msg)?;
                 self.handle_commitments(msg.sender, send_commitments_args)?;
             }
             SessionState::WaitingForSignatureShares { .. } => {
-                let send_signature_shares_args: SendSignatureSharesArgs<C> =
+                let send_signature_shares_args: Vec<SignatureShare<C>> =
                     serde_json::from_slice(&msg.msg)?;
                 self.handle_signature_share(msg.sender, send_signature_shares_args)?;
             }
@@ -113,34 +114,31 @@ impl<C: Ciphersuite> SessionState<C> {
     fn handle_commitments(
         &mut self,
         pubkey: Vec<u8>,
-        send_commitments_args: SendCommitmentsArgs<C>,
+        commitments: Vec<SigningCommitments<C>>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForCommitments {
             args,
-            commitments,
-            pubkeys: usernames,
+            commitments: commitments_map,
+            pubkeys,
         } = self
         {
-            if send_commitments_args.commitments.len() != args.num_messages {
+            if commitments.len() != args.num_messages {
                 return Err(eyre!("wrong number of commitments").into());
             }
+            let identifier = *pubkeys.get(&pubkey).ok_or(eyre!("unknown participant"))?;
 
             // Add commitment to map.
             // Currently ignores the possibility of overwriting previous values
             // (it seems better to ignore overwrites, which could be caused by
             // poor networking connectivity leading to retries)
-            commitments.insert(
-                send_commitments_args.identifier,
-                send_commitments_args.commitments,
-            );
-            usernames.insert(pubkey, send_commitments_args.identifier);
+            commitments_map.insert(identifier, commitments);
 
             // If complete, advance to next state
-            if commitments.len() == args.num_signers {
+            if commitments_map.len() == args.num_signers {
                 *self = SessionState::WaitingForSignatureShares {
                     args: args.clone(),
-                    commitments: commitments.clone(),
-                    pubkeys: usernames.clone(),
+                    commitments: commitments_map.clone(),
+                    pubkeys: pubkeys.clone(),
                     signature_shares: Default::default(),
                 }
             }
@@ -199,37 +197,35 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle signature share sent by a participant.
     fn handle_signature_share(
         &mut self,
-        _username: Vec<u8>,
-        send_signature_shares_args: SendSignatureSharesArgs<C>,
+        pubkey: Vec<u8>,
+        signature_shares: Vec<SignatureShare<C>>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForSignatureShares {
             args,
             commitments,
-            signature_shares,
-            ..
+            signature_shares: signature_shares_map,
+            pubkeys,
         } = self
         {
-            if send_signature_shares_args.signature_share.len() != args.num_messages {
+            if signature_shares.len() != args.num_messages {
                 return Err(eyre!("wrong number of signature shares").into());
             }
-            if !commitments.contains_key(&send_signature_shares_args.identifier) {
+            let identifier = *pubkeys.get(&pubkey).ok_or(eyre!("unknown participant"))?;
+            if !commitments.contains_key(&identifier) {
                 return Err(eyre!("invalid identifier").into());
             }
 
             // Currently ignoring the possibility of overwriting previous values
             // (it seems better to ignore overwrites, which could be caused by
             // poor networking connectivity leading to retries)
-            signature_shares.insert(
-                send_signature_shares_args.identifier,
-                send_signature_shares_args.signature_share,
-            );
+            signature_shares_map.insert(identifier, signature_shares);
             // If complete, advance to next state
-            if signature_shares.keys().cloned().collect::<HashSet<_>>()
+            if signature_shares_map.keys().cloned().collect::<HashSet<_>>()
                 == commitments.keys().cloned().collect::<HashSet<_>>()
             {
                 *self = SessionState::SignatureSharesReady {
                     args: args.clone(),
-                    signature_shares: signature_shares.clone(),
+                    signature_shares: signature_shares_map.clone(),
                 }
             }
             Ok(())
@@ -286,7 +282,11 @@ impl<C: Ciphersuite> HTTPComms<C> {
             session_id: None,
             access_token: None,
             args: args.clone(),
-            state: SessionState::new(args.messages.len(), args.num_signers as usize),
+            state: SessionState::new(
+                args.messages.len(),
+                args.num_signers as usize,
+                args.signers.clone(),
+            ),
             pubkeys: Default::default(),
             send_noise: None,
             recv_noise: None,
@@ -387,7 +387,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .json(&frostd::CreateNewSessionArgs {
-                pubkeys: self.args.signers.iter().cloned().map(PublicKey).collect(),
+                pubkeys: self.args.signers.keys().cloned().map(PublicKey).collect(),
                 message_count: 1,
             })
             .send()
@@ -403,21 +403,15 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         }
         self.session_id = Some(r.session_id);
 
-        let (Some(comm_privkey), Some(comm_participant_pubkey_getter)) = (
-            &self.args.comm_privkey,
-            &self.args.comm_participant_pubkey_getter,
-        ) else {
-            return Err(
-                eyre!("comm_privkey and comm_participant_pubkey_getter must be specified").into(),
-            );
+        let Some(comm_privkey) = &self.args.comm_privkey else {
+            return Err(eyre!("comm_privkey must be specified").into());
         };
 
         // If encryption is enabled, create the Noise objects
 
         let mut send_noise_map = HashMap::new();
         let mut recv_noise_map = HashMap::new();
-        for pubkey in &self.args.signers {
-            let comm_participant_pubkey = comm_participant_pubkey_getter(pubkey).ok_or_eyre("A participant in specified FROST session is not registered in the coordinator's address book")?;
+        for comm_participant_pubkey in self.args.signers.keys() {
             let builder = snow::Builder::new(
                 "Noise_K_25519_ChaChaPoly_BLAKE2s"
                     .parse()
@@ -426,7 +420,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let send_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey)
+                    .remote_public_key(comm_participant_pubkey)
                     .build_initiator()?,
             );
             let builder = snow::Builder::new(
@@ -437,11 +431,11 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let recv_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey)
+                    .remote_public_key(comm_participant_pubkey)
                     .build_responder()?,
             );
-            send_noise_map.insert(pubkey.clone(), send_noise);
-            recv_noise_map.insert(pubkey.clone(), recv_noise);
+            send_noise_map.insert(comm_participant_pubkey.clone(), send_noise);
+            recv_noise_map.insert(comm_participant_pubkey.clone(), recv_noise);
         }
         self.send_noise = Some(send_noise_map);
         self.recv_noise = Some(recv_noise_map);

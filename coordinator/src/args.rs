@@ -1,15 +1,15 @@
 use std::{
+    collections::HashMap,
     env,
     error::Error,
     fs,
     io::{BufRead, Write},
-    rc::Rc,
 };
 
 use clap::Parser;
 use eyre::eyre;
 
-use frost_core::{keys::PublicKeyPackage, Ciphersuite};
+use frost_core::{keys::PublicKeyPackage, Ciphersuite, Identifier};
 use frost_rerandomized::Randomizer;
 
 use crate::input::read_from_file_or_stdin;
@@ -85,10 +85,8 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     /// FROST server.
     pub http: bool,
 
-    /// The comma-separated keys of the signers to use in
-    /// HTTP mode. If HTTP mode is enabled and this is empty, then the session
-    /// ID will be printed and will have to be shared manually.
-    pub signers: Vec<Vec<u8>>,
+    /// Signers to use in HTTP mode, as a map of public keys to identifiers.
+    pub signers: HashMap<Vec<u8>, Identifier<C>>,
 
     /// The number of participants.
     pub num_signers: u16,
@@ -119,15 +117,6 @@ pub struct ProcessedArgs<C: Ciphersuite> {
 
     /// The coordinator's communication public key for HTTP mode.
     pub comm_pubkey: Option<Vec<u8>>,
-
-    /// A function that confirms if the public key of a participant is in the
-    /// user's contact book, returning the same public key, or None if not. For
-    /// HTTP mode.
-    // It is a `Rc<dyn Fn>` to make it easier to use;
-    // using `fn()` would preclude using closures and using generics would
-    // require a lot of code change for something simple.
-    #[allow(clippy::type_complexity)]
-    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
@@ -158,12 +147,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             &args.public_key_package,
         )?;
 
-        let signers = args
-            .signers
-            .iter()
-            .map(|s| Ok(hex::decode(s)?.to_vec()))
-            .collect::<Result<_, Box<dyn Error>>>()?;
-
         let public_key_package: PublicKeyPackage<C> = serde_json::from_str(&out)?;
 
         let messages = read_messages(&args.message, output, input)?;
@@ -174,7 +157,7 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
         Ok(ProcessedArgs {
             cli: args.cli,
             http: false,
-            signers,
+            signers: HashMap::new(),
             num_signers,
             public_key_package,
             messages,
@@ -184,7 +167,6 @@ impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
             port: args.port,
             comm_privkey: None,
             comm_pubkey: None,
-            comm_participant_pubkey_getter: None,
         })
     }
 }

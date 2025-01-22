@@ -1,6 +1,4 @@
-use frost_core::{
-    round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier, SigningPackage,
-};
+use frost_core::{Ciphersuite, SigningPackage};
 use frost_rerandomized::Randomizer;
 use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
@@ -144,15 +142,7 @@ pub struct CloseSessionArgs {
     pub session_id: Uuid,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(bound = "C: Ciphersuite")]
-pub struct SendCommitmentsArgs<C: Ciphersuite> {
-    pub identifier: Identifier<C>,
-    pub commitments: Vec<SigningCommitments<C>>,
-}
-
 #[derive(Serialize, Deserialize, derivative::Derivative)]
-#[derivative(Debug)]
 #[serde(bound = "C: Ciphersuite")]
 pub struct SendSigningPackageArgs<C: Ciphersuite> {
     pub signing_package: Vec<SigningPackage<C>>,
@@ -161,13 +151,5 @@ pub struct SendSigningPackageArgs<C: Ciphersuite> {
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
     )]
     pub aux_msg: Vec<u8>,
-    #[derivative(Debug = "ignore")]
     pub randomizer: Vec<Randomizer<C>>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(bound = "C: Ciphersuite")]
-pub struct SendSignatureSharesArgs<C: Ciphersuite> {
-    pub identifier: Identifier<C>,
-    pub signature_share: Vec<SignatureShare<C>>,
 }

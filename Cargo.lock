@@ -674,7 +674,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
- "derivative",
  "exitcode",
  "eyre",
  "frost-core",

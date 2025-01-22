@@ -1,12 +1,13 @@
 use core::str;
-use std::{collections::BTreeMap, error::Error, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    error::Error,
+    time::Duration,
+};
 
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
-use frostd::{
-    args::Args, router, AppState, SendCommitmentsArgs, SendSignatureSharesArgs,
-    SendSigningPackageArgs,
-};
+use frostd::{args::Args, router, AppState, SendSigningPackageArgs};
 use rand::thread_rng;
 use reqwest::Certificate;
 
@@ -59,9 +60,7 @@ async fn test_main_router<
     let router = router(shared_state);
     let server = TestServer::new(router)?;
 
-    // Create a dummy user. We make all requests with the same user since
-    // it currently it doesn't really matter who the user is, users are only
-    // used to share session IDs. This will likely change soon.
+    // Log in as two different users, Alice and Bob
 
     let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
     let alice_keypair = builder.generate_keypair().unwrap();
@@ -163,10 +162,6 @@ async fn test_main_router<
         nonces_map.insert(*identifier, nonces_vec);
 
         // Send commitments to server
-        let send_commitments_args = SendCommitmentsArgs {
-            identifier: *identifier,
-            commitments: commitments_vec,
-        };
         let res = server
             .post("/send")
             .authorization_bearer(token)
@@ -174,7 +169,7 @@ async fn test_main_router<
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_commitments_args)?,
+                msg: serde_json::to_vec(&commitments_vec)?,
             })
             .await;
         if res.status_code() != 200 {
@@ -183,7 +178,13 @@ async fn test_main_router<
     }
 
     // As the coordinator, get the commitments
-    let mut coordinator_state = SessionState::<C>::new(2, 2);
+    let comm_pubkeys = [&alice_keypair.public, &bob_keypair.public];
+    let pubkey_identifier_map = comm_pubkeys
+        .into_iter()
+        .cloned()
+        .zip(key_packages.keys().take(2).copied())
+        .collect::<HashMap<_, _>>();
+    let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
     loop {
         let res = server
             .post("/receive")
@@ -296,10 +297,6 @@ async fn test_main_router<
         };
 
         // Send SignatureShares to the server
-        let send_signature_shares_args = SendSignatureSharesArgs {
-            identifier: *identifier,
-            signature_share: signature_shares,
-        };
         let res = server
             .post("/send")
             .authorization_bearer(token)
@@ -307,7 +304,7 @@ async fn test_main_router<
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
-                msg: serde_json::to_vec(&send_signature_shares_args)?,
+                msg: serde_json::to_vec(&signature_shares)?,
             })
             .await;
         res.assert_status_ok();
