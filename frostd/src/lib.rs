@@ -57,6 +57,9 @@ pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         let listener = tokio::net::TcpListener::bind(addr).await?;
         Ok(axum::serve(listener, app).await?)
     } else {
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .expect("Failed to install rustls crypto provider");
         let config = RustlsConfig::from_pem_file(
             args.tls_cert
                 .clone()

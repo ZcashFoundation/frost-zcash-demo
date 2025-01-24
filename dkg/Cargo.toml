@@ -22,7 +22,7 @@ pipe = "0.4.0"
 frostd = { path = "../frostd" }
 participant = { path = "../participant" }
 xeddsa = "1.0.2"
-reqwest = { version = "0.12.9", features = ["json"] }
+reqwest = { version = "0.12.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 snow = "0.9.6"
 

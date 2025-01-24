@@ -433,6 +433,10 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // should just use `reqwest::Client::new()`, if the server has a proper web
     // certificate.
     let client = reqwest::Client::builder()
+        // workaround for bug that prevents additional root certificates from working
+        // https://github.com/seanmonstar/reqwest/issues/1260
+        // https://github.com/seanmonstar/reqwest/discussions/2428
+        .use_rustls_tls()
         .add_root_certificate(Certificate::from_pem(cert.pem().as_bytes())?)
         .build()?;
 
