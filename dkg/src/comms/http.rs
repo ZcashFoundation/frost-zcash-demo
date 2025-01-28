@@ -166,11 +166,6 @@ impl<C: Ciphersuite> SessionState<C> {
     /// sessions, we should receive n-2 broadcast packages (since we are
     /// excluding the original sender and ourselves).
     ///
-    /// Note that we don't actively abort if we get a package mismatch; the
-    /// session will simply stall until the timeout is reached. This is because
-    /// an attacker could force a stall anyway by simply not participating in
-    /// the protocol.
-    ///
     /// [1]: https://eprint.iacr.org/2002/040.pdf
     fn handle_round1_package_broadcast(
         &mut self,
@@ -199,6 +194,14 @@ impl<C: Ciphersuite> SessionState<C> {
             }
             if original_identifier == sender_identifier {
                 return Err(eyre!("received redundant broadcast Round 1 Package").into());
+            }
+            // Check if broadcast package is equal to the original package.
+            if round1_packages
+                .get(&original_identifier)
+                .ok_or_eyre("Round 1 Package not found")?
+                != &round1_package
+            {
+                return Err(eyre!("broadcast mismatch").into());
             }
 
             // Add broadcast Round 1 Package to the original sender's map.
@@ -235,12 +238,14 @@ impl<C: Ciphersuite> SessionState<C> {
                         map_identifiers == other_identifiers
                         // And finally, check if the broadcasted packages are
                         // all equal to the package received from the original
-                        // sender in the previous round.
+                        // sender in the previous round. Since we have already
+                        // checked them above before inserting them in
+                        // `round1_broadcasted_packages` this should always be
+                        // true; but it's safer to double check.
                             && map.values().all(|package| {
-                                package
+                                Some(package)
                                     == round1_packages
                                         .get(original_identifier)
-                                        .expect("must contain the package")
                             })
                     })
             {
