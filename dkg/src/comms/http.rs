@@ -38,6 +38,19 @@ pub enum SessionState<C: Ciphersuite> {
         /// Round 1 Packages sent by participants so far.
         round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     },
+    /// Waiting for participants to send their broadcasts of other participant's
+    /// commitments. See documentation of [`handle_round1_package_broadcast()`]
+    /// for details.
+    WaitingForRound1PackagesBroadcast {
+        /// Pubkey -> Identifier mapping.
+        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        /// Original Round 1 Packages sent by the other participants.
+        round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
+        /// Broadcasted Round 1 Packages sent by the other participants,
+        /// keyed by original sender, then by the sender of the broadcast.
+        round1_broadcasted_packages:
+            BTreeMap<Identifier<C>, BTreeMap<Identifier<C>, round1::Package<C>>>,
+    },
     /// Round 1 Packages have been sent by all other participants. Round 2
     /// Package can be created sent to other participants. Waiting for other
     /// participants to send their Round 2 Packages.
@@ -75,11 +88,21 @@ impl<C: Ciphersuite> SessionState<C> {
     /// returns true, and after the SigningPackage is sent to the participants,
     /// it should be called for new Msgs until [`are_signature_shares_ready()`]
     /// returns true.
-    pub fn recv(&mut self, msg: Msg) -> Result<(), Box<dyn Error>> {
+    pub fn recv(&mut self, msg: Msg, self_identifier: Identifier<C>) -> Result<(), Box<dyn Error>> {
         match self {
             SessionState::WaitingForRound1Packages { .. } => {
                 let round1_package: round1::Package<C> = serde_json::from_slice(&msg.msg)?;
                 self.handle_round1_package(msg.sender, round1_package)?;
+            }
+            SessionState::WaitingForRound1PackagesBroadcast { .. } => {
+                let (identifier, round1_package): (Identifier<C>, round1::Package<C>) =
+                    serde_json::from_slice(&msg.msg)?;
+                self.handle_round1_package_broadcast(
+                    msg.sender,
+                    self_identifier,
+                    identifier,
+                    round1_package,
+                )?;
             }
             SessionState::WaitingForRound2Packages { .. } => {
                 let round2_package: round2::Package<C> = serde_json::from_slice(&msg.msg)?;
@@ -110,6 +133,122 @@ impl<C: Ciphersuite> SessionState<C> {
 
             // If complete, advance to next state
             if round1_packages.len() == pubkeys.len() - 1 {
+                *self = SessionState::WaitingForRound1PackagesBroadcast {
+                    pubkeys: pubkeys.clone(),
+                    round1_packages: round1_packages.clone(),
+                    round1_broadcasted_packages: Default::default(),
+                }
+            }
+            Ok(())
+        } else {
+            panic!("wrong state");
+        }
+    }
+
+    /// Handle broadcast package sent from another participant.
+    ///
+    /// This implements Goldwasser-Lindell echo-broadcast protocol (Protocol 1
+    /// from [1]). We use the following terminology in the comments of this
+    /// function.
+    ///
+    /// - The original sender is the participant that wants to broadcast their
+    ///   package. The `round1_package` will thus contain the package sent by
+    ///   each original sender.
+    /// - The broadcaster sender is the participant that, after receiving the
+    ///   original sender package, broadcasts it to all other participants
+    ///   (excluding themselves, and the original sender).
+    /// - After all that is done, each echo-broadcast session is validated. It
+    ///   is valid if every broadcast package is equal to the original package
+    ///   sent by the original sender.
+    ///
+    /// Note that here we are keeping track of n-1 echo-broadcasts in parallel,
+    /// one for each original sender. In each of the n-1 echo-broadcast
+    /// sessions, we should receive n-2 broadcast packages (since we are
+    /// excluding the original sender and ourselves).
+    ///
+    /// [1]: https://eprint.iacr.org/2002/040.pdf
+    fn handle_round1_package_broadcast(
+        &mut self,
+        sender_pubkey: Vec<u8>,
+        self_identifier: Identifier<C>,
+        original_identifier: Identifier<C>,
+        round1_package: round1::Package<C>,
+    ) -> Result<(), Box<dyn Error>> {
+        if let SessionState::WaitingForRound1PackagesBroadcast {
+            pubkeys,
+            round1_packages,
+            round1_broadcasted_packages,
+        } = self
+        {
+            let sender_identifier = *pubkeys
+                .get(&sender_pubkey)
+                .ok_or(eyre!("unknown participant"))?;
+            // The `original_identifier` is not authenticated; we need to check
+            // if it is truly part of the DKG session.
+            if !pubkeys.values().any(|&id| id == original_identifier) {
+                return Err(eyre!("unknown participant"))?;
+            }
+            // Make sure nothing strange is going on.
+            if original_identifier == self_identifier {
+                return Err(eyre!("received own broadcast Round 1 Package").into());
+            }
+            if original_identifier == sender_identifier {
+                return Err(eyre!("received redundant broadcast Round 1 Package").into());
+            }
+            // Check if broadcast package is equal to the original package.
+            if round1_packages
+                .get(&original_identifier)
+                .ok_or_eyre("Round 1 Package not found")?
+                != &round1_package
+            {
+                return Err(eyre!("broadcast mismatch").into());
+            }
+
+            // Add broadcast Round 1 Package to the original sender's map.
+            if round1_broadcasted_packages
+                .entry(original_identifier)
+                .or_insert_with(BTreeMap::new)
+                .insert(sender_identifier, round1_package)
+                .is_some()
+            {
+                return Err(eyre!("duplicated broadcast Round 1 Package").into());
+            }
+
+            // Set of all other participants' identifiers
+            let other_identifiers = round1_packages.keys().cloned().collect::<HashSet<_>>();
+
+            // If complete, advance to next state. First, check if we have
+            // package maps for all other participants (original senders).
+            if round1_broadcasted_packages
+                .keys()
+                .cloned()
+                .collect::<HashSet<_>>()
+                == other_identifiers
+                // Then, validate each original sender's map.
+                && round1_broadcasted_packages
+                    .iter()
+                    .all(|(original_identifier, map)| {
+                        let mut map_identifiers = map.keys().cloned().collect::<HashSet<_>>();
+                        map_identifiers.insert(*original_identifier);
+                        //  Check if the map has all the other participants'
+                        // identifiers, excluding the original sender. (Or
+                        // alternatively, if the `other_identifiers` is equal to
+                        // `map_identifiers` when the original sender is added
+                        // to it.)
+                        map_identifiers == other_identifiers
+                        // And finally, check if the broadcasted packages are
+                        // all equal to the package received from the original
+                        // sender in the previous round. Since we have already
+                        // checked them above before inserting them in
+                        // `round1_broadcasted_packages` this should always be
+                        // true; but it's safer to double check.
+                            && map.values().all(|package| {
+                                Some(package)
+                                    == round1_packages
+                                        .get(original_identifier)
+                            })
+                    })
+            {
                 *self = SessionState::WaitingForRound2Packages {
                     pubkeys: pubkeys.clone(),
                     round1_packages: round1_packages.clone(),
@@ -123,9 +262,10 @@ impl<C: Ciphersuite> SessionState<C> {
     }
 
     /// Returns if all participants sent their Round 1 Packages.
-    /// When this returns `true`, [`round1_packages()`] can be called.
+    /// When this returns `true`, [`round1_packages()`] can be called, but
+    /// its contents have not been checked via echo broadcast.
     pub fn has_round1_packages(&self) -> bool {
-        matches!(self, SessionState::WaitingForRound2Packages { .. })
+        matches!(self, SessionState::WaitingForRound1PackagesBroadcast { .. })
     }
 
     /// Returns a map linking a participant identifier and the Round 1 Package
@@ -134,14 +274,22 @@ impl<C: Ciphersuite> SessionState<C> {
     pub fn round1_packages(
         &mut self,
     ) -> Result<BTreeMap<Identifier<C>, round1::Package<C>>, Box<dyn Error>> {
-        if let SessionState::WaitingForRound2Packages {
-            round1_packages, ..
-        } = self
-        {
-            Ok(round1_packages.clone())
-        } else {
-            panic!("wrong state");
+        match self {
+            SessionState::WaitingForRound2Packages {
+                round1_packages, ..
+            }
+            | SessionState::WaitingForRound1PackagesBroadcast {
+                round1_packages, ..
+            } => Ok(round1_packages.clone()),
+            _ => panic!("wrong state"),
         }
+    }
+
+    /// Returns if all participants sent their broadcast Round 1 Packages.
+    /// When this returns `true`, [`round1_packages()`] can be called,
+    /// and its contents are ensure to be checked via echo broadcast.
+    pub fn has_round1_broadcast_packages(&self) -> bool {
+        matches!(self, SessionState::WaitingForRound2Packages { .. })
     }
 
     /// Returns if all participants sent their Round 2 Packages.
@@ -210,6 +358,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     access_token: Option<String>,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
+    identifier: Option<Identifier<C>>,
     pubkeys: HashMap<Vec<u8>, Identifier<C>>,
     // The "send" Noise objects by pubkey of recipients.
     send_noise: Option<HashMap<Vec<u8>, Noise>>,
@@ -228,6 +377,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
             access_token: None,
             args: args.clone(),
             state: SessionState::default(),
+            identifier: None,
             pubkeys: Default::default(),
             send_noise: None,
             recv_noise: None,
@@ -402,7 +552,9 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         // This ensures the identifier is unique and that participants can
         // derive each other's identifiers.
         let input = [session_id.as_bytes(), &comm_pubkey[..]].concat();
-        Ok((Identifier::<C>::derive(&input)?, self.pubkeys.len() as u16))
+        let identifier = Identifier::<C>::derive(&input)?;
+        self.identifier = Some(identifier);
+        Ok((identifier, self.pubkeys.len() as u16))
     }
 
     async fn get_round1_packages(
@@ -491,7 +643,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .await?;
             for msg in r.msgs {
                 let msg = self.decrypt(msg)?;
-                self.state.recv(msg)?;
+                self.state
+                    .recv(msg, self.identifier.expect("must have been set"))?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
             eprint!(".");
@@ -501,6 +654,65 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         }
         eprintln!();
 
+        // Broadcast received Round 1 Packages to all other participants
+        for (recipient_pubkey, recipient_identifier) in self.pubkeys.clone().iter() {
+            // No need to broadcast to oneself
+            if Some(recipient_pubkey) == self.args.comm_pubkey.as_ref() {
+                continue;
+            }
+            for (sender_identifier, package) in self.state.round1_packages()?.iter() {
+                // No need to broadcast back to the sender
+                if *sender_identifier == *recipient_identifier {
+                    continue;
+                }
+                let msg = self.encrypt(
+                    recipient_pubkey,
+                    serde_json::to_vec(&(*sender_identifier, package))?,
+                )?;
+                self.client
+                    .post(format!("{}/send", self.host_port))
+                    .bearer_auth(self.access_token.as_ref().expect("was just set"))
+                    .json(&frostd::SendArgs {
+                        session_id: self.session_id.expect("set before"),
+                        recipients: vec![PublicKey(recipient_pubkey.clone())],
+                        msg,
+                    })
+                    .send()
+                    .await?;
+            }
+        }
+
+        eprint!("Waiting for other participants to send their broadcasted Round 1 Packages...");
+
+        loop {
+            let r = self
+                .client
+                .post(format!("{}/receive", self.host_port))
+                .bearer_auth(
+                    self.access_token
+                        .as_ref()
+                        .expect("must have been set before"),
+                )
+                .json(&frostd::ReceiveArgs {
+                    session_id: self.session_id.unwrap(),
+                    as_coordinator: false,
+                })
+                .send()
+                .await?
+                .json::<frostd::ReceiveOutput>()
+                .await?;
+            for msg in r.msgs {
+                let msg = self.decrypt(msg)?;
+                self.state
+                    .recv(msg, self.identifier.expect("must have been set"))?;
+            }
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            eprint!(".");
+            if self.state.has_round1_broadcast_packages() {
+                break;
+            }
+        }
+        eprintln!();
         self.state.round1_packages()
     }
 
@@ -556,7 +768,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .await?;
             for msg in r.msgs {
                 let msg = self.decrypt(msg)?;
-                self.state.recv(msg)?;
+                self.state
+                    .recv(msg, self.identifier.expect("must have been set"))?;
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
             eprint!(".");

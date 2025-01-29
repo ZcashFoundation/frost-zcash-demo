@@ -33,6 +33,16 @@ xeddsa = "1.0.2"
 futures-util = "0.3.31"
 futures = "0.3.31"
 thiserror = "2.0.9"
+# ring is enabled due to the following issue:
+# - we enable rustls for reqwest because it's required to workaround an issue
+#   when adding root certificates (see test_http), and that imports rustls
+#   with ring enabled
+# - when ring is enabled, it requires manually initializing the ring CryptoProvider
+#   in the server setup
+# - compiling just frostd does not require reqwest, but it tries to initialize
+#   the ring CryptoProvider, which is not available.
+# For this reason we just simply always enable ring.
+rustls = { version = "0.23.21", features = ["ring"] }
 
 [dev-dependencies]
 axum-test = "16.4.1"
@@ -41,7 +51,7 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
     "frost",
     "serde",
 ] }
-reqwest = { version = "0.12.9", features = ["json"] }
+reqwest = { version = "0.12.12", features = ["json", "rustls-tls-manual-roots"] }
 regex = "1.11.1"
 coordinator = { path = "../coordinator" }
 
