@@ -9,7 +9,7 @@ pub(crate) struct Args {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
-    /// does testing things
+    /// Generate a new UnifiedFullViewingKey from a SpendValidatingKey.
     Generate {
         /// The SpendValidatingKey (VerifyingKey in FROST) to use
         #[arg(short, long)]
@@ -21,6 +21,7 @@ pub(crate) enum Command {
         #[arg(long, default_value_t = false)]
         danger_dummy_sapling: bool,
     },
+    /// Sign a transaction plan with a externally-generated signature.
     Sign {
         /// The file containing the JSON Ywallet transaction plan
         #[arg(short = 'i', long)]

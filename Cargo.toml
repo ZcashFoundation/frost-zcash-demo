@@ -7,18 +7,11 @@ members = [
     "tests",
     "frostd",
     "frost-client",
-    # "zcash-sign",
-]
-# TODO: go back to the workspace. It currently can't because it has a dependency
-# conflict with dependencies from other members. This will be solved when
-# zcash-sign is updated to zcash_primitives 0.16
-exclude = ["zcash-sign"]
-default-members = [
-    "participant",
-    "trusted-dealer",
-    "dkg",
-    "coordinator",
-    "tests",
-    "frostd"
+    "zcash-sign",
 ]
 resolver = "2"
+
+[patch.crates-io]
+# TODO: remove this when https://github.com/zcash/orchard/issues/430 is fully
+# addressed and a new release is made
+orchard = { git = "https://github.com/conradoplg/orchard.git", rev = "f0c88b78a1d70d55ce6bb480566d132e57d5607b" }
