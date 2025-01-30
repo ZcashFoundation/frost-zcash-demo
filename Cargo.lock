@@ -814,7 +814,7 @@ dependencies = [
  "reqwest",
  "rpassword",
  "serde_json",
- "serdect",
+ "serdect 0.3.0",
  "snow",
  "thiserror 2.0.9",
  "tokio",
@@ -1347,7 +1347,7 @@ dependencies = [
  "rpassword",
  "serde",
  "serde_json",
- "serdect",
+ "serdect 0.3.0",
  "snow",
  "stable-eyre",
  "tempfile",
@@ -1373,7 +1373,7 @@ dependencies = [
  "postcard",
  "rand_core",
  "serde",
- "serdect",
+ "serdect 0.2.0",
  "thiserror 1.0.69",
  "thiserror-nostd-notrait",
  "visibility",
@@ -1435,7 +1435,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
- "serdect",
+ "serdect 0.3.0",
  "snow",
  "tempfile",
  "thiserror 2.0.9",
@@ -2609,7 +2609,7 @@ dependencies = [
  "reqwest",
  "rpassword",
  "serde_json",
- "serdect",
+ "serdect 0.3.0",
  "snow",
  "tokio",
  "xeddsa",
@@ -2858,7 +2858,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0f3e5beed80eb580c68e2c600937ac2c4eedabdfd5ef1e5b7ea4f3fba84497b"
 dependencies = [
  "heck 0.5.0",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "log",
  "multimap",
  "once_cell",
@@ -2878,7 +2878,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "157c5a9d7ea5c2ed2d9fb8f495b64759f7816c7eaea54ba3978f0d63000162e3"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.87",
@@ -3577,6 +3577,16 @@ name = "serdect"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a84f14a19e9a014bb9f4512488d9829a68e04ecabffb0f9904cd1ace94598177"
+dependencies = [
+ "base16ct",
+ "serde",
+]
+
+[[package]]
+name = "serdect"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f42f67da2385b51a5f9652db9c93d78aeaf7610bf5ec366080b6de810604af53"
 dependencies = [
  "base16ct",
  "serde",
