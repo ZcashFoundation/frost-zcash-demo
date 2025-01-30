@@ -2243,9 +2243,9 @@ checksum = "3d97bbf43eb4f088f8ca469930cde17fa036207c9a5e02ccc5107c4e8b17c964"
 
 [[package]]
 name = "message-io"
-version = "0.18.2"
+version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "036508102df66e6cf2a4a6dfbfb086d9d1a49f067aa2a57cbe57b540c133300a"
+checksum = "de6e87adc85a703ec21ff551d5d5f2b7c99a4d90590584bb321e6f9ac1395230"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
@@ -4259,9 +4259,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tungstenite"
-version = "0.23.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e2e2ce1e47ed2994fd43b04c8f618008d4cabdd5ee34027cf14f9d918edd9c8"
+checksum = "dbc55edf6afe467bfa92835ae73628d8a934818aa1591c6ebacc4379b7c0ad09"
 dependencies = [
  "byteorder",
  "bytes",
