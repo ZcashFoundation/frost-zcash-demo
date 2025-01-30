@@ -806,7 +806,7 @@ dependencies = [
  "frost-rerandomized",
  "frostd",
  "hex",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "message-io",
  "participant",
  "rand",
@@ -1119,7 +1119,7 @@ dependencies = [
  "frost-ed25519",
  "frostd",
  "hex",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "participant",
  "pipe",
  "rand",
@@ -1338,7 +1338,7 @@ dependencies = [
  "frost-rerandomized",
  "frostd",
  "hex",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "participant",
  "postcard",
  "rand",
@@ -2054,6 +2054,15 @@ name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -2848,7 +2857,7 @@ version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0f3e5beed80eb580c68e2c600937ac2c4eedabdfd5ef1e5b7ea4f3fba84497b"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.12.1",
  "log",
  "multimap",
@@ -2939,7 +2948,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4225,7 +4234,7 @@ dependencies = [
  "frost-ed25519",
  "frost-rerandomized",
  "hex",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "rand",
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
  "serde_json",
