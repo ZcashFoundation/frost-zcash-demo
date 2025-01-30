@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts, RequestPartsExt};
+use axum::{extract::FromRequestParts, http::request::Parts, RequestPartsExt};
 use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
@@ -20,14 +20,10 @@ pub(crate) struct User {
 /// Read a User from a request. This is used to authenticate users. If any axum
 /// handler has an User argument, this will be called and the authentication
 /// will be carried out.
-#[async_trait]
 impl FromRequestParts<SharedState> for User {
     type Rejection = AppError;
 
     #[tracing::instrument(err(Debug), skip(parts, state))]
-    // Can be removed after this fix is released
-    // https://github.com/rust-lang/rust-clippy/issues/12281
-    #[allow(clippy::blocks_in_conditions)]
     async fn from_request_parts(
         parts: &mut Parts,
         state: &SharedState,
