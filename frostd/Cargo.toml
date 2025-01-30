@@ -32,7 +32,7 @@ uuid = { version = "1.11.0", features = ["v4", "fast-rng", "serde"] }
 xeddsa = "1.0.2"
 futures-util = "0.3.31"
 futures = "0.3.31"
-thiserror = "2.0.9"
+thiserror = "2.0.11"
 # ring is enabled due to the following issue:
 # - we enable rustls for reqwest because it's required to workaround an issue
 #   when adding root certificates (see test_http), and that imports rustls
