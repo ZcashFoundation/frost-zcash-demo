@@ -45,7 +45,7 @@ impl<C> Comms<C> for CLIComms<C>
 where
     C: Ciphersuite + 'static,
 {
-    async fn get_identifier(
+    async fn get_identifier_and_max_signers(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
@@ -54,7 +54,9 @@ where
             self.args
                 .identifier
                 .ok_or_eyre("identifier must be specified")?,
-            0,
+            self.args
+                .max_signers
+                .ok_or_eyre("max_signers must be specified")?,
         ))
     }
 

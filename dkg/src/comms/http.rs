@@ -424,7 +424,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
 
 #[async_trait(?Send)]
 impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
-    async fn get_identifier(
+    async fn get_identifier_and_max_signers(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,

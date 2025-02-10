@@ -91,7 +91,7 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
 
     let rng = thread_rng();
 
-    let (identifier, max_signers) = comms.get_identifier(input, logger).await?;
+    let (identifier, max_signers) = comms.get_identifier_and_max_signers(input, logger).await?;
 
     let (round1_secret_package, round1_package) =
         frost::keys::dkg::part1(identifier, max_signers, pargs.min_signers, rng)?;

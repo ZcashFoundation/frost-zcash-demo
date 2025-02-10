@@ -21,7 +21,7 @@ use frost::Identifier;
 pub trait Comms<C: Ciphersuite> {
     /// Return this participant's identifier (in case it's derived from other
     /// information) and the number of participants in the signing session.
-    async fn get_identifier(
+    async fn get_identifier_and_max_signers(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
