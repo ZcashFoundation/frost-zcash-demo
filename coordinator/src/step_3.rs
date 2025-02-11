@@ -85,8 +85,8 @@ fn print_signature<C: Ciphersuite + 'static>(
     if args.signature.is_empty() {
         writeln!(
             logger,
-            "Group signature: {}",
-            serde_json::to_string(&group_signature)?
+            "Signature:\n{}",
+            hex::encode(&group_signature.serialize()?)
         )?;
     } else {
         fs::write(&args.signature, group_signature.serialize()?)?;

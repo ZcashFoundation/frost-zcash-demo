@@ -137,5 +137,10 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
     );
     config.write()?;
 
+    eprintln!(
+        "Group created; information written to {}",
+        config.path().expect("should not be None").display()
+    );
+
     Ok(())
 }

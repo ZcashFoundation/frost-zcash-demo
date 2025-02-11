@@ -98,6 +98,11 @@ pub(crate) async fn create_new_session(
             .or_default()
             .insert(id);
     }
+    // Also add the coordinator, since they don't have to be a participant
+    sessions_by_pubkey
+        .entry(user.pubkey.clone())
+        .or_default()
+        .insert(id);
     // Create Session object
     let session = Session {
         pubkeys: args.pubkeys.into_iter().map(|p| p.0).collect(),
@@ -263,10 +268,16 @@ pub(crate) async fn close_session(
         return Err(AppError::NotCoordinator);
     }
 
-    for username in session.pubkeys.clone() {
-        if let Some(v) = sessions_by_pubkey.get_mut(&username) {
+    // Remove session from each participant list...
+    for pubkey in session.pubkeys.clone() {
+        if let Some(v) = sessions_by_pubkey.get_mut(&pubkey) {
             v.remove(&args.session_id);
         }
+    }
+    // And also remove from the coordinator's list
+    // (might have been already removed if they are also a participant)
+    if let Some(v) = sessions_by_pubkey.get_mut(&user.pubkey) {
+        v.remove(&args.session_id);
     }
     sessions.remove(&args.session_id);
     Ok(Json(()))
