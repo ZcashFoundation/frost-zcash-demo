@@ -17,7 +17,7 @@ eyre = "0.6.11"
 frost-core = { version = "2.0.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
 hex = "0.4"
-rand = "0.8"
+rand = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.3.0" }
 serde_json = "1.0.138"
