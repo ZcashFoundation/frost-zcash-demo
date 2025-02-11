@@ -75,7 +75,9 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
             .host_str()
             .ok_or_eyre("host missing in URL")?
             .to_owned(),
-        port: server_url_parsed.port().unwrap_or(2744),
+        port: server_url_parsed
+            .port_or_known_default()
+            .expect("always works for https"),
         comm_privkey: Some(
             config
                 .communication_key
