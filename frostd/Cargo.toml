@@ -9,7 +9,6 @@ edition = "2021"
 async-trait = "0.1"
 axum = "0.8.1"
 axum-extra = { version = "0.10.0", features = ["typed-header"] }
-axum-macros = "0.5.0"
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 clap = { version = "4.5.23", features = ["derive"] }
 delay_map = "0.4.0"
@@ -19,13 +18,10 @@ frost-core = { version = "2.0.0", features = ["serde"] }
 frost-rerandomized = { version = "2.0.0-rc.0", features = ["serde"] }
 hex = "0.4"
 rand = "0.8"
-rcgen = "0.13.2"
 serde = { version = "1.0", features = ["derive"] }
 serdect = { version = "0.3.0" }
 serde_json = "1.0.138"
-snow = "0.9.6"
 tokio = { version = "1.42", features = ["full"] }
-tempfile = "3.16.0"
 tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -55,6 +51,9 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
 reqwest = { version = "0.12.12", features = ["json", "rustls-tls-manual-roots"] }
 regex = "1.11.1"
 coordinator = { path = "../coordinator" }
+rcgen = "0.13.2"
+snow = "0.9.6"
+tempfile = "3.16.0"
 
 [features]
 default = []

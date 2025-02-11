@@ -16,7 +16,6 @@ participant = { path = "../participant" }
 dkg = { path = "../dkg" }
 eyre = "0.6.12"
 rpassword = "7.3.1"
-directories = "5.0.1"
 dirs = "5.0.1"
 hex = "0.4.3"
 tokio = { version = "1.42", features = ["full"] }

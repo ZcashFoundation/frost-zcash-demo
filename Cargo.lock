@@ -308,17 +308,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-macros"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "604fde5e028fea851ce1d8570bbdc034bec850d157f7569d10f347d06808c05c"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.87",
-]
-
-[[package]]
 name = "axum-server"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,14 +785,12 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
- "exitcode",
  "eyre",
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
  "frostd",
  "hex",
- "itertools 0.14.0",
  "message-io",
  "participant",
  "rand 0.8.5",
@@ -1075,15 +1062,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "directories"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a49173b84e034382284f27f1af4dcbbd231ffa358c0fe316541a7337f376a35"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
 name = "dirs"
 version = "5.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1110,15 +1088,12 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "clap",
- "exitcode",
  "eyre",
  "frost-core",
  "frost-ed25519",
  "frostd",
  "hex",
- "itertools 0.14.0",
  "participant",
- "pipe",
  "rand 0.8.5",
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
  "reqwest",
@@ -1326,7 +1301,6 @@ dependencies = [
  "bech32",
  "clap",
  "coordinator",
- "directories",
  "dirs",
  "dkg",
  "eyre",
@@ -1411,7 +1385,6 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
- "axum-macros",
  "axum-server",
  "axum-test",
  "clap",
@@ -2675,15 +2648,6 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "pipe"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c7b8f27da217eb966df4c58d4159ea939431950ca03cf782c22bd7c5c1d8d75"
-dependencies = [
- "crossbeam-channel",
-]
 
 [[package]]
 name = "pkcs8"
@@ -4253,7 +4217,6 @@ name = "trusted-dealer"
 version = "0.1.0"
 dependencies = [
  "clap",
- "exitcode",
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",

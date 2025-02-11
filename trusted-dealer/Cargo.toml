@@ -15,7 +15,6 @@ thiserror = "2.0"
 rand = "0.8"
 hex = "0.4"
 itertools = "0.14.0"
-exitcode = "1.1.2"
 serde_json = "1.0"
 
 [features]
