@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.22.1"
-clap = { version = "4.5.11", features = ["derive"] }
+clap = { version = "4.5.28", features = ["derive"] }
 eyre = "0.6.12"
 halo2_gadgets = "0.3.0"
 halo2_proofs = "0.3.0"
