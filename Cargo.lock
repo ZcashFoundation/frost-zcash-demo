@@ -1330,9 +1330,9 @@ dependencies = [
 
 [[package]]
 name = "frost-core"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5afd375261c34d31ff24dad068382f4bc3c95010c919d4fb8d483dc3d85c023"
+checksum = "1858230cabb6792a5020daf4b0074f57b7d1e2a520ac544c77f102babee62ff4"
 dependencies = [
  "byteorder",
  "const-crc32-nostd",
@@ -1340,12 +1340,12 @@ dependencies = [
  "derive-getters",
  "document-features",
  "hex",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "postcard",
  "rand_core 0.6.4",
  "serde",
  "serdect 0.2.0",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "thiserror-nostd-notrait",
  "visibility",
  "zeroize",
