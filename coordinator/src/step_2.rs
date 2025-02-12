@@ -18,7 +18,9 @@ pub fn step_2<C: Ciphersuite>(
     commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
 ) -> Result<SigningPackage<C>, Box<dyn std::error::Error>> {
     let signing_package = SigningPackage::new(commitments, &args.messages[0]);
-    print_signing_package(logger, &signing_package);
+    if args.cli {
+        print_signing_package(logger, &signing_package);
+    }
     Ok(signing_package)
 }
 

@@ -178,6 +178,8 @@ where
         Box<dyn Error>,
     > {
         let mut rng = thread_rng();
+
+        eprintln!("Logging in...");
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
@@ -219,6 +221,7 @@ where
                 .to_string(),
         );
 
+        eprintln!("Joining signing session...");
         let session_id = match self.session_id {
             Some(s) => s,
             None => {
@@ -289,6 +292,7 @@ where
         self.recv_noise = Some(recv_noise);
 
         // Send Commitments to Server
+        eprintln!("Sending commitments to coordinator...");
         let send_commitments_args = vec![commitments];
         let msg = self.encrypt(serde_json::to_vec(&send_commitments_args)?)?;
         self.client
@@ -326,7 +330,6 @@ where
             } else {
                 eprintln!("\nSigning package received");
                 let msg = self.decrypt(r.msgs[0].msg.clone())?;
-                eprintln!("\n{}", String::from_utf8_lossy(&msg.clone()));
                 break serde_json::from_slice(&msg)?;
             }
         };

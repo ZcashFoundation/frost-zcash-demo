@@ -26,8 +26,6 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
     reader: &mut impl BufRead,
     logger: &mut impl Write,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    writeln!(logger, "\n=== STEP 1: CHOOSE PARTICIPANTS ===\n")?;
-
     let mut comms: Box<dyn Comms<C>> = if pargs.cli {
         Box::new(CLIComms::new())
     } else if pargs.http {
@@ -38,14 +36,7 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
 
     let participants_config = step_1(&pargs, &mut *comms, reader, logger).await?;
 
-    writeln!(
-        logger,
-        "=== STEP 2: CHOOSE MESSAGE AND GENERATE COMMITMENT PACKAGE ===\n"
-    )?;
-
     let signing_package = step_2(&pargs, logger, participants_config.commitments.clone())?;
-
-    writeln!(logger, "=== STEP 3: BUILD GROUP SIGNATURE ===\n")?;
 
     step_3(
         &pargs,
@@ -56,8 +47,6 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         &signing_package,
     )
     .await?;
-
-    writeln!(logger, "=== END ===")?;
 
     Ok(())
 }

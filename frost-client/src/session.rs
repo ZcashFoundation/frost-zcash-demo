@@ -11,6 +11,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         config,
         group,
         server_url,
+        close_all,
     } = (*args).clone()
     else {
         panic!("invalid Command");
@@ -124,6 +125,17 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
                 }
             }
             eprintln!();
+
+            if close_all {
+                let _r = client
+                    .post(format!("{}/close_session", host_port))
+                    .bearer_auth(&access_token)
+                    .json(&frostd::CloseSessionArgs { session_id })
+                    .send()
+                    .await?
+                    .bytes()
+                    .await?;
+            }
         }
     }
 

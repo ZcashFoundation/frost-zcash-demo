@@ -23,7 +23,9 @@ pub async fn step_1<C: Ciphersuite>(
     logger: &mut dyn Write,
 ) -> Result<ParticipantsConfig<C>, Box<dyn std::error::Error>> {
     let participants = read_commitments(args, comms, reader, logger).await?;
-    print_participants(logger, &participants.commitments);
+    if args.cli {
+        print_participants(logger, &participants.commitments);
+    }
     Ok(participants)
 }
 

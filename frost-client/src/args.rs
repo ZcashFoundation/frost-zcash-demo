@@ -146,6 +146,10 @@ pub(crate) enum Command {
         /// by the group public key (use `groups` to list).
         #[arg(short, long)]
         group: Option<String>,
+        /// Whether to also close all existing sessions. Useful for cleaning
+        /// up lingering sessions due to errors or if participants give up.
+        #[arg(long, default_value_t = false)]
+        close_all: bool,
     },
     Coordinator {
         /// The path to the config file to manage. If not specified, it uses

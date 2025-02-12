@@ -341,6 +341,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _num_signers: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>> {
         let mut rng = thread_rng();
+
+        eprintln!("Logging in...");
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
@@ -382,6 +384,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .to_string(),
         );
 
+        eprintln!("Creating signing session...");
         let r = self
             .client
             .post(format!("{}/create_new_session", self.host_port))
@@ -555,6 +558,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 session_id: self.session_id.unwrap(),
             })
             .send()
+            .await?
+            .bytes()
             .await?;
 
         let _r = self
@@ -566,6 +571,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                     .expect("must have been set before"),
             )
             .send()
+            .await?
+            .bytes()
             .await?;
 
         let signature_shares = self.state.signature_shares()?;

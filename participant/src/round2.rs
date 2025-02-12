@@ -25,8 +25,6 @@ pub async fn round_2_request_inputs<C: Ciphersuite>(
     identifier: Identifier<C>,
     rerandomized: bool,
 ) -> Result<Round2Config<C>, Box<dyn std::error::Error>> {
-    writeln!(logger, "=== Round 2 ===")?;
-
     let r = comms
         .get_signing_package(input, logger, commitments, identifier, rerandomized)
         .await?;
@@ -62,7 +60,6 @@ pub fn print_values_round_2<C: Ciphersuite>(
         "SignatureShare:\n{}",
         serde_json::to_string(&signature).unwrap()
     )?;
-    writeln!(logger, "=== End of Round 2 ===")?;
 
     Ok(())
 }

@@ -430,6 +430,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _output: &mut dyn Write,
     ) -> Result<(Identifier<C>, u16), Box<dyn Error>> {
         let mut rng = thread_rng();
+
+        eprintln!("Logging in...");
         let challenge = self
             .client
             .post(format!("{}/challenge", self.host_port))
@@ -473,6 +475,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         );
 
         let session_id = if !self.args.participants.is_empty() {
+            eprintln!("Creating DKG session...");
             let r = self
                 .client
                 .post(format!("{}/create_new_session", self.host_port))
@@ -493,6 +496,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .await?;
             r.session_id
         } else {
+            eprintln!("Joining DKG session...");
             match self.session_id {
                 Some(s) => s,
                 None => {
@@ -516,6 +520,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         };
         self.session_id = Some(session_id);
 
+        eprintln!("Getting session info...");
         // Get all participants' public keys, and derive their identifiers
         // from them.
         let session_info = self

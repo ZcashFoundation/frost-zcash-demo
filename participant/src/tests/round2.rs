@@ -141,7 +141,7 @@ async fn check_print_values_round_2() {
 
     print_values_round_2(signature_response, &mut buf).unwrap();
 
-    let log = "Please send the following to the Coordinator\nSignatureShare:\n{\"header\":{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"},\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\"}\n=== End of Round 2 ===\n";
+    let log = "Please send the following to the Coordinator\nSignatureShare:\n{\"header\":{\"version\":0,\"ciphersuite\":\"FROST-ED25519-SHA512-v1\"},\"share\":\"44055c54d0604cbd006f0d1713a22474d7735c5e8816b1878f62ca94bf105900\"}\n";
 
     let out = String::from_utf8(buf.into_inner().unwrap()).unwrap();
 

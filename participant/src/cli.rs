@@ -8,6 +8,7 @@ use crate::comms::Comms;
 
 use crate::round1::{generate_nonces_and_commitments, print_values};
 use crate::round2::{generate_signature, print_values_round_2, round_2_request_inputs};
+use eyre::eyre;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use frost_rerandomized::RandomizedCiphersuite;
@@ -41,12 +42,12 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
 
     let key_package = pargs.key_package;
 
-    writeln!(logger, "Key Package succesfully created.")?;
-
     let mut rng = thread_rng();
     let (nonces, commitments) = generate_nonces_and_commitments(&key_package, &mut rng);
 
-    print_values(commitments, logger)?;
+    if pargs.cli {
+        print_values(commitments, logger)?;
+    }
 
     // Round 2 - Sign
 
@@ -67,13 +68,28 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         rerandomized,
     )
     .await?;
+
+    writeln!(
+        logger,
+        "Message to be signed (hex-encoded):\n{}\nDo you want to sign it? (y/n)",
+        hex::encode(round_2_config.signing_package.message())
+    )?;
+    let mut sign_it = String::new();
+    input.read_line(&mut sign_it)?;
+    if sign_it.trim() != "y" {
+        return Err(eyre!("signing cancelled").into());
+    }
+
     let signature = generate_signature(round_2_config, &key_package, &nonces)?;
 
     comms
         .send_signature_share(*key_package.identifier(), signature)
         .await?;
 
-    print_values_round_2(signature, logger)?;
+    if pargs.cli {
+        print_values_round_2(signature, logger)?;
+    }
+    writeln!(logger, "Done")?;
 
     Ok(())
 }

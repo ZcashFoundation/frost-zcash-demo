@@ -142,7 +142,10 @@ async fn check_step_2() {
         ..
     } = get_helpers();
 
-    let args = Args::default();
+    let args = Args {
+        cli: true,
+        ..Default::default()
+    };
     let mut buf = BufWriter::new(Vec::new());
 
     let input = format!(
@@ -228,7 +231,7 @@ async fn check_step_3() {
     .await
     .unwrap();
 
-    let expected = format!("Please enter JSON encoded signature shares for participant {}:\nPlease enter JSON encoded signature shares for participant {}:\nGroup signature: \"{}\"\n", participant_id_1, participant_id_3, group_signature);
+    let expected = format!("Please enter JSON encoded signature shares for participant {}:\nPlease enter JSON encoded signature shares for participant {}:\nSignature:\n{}\n", participant_id_1, participant_id_3, group_signature);
 
     let (_, res) = &buf.into_parts();
     let actual = String::from_utf8(res.as_ref().unwrap().to_owned()).unwrap();
