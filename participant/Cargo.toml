@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 async-trait = { workspace = true }
-derivative = { workspace = true }
 frost-core = { workspace = true, features = ["serde"] }
 frost-rerandomized = { workspace = true, features = ["serde"] }
 frost-ed25519 = { workspace = true, features = ["serde"] }
@@ -15,13 +14,12 @@ reddsa = { workspace = true, features = ["frost"] }
 hex = { workspace = true }
 rand = { workspace = true }
 eyre = { workspace = true }
-exitcode = { workspace = true }
 serde_json = { workspace = true }
 serdect = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["full"] }
 message-io = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls-native-roots"] }
 frostd = { workspace = true }
 rpassword = { workspace = true }
 snow = { workspace = true }

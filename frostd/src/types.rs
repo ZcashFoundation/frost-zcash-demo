@@ -142,7 +142,7 @@ pub struct CloseSessionArgs {
     pub session_id: Uuid,
 }
 
-#[derive(Serialize, Deserialize, derivative::Derivative)]
+#[derive(Serialize, Deserialize)]
 #[serde(bound = "C: Ciphersuite")]
 pub struct SendSigningPackageArgs<C: Ciphersuite> {
     pub signing_package: Vec<SigningPackage<C>>,
