@@ -4,25 +4,25 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-base64 = "0.22.1"
-clap = { version = "4.5.11", features = ["derive"] }
-eyre = "0.6.12"
-halo2_gadgets = "0.3.0"
-halo2_proofs = "0.3.0"
-hex = "0.4.3"
-lazy_static = "1.5.0"
-orchard = { version = "0.10.1", features = ["unstable-frost"] }
-rand = "0.8.5"
-rand_core = "0.6.4"
-sapling-crypto = "0.4.0"
-serde = "1.0.204"
-serde-hex = "0.1.0"
-serde_json = "1.0.138"
-serde_with = { version = "3.9.0", features = ["hex"] }
-zcash_address = "0.6.2"
-zcash_client_backend = { version = "0.16.0", features = ["orchard"] }
-zcash_encoding = "0.2.2"
-zcash_keys = { version =  "0.6.0", features = ["test-dependencies", "orchard"] }
-zcash_primitives = "0.21.0"
-zcash_proofs = { version = "0.21.0", features = ["bundled-prover"] }
-zcash_protocol = "0.4.3"
+base64 = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+eyre = { workspace = true }
+halo2_gadgets = { workspace = true }
+halo2_proofs = { workspace = true }
+hex = { workspace = true }
+lazy_static = { workspace = true }
+orchard = { workspace = true, features = ["unstable-frost"] }
+rand = { workspace = true }
+rand_core = { workspace = true }
+sapling-crypto = { workspace = true }
+serde = { workspace = true }
+serde-hex = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true, features = ["hex"] }
+zcash_address = { workspace = true }
+zcash_client_backend = { workspace = true, features = ["orchard"] }
+zcash_encoding = { workspace = true }
+zcash_keys = { workspace = true, features = ["test-dependencies", "orchard"] }
+zcash_primitives = { workspace = true }
+zcash_proofs = { workspace = true, features = ["bundled-prover"] }
+zcash_protocol = { workspace = true }

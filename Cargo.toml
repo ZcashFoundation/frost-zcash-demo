@@ -11,6 +11,71 @@ members = [
 ]
 resolver = "2"
 
+[workspace.dependencies]
+async-trait = "0.1.85"
+axum = "0.8.1"
+axum-extra = "0.10.0"
+axum-server = "0.7"
+axum-test = "17.2.0"
+base64 = "0.22.1"
+bech32 = "0.11.0"
+clap = "4.5.23"
+coordinator = { path = "coordinator" }
+delay_map = "0.4.0"
+derivative = "2.2.0"
+dirs = "5.0.1"
+dkg = { path = "dkg" }
+exitcode = "1.1.2"
+eyre = "0.6.12"
+frost-core = "2.0.0"
+frost-ed25519 = "2.0.0"
+frost-rerandomized = "2.0.0-rc.0"
+frostd = { path = "frostd" }
+futures = "0.3.31"
+futures-util = "0.3.31"
+halo2_gadgets = "0.3.0"
+halo2_proofs = "0.3.0"
+hex = "0.4.3"
+itertools = "0.14.0"
+lazy_static = "1.5.0"
+message-io = "0.18"
+orchard = "0.10.1"
+participant = { path = "participant" }
+postcard = "1.1.1"
+rand = "0.8.5"
+rand_core = "0.6.4"
+rcgen = "0.13.2"
+reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead" }
+regex = "1.11.1"
+reqwest = "0.12.12"
+rpassword = "7.3.1"
+rustls = "0.23.21"
+sapling-crypto = "0.4.0"
+serde = "1.0.204"
+serde-hex = "0.1.0"
+serde_json = "1.0.138"
+serde_with = "3.9.0"
+serdect = "0.3.0"
+snow = "0.9.6"
+stable-eyre = "0.2"
+tempfile = "3.16.0"
+thiserror = "2.0.11"
+tokio = "1.42"
+toml = "0.8.19"
+tower-http = "0.6.2"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+trusted-dealer = { path = "trusted-dealer" }
+uuid = "1.11.0"
+xeddsa = "1.0.2"
+zcash_address = "0.6.2"
+zcash_client_backend = "0.16.0"
+zcash_encoding = "0.2.2"
+zcash_keys = "0.6.0"
+zcash_primitives = "0.21.0"
+zcash_proofs = "0.21.0"
+zcash_protocol = "0.4.3"
+
 [patch.crates-io]
 # TODO: remove this when https://github.com/zcash/orchard/issues/430 is fully
 # addressed and a new release is made
