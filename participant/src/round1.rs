@@ -33,7 +33,7 @@ pub async fn request_inputs<C: Ciphersuite + 'static>(
         } else {
             // TODO: Improve error
             serde_json::from_str::<KeyPackage<C>>(&secret_share)
-                .map_err(|_| Error::<C>::InvalidSecretShare)?
+                .map_err(|_| Error::<C>::InvalidSecretShare { culprit: None })?
         };
 
     Ok(Round1Config { key_package })

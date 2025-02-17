@@ -19,7 +19,7 @@ serde_json = { workspace = true }
 frostd = { workspace = true }
 participant = { workspace = true }
 xeddsa = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls-native-roots"] }
 tokio = { workspace = true, features = ["full"] }
 snow = { workspace = true }
 
