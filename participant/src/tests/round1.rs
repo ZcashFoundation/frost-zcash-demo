@@ -71,7 +71,7 @@ async fn check_0_input_for_identifier() {
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
-        Error::InvalidSecretShare
+        Error::InvalidSecretShare { culprit: None }
     );
 }
 
@@ -91,7 +91,7 @@ async fn check_invalid_length_signing_share() {
 
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
-        Error::InvalidSecretShare
+        Error::InvalidSecretShare { culprit: None }
     );
 }
 
@@ -110,7 +110,7 @@ async fn check_invalid_round_1_inputs() {
             .unwrap_err();
     assert_eq!(
         *expected.downcast::<Error>().unwrap(),
-        Error::InvalidSecretShare
+        Error::InvalidSecretShare { culprit: None }
     );
 }
 
