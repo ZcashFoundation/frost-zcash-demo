@@ -67,6 +67,22 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
     let mut config = Config::read(config)?;
 
     let mut contact = Contact::from_text(&text_contact)?;
+    if config.contact.contains_key(&contact.name) {
+        return Err(eyre!(
+            "contact with name {} already exists. Either remove the existing \
+            one, or ask the sender to change their display name when exporting",
+            &contact.name
+        )
+        .into());
+    }
+    if config.contact.values().any(|c| c.pubkey == contact.pubkey) {
+        return Err(eyre!(
+            "pubkey {} already registered for {}",
+            hex::encode(&contact.pubkey),
+            &contact.name,
+        )
+        .into());
+    }
     // We don't want the version when writing to the config file.
     contact.version = None;
     config.contact.insert(contact.name.clone(), contact.clone());
