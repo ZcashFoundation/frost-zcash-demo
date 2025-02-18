@@ -187,17 +187,34 @@ pub(crate) async fn send(
             .map(SessionParticipant::Participant)
             .collect()
     };
-    for recipient in &recipients {
-        session
-            .queue
-            .entry(recipient.clone())
-            .or_default()
-            .push_back(Msg {
-                sender: user.pubkey.clone(),
-                msg: args.msg.clone(),
-            });
+
+    // Check if both the sender and the recipients are in the session
+    // Note that we need to jump through all these hoops involving
+    // `in_session` due to the get_mut issue mentioned above. We can't return
+    // an error until we reinsert the session back into the map.
+    let in_session = (session.pubkeys.contains(&user.pubkey)
+        || session.coordinator_pubkey == user.pubkey)
+        && recipients.iter().all(|p| match p {
+            SessionParticipant::Coordinator => true,
+            SessionParticipant::Participant(public_key) => session.pubkeys.contains(public_key),
+        });
+
+    if in_session {
+        for recipient in &recipients {
+            session
+                .queue
+                .entry(recipient.clone())
+                .or_default()
+                .push_back(Msg {
+                    sender: user.pubkey.clone(),
+                    msg: args.msg.clone(),
+                });
+        }
     }
     sessions.insert(args.session_id, session);
+    if !in_session {
+        return Err(AppError::NotInSession);
+    }
 
     Ok(())
 }
@@ -219,6 +236,11 @@ pub(crate) async fn receive(
     let session = sessions
         .get(&args.session_id)
         .ok_or(AppError::SessionNotFound)?;
+
+    // Check if both the sender and the recipients are in the session
+    if !session.pubkeys.contains(&user.pubkey) && session.coordinator_pubkey != user.pubkey {
+        return Err(AppError::NotInSession);
+    }
 
     let participant = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
         SessionParticipant::Coordinator
