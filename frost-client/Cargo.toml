@@ -32,3 +32,4 @@ rand = { workspace = true }
 stable-eyre = { workspace = true }
 itertools = { workspace = true }
 xeddsa = { workspace = true }
+zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
