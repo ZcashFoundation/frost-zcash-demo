@@ -10,6 +10,7 @@ use eyre::{eyre, OptionExt};
 use frost_core::{Ciphersuite, Identifier};
 use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
 
@@ -30,6 +31,14 @@ pub struct Config {
     pub group: BTreeMap<String, Group>,
 }
 
+impl Zeroize for Config {
+    fn zeroize(&mut self) {
+        self.group.iter_mut().for_each(|(_, g)| g.zeroize());
+    }
+}
+
+impl ZeroizeOnDrop for Config {}
+
 impl Config {
     pub fn contact_by_pubkey(&self, pubkey: &PublicKey) -> Result<Contact, Box<dyn Error>> {
         if Some(pubkey) == self.communication_key.as_ref().map(|c| &c.pubkey) {
@@ -49,7 +58,7 @@ impl Config {
 }
 
 /// The communication key pair for the user.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ZeroizeOnDrop)]
 pub struct CommunicationKey {
     /// The private key.
     #[serde(
@@ -62,7 +71,7 @@ pub struct CommunicationKey {
 }
 
 /// A FROST group the user belongs to.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Zeroize)]
 pub struct Group {
     /// A human-readable description of the group to make it easier to select
     /// groups
@@ -84,8 +93,11 @@ pub struct Group {
     /// The default server the participants are using, if any.
     pub server_url: Option<String>,
     /// The group participants, keyed by hex-encoded identifier
+    #[zeroize(skip)]
     pub participant: BTreeMap<String, Participant>,
 }
+
+impl ZeroizeOnDrop for Group {}
 
 impl Group {
     /// Returns a human-readable summary of the contact; used when it is
@@ -169,7 +181,7 @@ impl Config {
                 ..Default::default()
             });
         }
-        let bytes = std::fs::read(&path)?;
+        let bytes = Zeroizing::new(std::fs::read(&path)?);
         let s = str::from_utf8(&bytes)?;
         let mut config: Config = toml::from_str(s)?;
         config.path = Some(path);
@@ -178,7 +190,7 @@ impl Config {
 
     /// Write the config to path it was loaded from.
     pub fn write(&self) -> Result<(), Box<dyn Error>> {
-        let s = toml::to_string_pretty(self)?;
+        let s = Zeroizing::new(toml::to_string_pretty(self)?);
         let bytes = s.as_bytes();
         Ok(write_atomic::write_file(
             self.path
