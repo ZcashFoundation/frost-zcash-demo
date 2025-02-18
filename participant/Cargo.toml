@@ -24,6 +24,7 @@ frostd = { workspace = true }
 rpassword = { workspace = true }
 snow = { workspace = true }
 xeddsa = { workspace = true }
+zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
 
 [features]
 default = []

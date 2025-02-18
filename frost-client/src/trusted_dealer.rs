@@ -7,6 +7,7 @@ use rand::thread_rng;
 use frost_core::{keys::KeyPackage, Ciphersuite};
 use frost_ed25519::Ed25519Sha512;
 use trusted_dealer::MaybeIntoEvenY;
+use zeroize::Zeroizing;
 
 use crate::{
     args::Command,
@@ -72,7 +73,8 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         let pubkey = config
             .communication_key
             .ok_or_eyre("config not initialized")?
-            .pubkey;
+            .pubkey
+            .clone();
         let participant = Participant {
             identifier: identifier.serialize(),
             pubkey: pubkey.clone(),
