@@ -54,7 +54,18 @@ pub(crate) enum Command {
         #[arg(short, long)]
         pubkey: String,
     },
-    /// Generate FROST shares using a trusted dealer.
+    /// Generate FROST shares using a trusted dealer. Should only be used for
+    /// tests.
+    ///
+    /// IMPORTANT: this should only be used for tests. After a trusted dealer
+    /// key generation, the participant need to validate their received shares
+    /// before generating a key package. This tool does not do that and writes
+    /// just the key packages into the config files, making it impossible for
+    /// participants to verify them since the required information is lost.
+    ///
+    /// A future version of this tool might support running the trusted dealer
+    /// using the FROST server; but there is no benefit in doing that instead of
+    /// using distributed key generation (DKG).
     TrustedDealer {
         /// The path to the config file to manage.
         ///
@@ -151,6 +162,7 @@ pub(crate) enum Command {
         #[arg(long, default_value_t = false)]
         close_all: bool,
     },
+    /// Start a new FROST signing session.
     Coordinator {
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
@@ -186,6 +198,7 @@ pub(crate) enum Command {
         #[arg(short = 'o', long, default_value = "")]
         signature: String,
     },
+    /// Participate in a FROST signing session.
     Participant {
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
