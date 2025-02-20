@@ -18,7 +18,7 @@ rand = { workspace = true }
 serde_json = { workspace = true }
 serdect = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls-native-roots"] }
 frostd = { workspace = true }
 participant = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
