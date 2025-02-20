@@ -49,7 +49,7 @@ reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9c
 regex = "1.11.1"
 reqwest = "0.12.12"
 rpassword = "7.3.1"
-rustls = "0.23.21"
+rustls = "0.23.23"
 sapling-crypto = "0.4.0"
 serde = "1.0.204"
 serde-hex = "0.1.0"
