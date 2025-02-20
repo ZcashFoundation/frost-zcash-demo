@@ -34,6 +34,10 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         Box::new(SocketComms::new(&pargs))
     };
 
+    if !pargs.randomizers.is_empty() && pargs.randomizers.len() != pargs.messages.len() {
+        return Err("Number of randomizers must match number of messages".into());
+    }
+
     let participants_config = step_1(&pargs, &mut *comms, reader, logger).await?;
 
     let signing_package = step_2(&pargs, logger, participants_config.commitments.clone())?;
