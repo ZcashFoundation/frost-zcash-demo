@@ -10,6 +10,7 @@ use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
     SigningPackage,
 };
+use frostd::SendSigningPackageArgs;
 
 use std::{
     error::Error,
@@ -47,13 +48,7 @@ where
         _commitments: SigningCommitments<C>,
         _identifier: Identifier<C>,
         rerandomized: bool,
-    ) -> Result<
-        (
-            frost::SigningPackage<C>,
-            Option<frost_rerandomized::Randomizer<C>>,
-        ),
-        Box<dyn Error>,
-    > {
+    ) -> Result<SendSigningPackageArgs<C>, Box<dyn Error>> {
         writeln!(output, "Enter the JSON-encoded SigningPackage:")?;
 
         let mut signing_package_json = String::new();
@@ -71,9 +66,19 @@ where
 
             let randomizer =
                 frost_rerandomized::Randomizer::<C>::deserialize(&hex::decode(json.trim())?)?;
-            Ok((signing_package, Some(randomizer)))
+            let r = frostd::SendSigningPackageArgs::<C> {
+                signing_package: vec![signing_package],
+                randomizer: vec![randomizer],
+                aux_msg: vec![],
+            };
+            Ok(r)
         } else {
-            Ok((signing_package, None))
+            let r = frostd::SendSigningPackageArgs::<C> {
+                signing_package: vec![signing_package],
+                randomizer: vec![],
+                aux_msg: vec![],
+            };
+            Ok(r)
         }
     }
 
