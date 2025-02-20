@@ -83,6 +83,13 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
         )
         .into());
     }
+    if config.communication_key.as_ref().map(|c| &c.pubkey) == Some(&contact.pubkey) {
+        return Err(eyre!(
+            "pubkey {} already registered for yourself",
+            hex::encode(&contact.pubkey)
+        )
+        .into());
+    }
     // We don't want the version when writing to the config file.
     contact.version = None;
     config.contact.insert(contact.name.clone(), contact.clone());
