@@ -29,7 +29,11 @@ pub(crate) async fn init(args: &Command) -> Result<(), Box<dyn Error>> {
         config.path().expect("should not be None").display()
     );
     config.write()?;
-    eprintln!("Done.");
+    eprintln!(
+        "Done.\nWARNING: the config file will contain your private FROST shares in clear. \
+    Keep it safe and never share it with anyone. Future versions of this tool might encrypt \
+    the config file."
+    );
 
     Ok(())
 }
