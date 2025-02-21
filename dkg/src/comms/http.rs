@@ -816,4 +816,20 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             _ => Err(eyre!("wrong state").into()),
         }
     }
+
+    async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
+        if let (Some(session_id), Some(access_token)) = (self.session_id, self.access_token.clone())
+        {
+            let _r = self
+                .client
+                .post(format!("{}/close_session", self.host_port))
+                .bearer_auth(access_token)
+                .json(&frostd::CloseSessionArgs { session_id })
+                .send()
+                .await?
+                .bytes()
+                .await?;
+        }
+        Ok(())
+    }
 }

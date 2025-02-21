@@ -3,6 +3,9 @@ use frost_rerandomized::Randomizer;
 use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
 
+/// The maximum size of a message.
+pub const MAX_MSG_SIZE: usize = 65535;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Error {
     pub code: usize,

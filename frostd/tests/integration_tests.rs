@@ -418,6 +418,20 @@ async fn test_main_router<
     let r: frostd::Error = res.json();
     assert_eq!(r.code, frostd::NOT_IN_SESSION);
 
+    // Check if sending a too big message fails
+    let res = server
+        .post("/send")
+        .authorization_bearer(alice_token)
+        .json(&frostd::SendArgs {
+            session_id,
+            recipients: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            msg: [0; frostd::MAX_MSG_SIZE + 1].to_vec(),
+        })
+        .await;
+    res.assert_status_internal_server_error();
+    let r: frostd::Error = res.json();
+    assert_eq!(r.code, frostd::INVALID_ARGUMENT);
+
     Ok(())
 }
 
