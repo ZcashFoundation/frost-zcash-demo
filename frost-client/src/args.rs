@@ -9,8 +9,12 @@ pub(crate) struct Args {
 
 #[derive(Subcommand, Clone)]
 pub(crate) enum Command {
-    /// Initializes the user, generating a communication key pair and saving
-    /// to the config file.
+    /// Initializes the user, generating a communication key pair and saving to
+    /// the config file.
+    ///
+    /// WARNING: the config file will contain your private FROST shares in
+    /// clear. Keep it safe and never share it with anyone. Future versions of
+    /// this tool might encrypt the config file.
     Init {
         /// The path to the config file to manage. If not specified, it uses
         /// $HOME/.local/frost/credentials.toml
