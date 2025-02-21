@@ -32,3 +32,4 @@ rand = { workspace = true }
 stable-eyre = { workspace = true }
 itertools = { workspace = true }
 xeddsa = { workspace = true }
+thiserror = { workspace = true }

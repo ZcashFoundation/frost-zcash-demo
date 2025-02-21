@@ -10,6 +10,7 @@ use frost_core::keys::PublicKeyPackage;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use frost_rerandomized::RandomizedCiphersuite;
+use frostd::PublicKey;
 use reddsa::frost::redpallas::PallasBlake2b512;
 use reqwest::Url;
 
@@ -69,7 +70,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
     let signers = signers
         .iter()
         .map(|s| {
-            let pubkey = hex::decode(s)?.to_vec();
+            let pubkey = PublicKey(hex::decode(s)?.to_vec());
             let contact = group.participant_by_pubkey(&pubkey)?;
             Ok((pubkey, contact.identifier()?))
         })
