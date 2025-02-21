@@ -103,7 +103,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
             let participants: Vec<_> = r
                 .pubkeys
                 .iter()
-                .map(|pubkey| config.contact_by_pubkey(&pubkey.0))
+                .map(|pubkey| config.contact_by_pubkey(pubkey))
                 .collect();
             eprintln!("Session with ID {}", session_id);
             eprintln!(
@@ -118,7 +118,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
                     eprintln!(
                         "\t{}\t({})",
                         participant.name,
-                        hex::encode(participant.pubkey)
+                        hex::encode(&participant.pubkey.0)
                     );
                 } else {
                     eprintln!("\t(Unknown contact)");

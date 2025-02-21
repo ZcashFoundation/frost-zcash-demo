@@ -3,7 +3,7 @@ use uuid::Uuid;
 use xeddsa::{xed25519, Verify as _};
 
 use crate::{
-    state::{Session, SharedState},
+    state::{Session, SessionParticipant, SharedState},
     types::*,
     user::User,
     AppError,
@@ -31,11 +31,11 @@ pub(crate) async fn login(
     Json(args): Json<KeyLoginArgs>,
 ) -> Result<Json<KeyLoginOutput>, AppError> {
     // Check if the user sent the credentials
-    if args.signature.is_empty() || args.pubkey.is_empty() {
+    if args.signature.is_empty() || args.pubkey.0.is_empty() {
         return Err(AppError::InvalidArgument("signature or pubkey".into()));
     }
 
-    let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.clone())
+    let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.0.clone())
         .map_err(|_| AppError::InvalidArgument("pubkey".into()))?;
     let pubkey = xed25519::PublicKey(pubkey);
     let signature = TryInto::<[u8; 64]>::try_into(args.signature)
@@ -94,7 +94,7 @@ pub(crate) async fn create_new_session(
     // Save session ID in global state
     for pubkey in &args.pubkeys {
         sessions_by_pubkey
-            .entry(pubkey.clone().0)
+            .entry(pubkey.clone())
             .or_default()
             .insert(id);
     }
@@ -105,7 +105,7 @@ pub(crate) async fn create_new_session(
         .insert(id);
     // Create Session object
     let session = Session {
-        pubkeys: args.pubkeys.into_iter().map(|p| p.0).collect(),
+        pubkeys: args.pubkeys.clone(),
         coordinator_pubkey: user.pubkey,
         message_count: args.message_count,
         queue: Default::default(),
@@ -157,7 +157,7 @@ pub(crate) async fn get_session_info(
 
     Ok(Json(GetSessionInfoOutput {
         message_count: session.message_count,
-        pubkeys: session.pubkeys.iter().cloned().map(PublicKey).collect(),
+        pubkeys: session.pubkeys.clone(),
         coordinator_pubkey: session.coordinator_pubkey.clone(),
     }))
 }
@@ -180,14 +180,17 @@ pub(crate) async fn send(
         .ok_or(AppError::SessionNotFound)?;
 
     let recipients = if args.recipients.is_empty() {
-        vec![Vec::new()]
+        vec![SessionParticipant::Coordinator]
     } else {
-        args.recipients.into_iter().map(|p| p.0).collect()
+        args.recipients
+            .into_iter()
+            .map(SessionParticipant::Participant)
+            .collect()
     };
-    for pubkey in &recipients {
+    for recipient in &recipients {
         session
             .queue
-            .entry(pubkey.clone())
+            .entry(recipient.clone())
             .or_default()
             .push_back(Msg {
                 sender: user.pubkey.clone(),
@@ -217,22 +220,27 @@ pub(crate) async fn receive(
         .get(&args.session_id)
         .ok_or(AppError::SessionNotFound)?;
 
-    let pubkey = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
-        Vec::new()
+    let participant = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
+        SessionParticipant::Coordinator
     } else {
-        user.pubkey
+        SessionParticipant::Participant(user.pubkey)
     };
 
     // If there are no new messages, we don't want to renew the timeout.
     // Thus only if there are new messages we drop the read-only lock
     // to get the write lock and re-insert the updated session.
-    let msgs = if session.queue.contains_key(&pubkey) {
+    let msgs = if session.queue.contains_key(&participant) {
         drop(sessions);
         let mut sessions = state.sessions.sessions.write().unwrap();
         let mut session = sessions
             .remove(&args.session_id)
             .ok_or(AppError::SessionNotFound)?;
-        let msgs = session.queue.entry(pubkey).or_default().drain(..).collect();
+        let msgs = session
+            .queue
+            .entry(participant)
+            .or_default()
+            .drain(..)
+            .collect();
         sessions.insert(args.session_id, session);
         msgs
     } else {

@@ -8,6 +8,7 @@ use std::{
 
 use eyre::{eyre, OptionExt};
 use frost_core::{Ciphersuite, Identifier};
+use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
 
 use crate::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
@@ -30,18 +31,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn contact_by_pubkey(&self, pubkey: &[u8]) -> Result<Contact, Box<dyn Error>> {
-        if Some(pubkey) == self.communication_key.as_ref().map(|c| c.pubkey.as_slice()) {
+    pub fn contact_by_pubkey(&self, pubkey: &PublicKey) -> Result<Contact, Box<dyn Error>> {
+        if Some(pubkey) == self.communication_key.as_ref().map(|c| &c.pubkey) {
             return Ok(Contact {
                 version: Some(0),
                 name: "".to_string(),
-                pubkey: pubkey.to_vec(),
+                pubkey: pubkey.clone(),
             });
         }
         Ok(self
             .contact
             .values()
-            .find(|c| c.pubkey == pubkey)
+            .find(|c| c.pubkey == *pubkey)
             .cloned()
             .ok_or_eyre("contact not found")?)
     }
@@ -57,11 +58,7 @@ pub struct CommunicationKey {
     )]
     pub privkey: Vec<u8>,
     /// The public key.
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub pubkey: Vec<u8>,
+    pub pubkey: PublicKey,
 }
 
 /// A FROST group the user belongs to.
@@ -106,17 +103,17 @@ impl Group {
         );
         for participant in self.participant.values() {
             let contact = config.contact_by_pubkey(&participant.pubkey)?;
-            s += &format!("\t{}\t({})\n", contact.name, hex::encode(contact.pubkey));
+            s += &format!("\t{}\t({})\n", contact.name, hex::encode(contact.pubkey.0));
         }
         Ok(s)
     }
 
     /// Get a group participant by their pubkey.
-    pub fn participant_by_pubkey(&self, pubkey: &[u8]) -> Result<Participant, Box<dyn Error>> {
+    pub fn participant_by_pubkey(&self, pubkey: &PublicKey) -> Result<Participant, Box<dyn Error>> {
         Ok(self
             .participant
             .values()
-            .find(|p| p.pubkey == pubkey)
+            .find(|p| p.pubkey == *pubkey)
             .cloned()
             .ok_or_eyre("Participant not found")?)
     }
@@ -132,11 +129,7 @@ pub struct Participant {
     )]
     pub identifier: Vec<u8>,
     /// The communication public key for the participant.
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub pubkey: Vec<u8>,
+    pub pubkey: PublicKey,
 }
 
 impl Participant {
