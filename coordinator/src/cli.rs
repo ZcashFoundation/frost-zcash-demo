@@ -34,11 +34,19 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         Box::new(SocketComms::new(&pargs))
     };
 
-    let participants_config = step_1(&pargs, &mut *comms, reader, logger).await?;
+    let r = step_1(&pargs, &mut *comms, reader, logger).await;
+    let Ok(participants_config) = r else {
+        let _ = comms.cleanup_on_error().await;
+        return Err(r.unwrap_err());
+    };
 
-    let signing_package = step_2(&pargs, logger, participants_config.commitments.clone())?;
+    let r = step_2(&pargs, logger, participants_config.commitments.clone());
+    let Ok(signing_package) = r else {
+        let _ = comms.cleanup_on_error().await;
+        return Err(r.unwrap_err());
+    };
 
-    step_3(
+    let r = step_3(
         &pargs,
         &mut *comms,
         reader,
@@ -46,7 +54,12 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         participants_config,
         &signing_package,
     )
-    .await?;
+    .await;
+
+    if let Err(e) = r {
+        let _ = comms.cleanup_on_error().await;
+        return Err(e);
+    }
 
     Ok(())
 }
