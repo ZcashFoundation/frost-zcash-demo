@@ -50,4 +50,9 @@ pub trait Comms<C: Ciphersuite> {
     fn get_pubkey_identifier_map(
         &self,
     ) -> Result<HashMap<PublicKey, Identifier<C>>, Box<dyn Error>>;
+
+    /// Do any cleanups in case an error occurs during the protocol run.
+    async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
 }
