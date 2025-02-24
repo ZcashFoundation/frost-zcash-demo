@@ -3,8 +3,10 @@ pub mod http;
 pub mod socket;
 
 use async_trait::async_trait;
+use eyre::eyre;
 
 use frost_core::{self as frost, Ciphersuite};
+use frostd::SendSigningPackageArgs;
 
 use std::{
     error::Error,
@@ -43,13 +45,33 @@ pub trait Comms<C: Ciphersuite> {
         commitments: SigningCommitments<C>,
         identifier: Identifier<C>,
         rerandomized: bool,
-    ) -> Result<
-        (
-            frost::SigningPackage<C>,
-            Option<frost_rerandomized::Randomizer<C>>,
-        ),
-        Box<dyn Error>,
-    >;
+    ) -> Result<SendSigningPackageArgs<C>, Box<dyn Error>>;
+
+    /// Ask the user if they want to sign the message.
+    ///
+    /// Implementations should show the message to the user (or auxiliary data
+    /// that maps to the message) and ask for confirmation.
+    ///
+    /// The default implementation prints the message to output and reads
+    /// confirmation from input.
+    async fn confirm_message(
+        &mut self,
+        input: &mut dyn BufRead,
+        output: &mut dyn Write,
+        signing_package: &SendSigningPackageArgs<C>,
+    ) -> Result<(), Box<dyn Error>> {
+        writeln!(
+            output,
+            "Message to be signed (hex-encoded):\n{}\nDo you want to sign it? (y/n)",
+            hex::encode(signing_package.signing_package[0].message())
+        )?;
+        let mut sign_it = String::new();
+        input.read_line(&mut sign_it)?;
+        if sign_it.trim() != "y" {
+            return Err(eyre!("signing cancelled").into());
+        }
+        Ok(())
+    }
 
     async fn send_signature_share(
         &mut self,

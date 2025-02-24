@@ -1,4 +1,5 @@
 use frost_core::{self as frost, Ciphersuite};
+use frostd::SendSigningPackageArgs;
 
 use crate::comms::Comms;
 use frost::{
@@ -24,28 +25,28 @@ pub async fn round_2_request_inputs<C: Ciphersuite>(
     commitments: SigningCommitments<C>,
     identifier: Identifier<C>,
     rerandomized: bool,
-) -> Result<Round2Config<C>, Box<dyn std::error::Error>> {
-    let r = comms
+) -> Result<SendSigningPackageArgs<C>, Box<dyn std::error::Error>> {
+    comms
         .get_signing_package(input, logger, commitments, identifier, rerandomized)
-        .await?;
-
-    Ok(Round2Config {
-        signing_package: r.0,
-        randomizer: r.1,
-    })
+        .await
 }
 
 pub fn generate_signature<C: frost_rerandomized::RandomizedCiphersuite>(
-    config: Round2Config<C>,
+    config: SendSigningPackageArgs<C>,
     key_package: &KeyPackage<C>,
     signing_nonces: &SigningNonces<C>,
 ) -> Result<SignatureShare<C>, Error<C>> {
-    let signing_package = config.signing_package;
+    let signing_package = config.signing_package.first().unwrap();
 
-    let signature = if let Some(randomizer) = config.randomizer {
-        frost_rerandomized::sign::<C>(&signing_package, signing_nonces, key_package, randomizer)?
+    let signature = if !config.randomizer.is_empty() {
+        frost_rerandomized::sign::<C>(
+            signing_package,
+            signing_nonces,
+            key_package,
+            config.randomizer[0],
+        )?
     } else {
-        round2::sign(&signing_package, signing_nonces, key_package)?
+        round2::sign(signing_package, signing_nonces, key_package)?
     };
     Ok(signature)
 }
