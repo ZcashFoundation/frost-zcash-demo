@@ -7,13 +7,13 @@ use axum_extra::{
 };
 use uuid::Uuid;
 
-use crate::{state::SharedState, AppError};
+use crate::{state::SharedState, AppError, PublicKey};
 
 /// An User
 #[derive(Debug)]
 #[allow(dead_code)]
 pub(crate) struct User {
-    pub(crate) pubkey: Vec<u8>,
+    pub(crate) pubkey: PublicKey,
     pub(crate) current_token: Uuid,
 }
 

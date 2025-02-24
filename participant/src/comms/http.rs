@@ -274,7 +274,7 @@ where
         let send_noise = Noise::new(
             builder
                 .local_private_key(comm_privkey)
-                .remote_public_key(&comm_coordinator_pubkey)
+                .remote_public_key(&comm_coordinator_pubkey.0)
                 .build_initiator()?,
         );
         let builder = snow::Builder::new(
@@ -285,7 +285,7 @@ where
         let recv_noise = Noise::new(
             builder
                 .local_private_key(comm_privkey)
-                .remote_public_key(&comm_coordinator_pubkey)
+                .remote_public_key(&comm_coordinator_pubkey.0)
                 .build_responder()?,
         );
         self.send_noise = Some(send_noise);

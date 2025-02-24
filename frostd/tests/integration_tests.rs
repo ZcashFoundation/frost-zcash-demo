@@ -89,7 +89,7 @@ async fn test_main_router<
         .post("/login")
         .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
-            pubkey: alice_keypair.public.clone(),
+            pubkey: frostd::PublicKey(alice_keypair.public.clone()),
             signature: alice_signature.to_vec(),
         })
         .await;
@@ -104,7 +104,7 @@ async fn test_main_router<
         .post("/login")
         .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
-            pubkey: bob_keypair.public.clone(),
+            pubkey: frostd::PublicKey(bob_keypair.public.clone()),
             signature: bob_signature.to_vec(),
         })
         .await;
@@ -182,6 +182,7 @@ async fn test_main_router<
     let pubkey_identifier_map = comm_pubkeys
         .into_iter()
         .cloned()
+        .map(frostd::PublicKey)
         .zip(key_packages.keys().take(2).copied())
         .collect::<HashMap<_, _>>();
     let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
@@ -242,7 +243,7 @@ async fn test_main_router<
         .authorization_bearer(alice_token)
         .json(&frostd::SendArgs {
             session_id,
-            recipients: usernames.keys().cloned().map(frostd::PublicKey).collect(),
+            recipients: usernames.keys().cloned().collect(),
             msg: serde_json::to_vec(&send_signing_package_args)?,
         })
         .await;
@@ -464,7 +465,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("https://127.0.0.1:2744/login")
         .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
-            pubkey: alice_keypair.public.clone(),
+            pubkey: frostd::PublicKey(alice_keypair.public.clone()),
             signature: alice_signature.to_vec(),
         })
         .send()
@@ -528,7 +529,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("https://127.0.0.1:2744/login")
         .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
-            pubkey: bob_keypair.public.clone(),
+            pubkey: frostd::PublicKey(bob_keypair.public),
             signature: bob_signature.to_vec(),
         })
         .send()
