@@ -69,6 +69,10 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
     )
     .await?;
 
+    comms
+        .confirm_message(input, logger, &round_2_config)
+        .await?;
+
     let signature = generate_signature(round_2_config, &key_package, &nonces)?;
 
     comms
