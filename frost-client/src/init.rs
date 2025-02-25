@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use frostd::cipher::Cipher;
+
 use crate::{
     args::Command,
     config::{CommunicationKey, Config},
@@ -16,12 +18,8 @@ pub(crate) async fn init(args: &Command) -> Result<(), Box<dyn Error>> {
         eprintln!("Skipping keypair generation; keypair already generated and stored");
     } else {
         eprintln!("Generating keypair... ");
-        let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
-        let keypair = builder.generate_keypair().unwrap();
-        config.communication_key = Some(CommunicationKey {
-            privkey: keypair.private.clone(),
-            pubkey: frostd::PublicKey(keypair.public.clone()),
-        });
+        let (privkey, pubkey) = Cipher::generate_keypair()?;
+        config.communication_key = Some(CommunicationKey { privkey, pubkey });
     };
 
     eprintln!(

@@ -11,7 +11,7 @@ use eyre::eyre;
 
 use frost_core::{keys::PublicKeyPackage, Ciphersuite, Identifier};
 use frost_rerandomized::Randomizer;
-use frostd::PublicKey;
+use frostd::{cipher::PrivateKey, PublicKey};
 
 use crate::input::read_from_file_or_stdin;
 
@@ -114,7 +114,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub port: u16,
 
     /// The coordinator's communication private key for HTTP mode.
-    pub comm_privkey: Option<Vec<u8>>,
+    pub comm_privkey: Option<PrivateKey>,
 
     /// The coordinator's communication public key for HTTP mode.
     pub comm_pubkey: Option<PublicKey>,

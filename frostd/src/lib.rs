@@ -1,4 +1,5 @@
 pub mod args;
+pub mod cipher;
 mod functions;
 mod state;
 mod types;

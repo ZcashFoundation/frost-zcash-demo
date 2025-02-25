@@ -11,7 +11,7 @@ use frost_core::{
     keys::{KeyPackage, SecretShare},
     Ciphersuite,
 };
-use frostd::PublicKey;
+use frostd::{cipher::PrivateKey, PublicKey};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::input::read_from_file_or_stdin;
@@ -73,7 +73,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub session_id: String,
 
     /// The participant's communication private key for HTTP mode.
-    pub comm_privkey: Option<Vec<u8>>,
+    pub comm_privkey: Option<PrivateKey>,
 
     /// The participant's communication public key for HTTP mode.
     pub comm_pubkey: Option<PublicKey>,
