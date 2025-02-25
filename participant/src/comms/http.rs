@@ -12,7 +12,6 @@ use eyre::{eyre, OptionExt};
 use frost_core::{round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier};
 use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
-use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
@@ -104,12 +103,11 @@ pub struct HTTPComms<C: Ciphersuite> {
     session_id: Option<Uuid>,
     access_token: Option<String>,
     args: ProcessedArgs<C>,
-    send_noise: Option<Noise>,
-    recv_noise: Option<Noise>,
+    cipher: Option<Cipher>,
     _phantom: PhantomData<C>,
 }
 
-use frostd::{SendSigningPackageArgs, Uuid};
+use frostd::{cipher::Cipher, SendSigningPackageArgs, Uuid};
 
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
@@ -124,35 +122,9 @@ where
             session_id: Uuid::parse_str(&args.session_id).ok(),
             access_token: None,
             args: args.clone(),
-            send_noise: None,
-            recv_noise: None,
+            cipher: None,
             _phantom: Default::default(),
         })
-    }
-
-    // Encrypts a message for the coordinator.
-    fn encrypt(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
-        let noise = self
-            .send_noise
-            .as_mut()
-            .expect("send_noise must have been set previously");
-        let mut encrypted = vec![0; 65535];
-        let len = noise.write_message(&msg, &mut encrypted)?;
-        encrypted.truncate(len);
-        Ok(encrypted)
-    }
-
-    // Decrypts a message from the coordinator.
-    fn decrypt(&mut self, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
-        let noise = self
-            .recv_noise
-            .as_mut()
-            .expect("recv_noise must have been set previously");
-        let mut decrypted = vec![0; 65535];
-        decrypted.resize(65535, 0);
-        let len = noise.read_message(&msg, &mut decrypted)?;
-        decrypted.truncate(len);
-        Ok(decrypted)
     }
 }
 
@@ -182,16 +154,12 @@ where
             .await?
             .challenge;
 
-        let privkey = xed25519::PrivateKey::from(
-            &TryInto::<[u8; 32]>::try_into(
-                self.args
-                    .comm_privkey
-                    .clone()
-                    .ok_or_eyre("comm_privkey must be specified")?,
-            )
-            .map_err(|_| eyre!("invalid comm_privkey"))?,
-        );
-        let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+        let signature: [u8; 64] = self
+            .args
+            .comm_privkey
+            .clone()
+            .ok_or_eyre("comm_privkey must be specified")?
+            .sign(challenge.as_bytes(), &mut rng)?;
 
         self.access_token = Some(
             self.client
@@ -258,35 +226,15 @@ where
             .await?;
 
         let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
-        let builder = snow::Builder::new(
-            "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                .parse()
-                .expect("should be a valid cipher"),
-        );
-        let send_noise = Noise::new(
-            builder
-                .local_private_key(comm_privkey)
-                .remote_public_key(&comm_coordinator_pubkey.0)
-                .build_initiator()?,
-        );
-        let builder = snow::Builder::new(
-            "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                .parse()
-                .expect("should be a valid cipher"),
-        );
-        let recv_noise = Noise::new(
-            builder
-                .local_private_key(comm_privkey)
-                .remote_public_key(&comm_coordinator_pubkey.0)
-                .build_responder()?,
-        );
-        self.send_noise = Some(send_noise);
-        self.recv_noise = Some(recv_noise);
+
+        let cipher = Cipher::new(comm_privkey.clone(), vec![comm_coordinator_pubkey.clone()])?;
+        self.cipher = Some(cipher);
+        let cipher = self.cipher.as_mut().expect("was just set");
 
         // Send Commitments to Server
         eprintln!("Sending commitments to coordinator...");
         let send_commitments_args = vec![commitments];
-        let msg = self.encrypt(serde_json::to_vec(&send_commitments_args)?)?;
+        let msg = cipher.encrypt(None, serde_json::to_vec(&send_commitments_args)?)?;
         self.client
             .post(format!("{}/send", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
@@ -321,8 +269,8 @@ where
                 eprint!(".");
             } else {
                 eprintln!("\nSigning package received");
-                let msg = self.decrypt(r.msgs[0].msg.clone())?;
-                break serde_json::from_slice(&msg)?;
+                let msg = cipher.decrypt(r.msgs[0].clone())?;
+                break serde_json::from_slice(&msg.msg)?;
             }
         };
 
@@ -334,13 +282,15 @@ where
         _identifier: Identifier<C>,
         signature_share: SignatureShare<C>,
     ) -> Result<(), Box<dyn Error>> {
+        let cipher = self.cipher.as_mut().expect("was just set");
+
         // Send signature share to Coordinator
 
         eprintln!("Sending signature share to coordinator...");
 
         let send_signature_shares_args = vec![signature_share];
 
-        let msg = self.encrypt(serde_json::to_vec(&send_signature_shares_args)?)?;
+        let msg = cipher.encrypt(None, serde_json::to_vec(&send_signature_shares_args)?)?;
 
         let _r = self
             .client
