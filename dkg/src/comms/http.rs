@@ -131,10 +131,21 @@ impl<C: Ciphersuite> SessionState<C> {
 
             // If complete, advance to next state
             if round1_packages.len() == pubkeys.len() - 1 {
-                *self = SessionState::WaitingForRound1PackagesBroadcast {
-                    pubkeys: pubkeys.clone(),
-                    round1_packages: round1_packages.clone(),
-                    round1_broadcasted_packages: Default::default(),
+                if pubkeys.len() > 2 {
+                    *self = SessionState::WaitingForRound1PackagesBroadcast {
+                        pubkeys: pubkeys.clone(),
+                        round1_packages: round1_packages.clone(),
+                        round1_broadcasted_packages: Default::default(),
+                    }
+                } else {
+                    // if pubkeys.len() == 2 then the echo broadcast protocol
+                    // degenerates into a simple broadcast, so we can just skip
+                    // the echo broadcast round.
+                    *self = SessionState::WaitingForRound2Packages {
+                        pubkeys: pubkeys.clone(),
+                        round1_packages: round1_packages.clone(),
+                        round2_packages: Default::default(),
+                    }
                 }
             }
             Ok(())
@@ -263,7 +274,11 @@ impl<C: Ciphersuite> SessionState<C> {
     /// When this returns `true`, [`round1_packages()`] can be called, but
     /// its contents have not been checked via echo broadcast.
     pub fn has_round1_packages(&self) -> bool {
-        matches!(self, SessionState::WaitingForRound1PackagesBroadcast { .. })
+        matches!(
+            self,
+            SessionState::WaitingForRound1PackagesBroadcast { .. }
+                | SessionState::WaitingForRound2Packages { .. }
+        )
     }
 
     /// Returns a map linking a participant identifier and the Round 1 Package
@@ -283,9 +298,11 @@ impl<C: Ciphersuite> SessionState<C> {
         }
     }
 
-    /// Returns if all participants sent their broadcast Round 1 Packages.
+    /// Returns if all participants sent their broadcast Round 1 Packages,
+    /// or if the echo broadcast round should be skipped.
+    ///
     /// When this returns `true`, [`round1_packages()`] can be called,
-    /// and its contents are ensure to be checked via echo broadcast.
+    /// and its contents are ensured to be checked via echo broadcast.
     pub fn has_round1_broadcast_packages(&self) -> bool {
         matches!(self, SessionState::WaitingForRound2Packages { .. })
     }
@@ -491,6 +508,11 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 ))
             })
             .collect::<Result<_, frost_core::Error<C>>>()?;
+
+        if self.pubkeys.len() < 2 {
+            return Err(eyre!("DKG session must have at least 2 participants").into());
+        }
+
         // Copy the pubkeys into the state.
         match self.state {
             SessionState::WaitingForRound1Packages {
@@ -585,65 +607,70 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         }
         eprintln!();
 
-        // Broadcast received Round 1 Packages to all other participants
-        for (recipient_pubkey, recipient_identifier) in self.pubkeys.clone().iter() {
-            // No need to broadcast to oneself
-            if Some(recipient_pubkey) == self.args.comm_pubkey.as_ref() {
-                continue;
-            }
-            for (sender_identifier, package) in self.state.round1_packages()?.iter() {
-                // No need to broadcast back to the sender
-                if *sender_identifier == *recipient_identifier {
+        // We might need to skip the echo broadcast if its not needed (e.g.
+        // only 2 participants)
+        if !self.state.has_round1_broadcast_packages() {
+            // Broadcast received Round 1 Packages to all other participants
+            for (recipient_pubkey, recipient_identifier) in self.pubkeys.clone().iter() {
+                // No need to broadcast to oneself
+                if Some(recipient_pubkey) == self.args.comm_pubkey.as_ref() {
                     continue;
                 }
-                let msg = cipher.encrypt(
-                    Some(recipient_pubkey),
-                    serde_json::to_vec(&(*sender_identifier, package))?,
-                )?;
-                self.client
-                    .post(format!("{}/send", self.host_port))
-                    .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                    .json(&frostd::SendArgs {
-                        session_id: self.session_id.expect("set before"),
-                        recipients: vec![recipient_pubkey.clone()],
-                        msg,
+                for (sender_identifier, package) in self.state.round1_packages()?.iter() {
+                    // No need to broadcast back to the sender
+                    if *sender_identifier == *recipient_identifier {
+                        continue;
+                    }
+                    let msg = cipher.encrypt(
+                        Some(recipient_pubkey),
+                        serde_json::to_vec(&(*sender_identifier, package))?,
+                    )?;
+                    self.client
+                        .post(format!("{}/send", self.host_port))
+                        .bearer_auth(self.access_token.as_ref().expect("was just set"))
+                        .json(&frostd::SendArgs {
+                            session_id: self.session_id.expect("set before"),
+                            recipients: vec![recipient_pubkey.clone()],
+                            msg,
+                        })
+                        .send()
+                        .await?;
+                }
+            }
+
+            eprint!("Waiting for other participants to send their broadcasted Round 1 Packages...");
+
+            loop {
+                let r = self
+                    .client
+                    .post(format!("{}/receive", self.host_port))
+                    .bearer_auth(
+                        self.access_token
+                            .as_ref()
+                            .expect("must have been set before"),
+                    )
+                    .json(&frostd::ReceiveArgs {
+                        session_id: self.session_id.unwrap(),
+                        as_coordinator: false,
                     })
                     .send()
+                    .await?
+                    .json::<frostd::ReceiveOutput>()
                     .await?;
+                for msg in r.msgs {
+                    let msg = cipher.decrypt(msg)?;
+                    self.state
+                        .recv(msg, self.identifier.expect("must have been set"))?;
+                }
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                eprint!(".");
+                if self.state.has_round1_broadcast_packages() {
+                    break;
+                }
             }
+            eprintln!();
         }
 
-        eprint!("Waiting for other participants to send their broadcasted Round 1 Packages...");
-
-        loop {
-            let r = self
-                .client
-                .post(format!("{}/receive", self.host_port))
-                .bearer_auth(
-                    self.access_token
-                        .as_ref()
-                        .expect("must have been set before"),
-                )
-                .json(&frostd::ReceiveArgs {
-                    session_id: self.session_id.unwrap(),
-                    as_coordinator: false,
-                })
-                .send()
-                .await?
-                .json::<frostd::ReceiveOutput>()
-                .await?;
-            for msg in r.msgs {
-                let msg = cipher.decrypt(msg)?;
-                self.state
-                    .recv(msg, self.identifier.expect("must have been set"))?;
-            }
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            eprint!(".");
-            if self.state.has_round1_broadcast_packages() {
-                break;
-            }
-        }
-        eprintln!();
         self.state.round1_packages()
     }
 
