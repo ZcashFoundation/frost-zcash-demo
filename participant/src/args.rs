@@ -11,6 +11,7 @@ use frost_core::{
     keys::{KeyPackage, SecretShare},
     Ciphersuite,
 };
+use frostd::PublicKey;
 
 use crate::input::read_from_file_or_stdin;
 
@@ -74,7 +75,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub comm_privkey: Option<Vec<u8>>,
 
     /// The participant's communication public key for HTTP mode.
-    pub comm_pubkey: Option<Vec<u8>>,
+    pub comm_pubkey: Option<PublicKey>,
 
     /// A function that confirms that a public key from the server is trusted by
     /// the user; returns the same public key. For HTTP mode.
@@ -82,7 +83,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
-    pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
+    pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&PublicKey) -> Option<PublicKey>>>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {

@@ -61,7 +61,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
 
     let mut participants = participants
         .iter()
-        .map(|s| Ok(hex::decode(s)?.to_vec()))
+        .map(|s| Ok(frostd::PublicKey(hex::decode(s)?.to_vec())))
         .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
     // Add ourselves if not already in the list
     if !participants.is_empty() && !participants.contains(&comm_pubkey) {

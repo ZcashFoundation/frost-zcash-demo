@@ -11,6 +11,7 @@ use eyre::eyre;
 
 use frost_core::{keys::PublicKeyPackage, Ciphersuite, Identifier};
 use frost_rerandomized::Randomizer;
+use frostd::PublicKey;
 
 use crate::input::read_from_file_or_stdin;
 
@@ -86,7 +87,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub http: bool,
 
     /// Signers to use in HTTP mode, as a map of public keys to identifiers.
-    pub signers: HashMap<Vec<u8>, Identifier<C>>,
+    pub signers: HashMap<PublicKey, Identifier<C>>,
 
     /// The number of participants.
     pub num_signers: u16,
@@ -116,7 +117,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub comm_privkey: Option<Vec<u8>>,
 
     /// The coordinator's communication public key for HTTP mode.
-    pub comm_pubkey: Option<Vec<u8>>,
+    pub comm_pubkey: Option<PublicKey>,
 }
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
