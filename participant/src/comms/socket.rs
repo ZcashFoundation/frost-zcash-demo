@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use frost_core::{self as frost, Ciphersuite};
 
 use eyre::eyre;
+use frostd::SendSigningPackageArgs;
 use message_io::{
     network::{Endpoint, NetEvent, Transport},
     node::{self, NodeHandler, NodeListener},
@@ -89,13 +90,7 @@ where
         commitments: SigningCommitments<C>,
         identifier: Identifier<C>,
         _rerandomized: bool,
-    ) -> Result<
-        (
-            frost::SigningPackage<C>,
-            Option<frost_rerandomized::Randomizer<C>>,
-        ),
-        Box<dyn Error>,
-    > {
+    ) -> Result<SendSigningPackageArgs<C>, Box<dyn Error>> {
         // Send Commitments to Coordinator
         let data = serde_json::to_vec(&Message::<C>::IdentifiedCommitments {
             identifier,
@@ -116,7 +111,11 @@ where
             randomizer,
         } = message
         {
-            Ok((signing_package, randomizer))
+            Ok(SendSigningPackageArgs::<C> {
+                signing_package: vec![signing_package],
+                randomizer: randomizer.map(|r| vec![r]).unwrap_or_default(),
+                aux_msg: vec![],
+            })
         } else {
             Err(eyre!("Expected SigningPackage message"))?
         }

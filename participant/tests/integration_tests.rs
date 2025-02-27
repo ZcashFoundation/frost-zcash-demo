@@ -1,10 +1,12 @@
 use std::collections::{BTreeMap, HashMap};
+use std::vec;
 
 use frost_ed25519 as frost;
 
 use frost::keys::IdentifierList;
 use frost::{aggregate, SigningPackage};
-use participant::round2::{generate_signature, Round2Config};
+use frostd::SendSigningPackageArgs;
+use participant::round2::generate_signature;
 use rand::thread_rng;
 
 #[test]
@@ -40,9 +42,10 @@ fn check_participant() {
     let mut signature_shares = BTreeMap::new();
 
     for participant_identifier in nonces.keys() {
-        let config = Round2Config {
-            signing_package: SigningPackage::new(commitments.clone(), &message),
-            randomizer: None,
+        let config = SendSigningPackageArgs {
+            signing_package: vec![SigningPackage::new(commitments.clone(), &message)],
+            randomizer: vec![],
+            aux_msg: vec![],
         };
         let signature = generate_signature(
             config,

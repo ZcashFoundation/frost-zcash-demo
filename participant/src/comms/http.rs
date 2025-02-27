@@ -9,9 +9,7 @@ use std::{
 
 use async_trait::async_trait;
 use eyre::{eyre, OptionExt};
-use frost_core::{
-    self as frost, round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier,
-};
+use frost_core::{round1::SigningCommitments, round2::SignatureShare, Ciphersuite, Identifier};
 use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
 use xeddsa::{xed25519, Sign as _};
@@ -169,14 +167,8 @@ where
         _output: &mut dyn Write,
         commitments: SigningCommitments<C>,
         _identifier: Identifier<C>,
-        rerandomized: bool,
-    ) -> Result<
-        (
-            frost::SigningPackage<C>,
-            Option<frost_rerandomized::Randomizer<C>>,
-        ),
-        Box<dyn Error>,
-    > {
+        _rerandomized: bool,
+    ) -> Result<SendSigningPackageArgs<C>, Box<dyn Error>> {
         let mut rng = thread_rng();
 
         eprintln!("Logging in...");
@@ -334,20 +326,7 @@ where
             }
         };
 
-        if rerandomized {
-            let signing_package = r
-                .signing_package
-                .first()
-                .ok_or(eyre!("missing signing package"))?;
-            let randomizer = r.randomizer.first().ok_or(eyre!("missing randomizer"))?;
-            Ok((signing_package.clone(), Some(*randomizer)))
-        } else {
-            let signing_package = r
-                .signing_package
-                .first()
-                .ok_or(eyre!("missing signing package"))?;
-            Ok((signing_package.clone(), None))
-        }
+        Ok(r)
     }
 
     async fn send_signature_share(
