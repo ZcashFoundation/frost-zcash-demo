@@ -2,6 +2,7 @@ use eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{self as frost, Ciphersuite, Identifier};
 
+use frostd::PublicKey;
 use rand::thread_rng;
 use reddsa::frost::redpallas::keys::EvenY;
 use std::collections::HashMap;
@@ -77,7 +78,7 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     (
         KeyPackage<C>,
         PublicKeyPackage<C>,
-        HashMap<Vec<u8>, Identifier<C>>,
+        HashMap<PublicKey, Identifier<C>>,
     ),
     Box<dyn Error>,
 > {

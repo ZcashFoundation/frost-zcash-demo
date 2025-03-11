@@ -20,7 +20,7 @@ pub(crate) async fn init(args: &Command) -> Result<(), Box<dyn Error>> {
         let keypair = builder.generate_keypair().unwrap();
         config.communication_key = Some(CommunicationKey {
             privkey: keypair.private.clone(),
-            pubkey: keypair.public.clone(),
+            pubkey: frostd::PublicKey(keypair.public.clone()),
         });
     };
 

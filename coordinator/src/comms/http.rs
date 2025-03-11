@@ -43,7 +43,7 @@ pub enum SessionState<C: Ciphersuite> {
         /// Commitments sent by participants so far, for each message being
         /// signed.
         commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
     },
     /// Commitments have been sent by all participants. Coordinator can create
     /// SigningPackage and send to participants. Waiting for participants to
@@ -54,7 +54,7 @@ pub enum SessionState<C: Ciphersuite> {
         /// All commitments sent by participants, for each message being signed.
         commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
         /// Pubkey -> Identifier mapping.
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
         /// Signature shares sent by participants so far, for each message being
         /// signed.
         signature_shares: HashMap<Identifier<C>, Vec<SignatureShare<C>>>,
@@ -74,7 +74,7 @@ impl<C: Ciphersuite> SessionState<C> {
     pub fn new(
         num_messages: usize,
         num_signers: usize,
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
     ) -> Self {
         let args = SessionStateArgs {
             num_messages,
@@ -113,7 +113,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle commitments sent by a participant.
     fn handle_commitments(
         &mut self,
-        pubkey: Vec<u8>,
+        pubkey: PublicKey,
         commitments: Vec<SigningCommitments<C>>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForCommitments {
@@ -164,7 +164,7 @@ impl<C: Ciphersuite> SessionState<C> {
     ) -> Result<
         (
             Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>>,
-            HashMap<Vec<u8>, Identifier<C>>,
+            HashMap<PublicKey, Identifier<C>>,
         ),
         Box<dyn Error>,
     > {
@@ -197,7 +197,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle signature share sent by a participant.
     fn handle_signature_share(
         &mut self,
-        pubkey: Vec<u8>,
+        pubkey: PublicKey,
         signature_shares: Vec<SignatureShare<C>>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForSignatureShares {
@@ -265,11 +265,11 @@ pub struct HTTPComms<C: Ciphersuite> {
     access_token: Option<String>,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
-    pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+    pubkeys: HashMap<PublicKey, Identifier<C>>,
     // The "send" Noise objects by pubkey of recipients.
-    send_noise: Option<HashMap<Vec<u8>, Noise>>,
+    send_noise: Option<HashMap<PublicKey, Noise>>,
     // The "receive" Noise objects by pubkey of senders.
-    recv_noise: Option<HashMap<Vec<u8>, Noise>>,
+    recv_noise: Option<HashMap<PublicKey, Noise>>,
     _phantom: PhantomData<C>,
 }
 
@@ -295,7 +295,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
     }
 
     // Encrypts a message for a given recipient.
-    fn encrypt(&mut self, recipient: &Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn encrypt(&mut self, recipient: &PublicKey, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
         let noise_map = self
             .send_noise
             .as_mut()
@@ -390,7 +390,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .post(format!("{}/create_new_session", self.host_port))
             .bearer_auth(self.access_token.as_ref().expect("was just set"))
             .json(&frostd::CreateNewSessionArgs {
-                pubkeys: self.args.signers.keys().cloned().map(PublicKey).collect(),
+                pubkeys: self.args.signers.keys().cloned().collect(),
                 message_count: 1,
             })
             .send()
@@ -423,7 +423,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let send_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(comm_participant_pubkey)
+                    .remote_public_key(&comm_participant_pubkey.0)
                     .build_initiator()?,
             );
             let builder = snow::Builder::new(
@@ -434,7 +434,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let recv_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(comm_participant_pubkey)
+                    .remote_public_key(&comm_participant_pubkey.0)
                     .build_responder()?,
             );
             send_noise_map.insert(comm_participant_pubkey.clone(), send_noise);
@@ -506,7 +506,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 )
                 .json(&frostd::SendArgs {
                     session_id: self.session_id.unwrap(),
-                    recipients: vec![frostd::PublicKey(recipient.clone())],
+                    recipients: vec![recipient.clone()],
                     msg,
                 })
                 .send()

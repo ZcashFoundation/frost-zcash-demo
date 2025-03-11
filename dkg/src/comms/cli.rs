@@ -9,6 +9,7 @@ use frost_core::Ciphersuite;
 use async_trait::async_trait;
 
 use frost::{keys::PublicKeyPackage, Identifier};
+use frostd::PublicKey;
 
 use std::collections::HashMap;
 use std::{
@@ -138,7 +139,9 @@ where
         Ok(received_round2_packages)
     }
 
-    fn get_pubkey_identifier_map(&self) -> Result<HashMap<Vec<u8>, Identifier<C>>, Box<dyn Error>> {
+    fn get_pubkey_identifier_map(
+        &self,
+    ) -> Result<HashMap<PublicKey, Identifier<C>>, Box<dyn Error>> {
         Ok(Default::default())
     }
 }

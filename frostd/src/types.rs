@@ -10,17 +10,6 @@ pub struct Error {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RegisterArgs {
-    pub username: String,
-    pub password: String,
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub pubkey: Vec<u8>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeArgs {}
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,11 +20,7 @@ pub struct ChallengeOutput {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyLoginArgs {
     pub challenge: Uuid,
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub pubkey: Vec<u8>,
+    pub pubkey: PublicKey,
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
@@ -84,10 +69,10 @@ pub struct GetSessionInfoArgs {
 pub struct GetSessionInfoOutput {
     pub message_count: u8,
     pub pubkeys: Vec<PublicKey>,
-    pub coordinator_pubkey: Vec<u8>,
+    pub coordinator_pubkey: PublicKey,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
 pub struct PublicKey(
     #[serde(
@@ -118,7 +103,7 @@ pub struct SendArgs {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Msg {
-    pub sender: Vec<u8>,
+    pub sender: PublicKey,
     #[serde(
         serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
         deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
