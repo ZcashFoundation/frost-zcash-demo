@@ -179,10 +179,10 @@ pub(crate) enum Command {
         #[arg(short = 'm', long)]
         message: Vec<String>,
         /// The randomizers to use. Each instance can be a file with the raw
-        /// randomizer, "" or "-". If "" or "-" is specified, then it will be read
-        /// from standard input as a hex string. If none are passed, random ones
-        /// will be generated. If one or more are passed, the number should match
-        /// the `message` parameter.
+        /// randomizer, "" or "-". If "" or "-" is specified, then it will be
+        /// read from standard input as a hex string. If none are passed, random
+        /// ones will be generated if the ciphersuite is redpallas. If one or
+        /// more are passed, the number should match the `message` parameter.
         #[arg(short = 'r', long)]
         randomizer: Vec<String>,
         /// Where to write the generated raw bytes signature. If "-", the
