@@ -53,4 +53,9 @@ pub trait Comms<C: Ciphersuite> {
         signing_package: &SigningPackage<C>,
         randomizer: Option<frost_rerandomized::Randomizer<C>>,
     ) -> Result<BTreeMap<Identifier<C>, SignatureShare<C>>, Box<dyn Error>>;
+
+    /// Do any cleanups in case an error occurs during the protocol run.
+    async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
 }

@@ -15,7 +15,6 @@ pub struct ParticipantsConfig<C: Ciphersuite> {
     pub pub_key_package: PublicKeyPackage<C>,
 }
 
-// TODO: needs to include the coordinator's keys!
 pub async fn step_1<C: Ciphersuite>(
     args: &ProcessedArgs<C>,
     comms: &mut dyn Comms<C>,
