@@ -89,7 +89,7 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
     // Second pass over configs; write group information
     for (share, path) in shares.values().zip(config.iter()) {
         let mut config = Config::read(Some(path.to_string()))?;
-        // IMPORTANT: the TrustedDealer command intended for tests only, see
+        // IMPORTANT: the TrustedDealer command is intended for tests only, see
         // comment in [`Command::TrustedDealer`]. If you're using this code as a
         // reference, note that participants should not convert a SecretShare
         // into a KeyPackage without first checking if

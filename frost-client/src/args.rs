@@ -58,7 +58,7 @@ pub(crate) enum Command {
     /// tests.
     ///
     /// IMPORTANT: this should only be used for tests. After a trusted dealer
-    /// key generation, the participant need to validate their received shares
+    /// key generation, the participants need to validate their received shares
     /// before generating a key package. This tool does not do that and writes
     /// just the key packages into the config files, making it impossible for
     /// participants to verify them since the required information is lost.
