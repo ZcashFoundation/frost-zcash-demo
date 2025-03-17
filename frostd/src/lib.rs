@@ -89,6 +89,8 @@ pub(crate) enum AppError {
     SessionNotFound,
     #[error("user is not the coordinator")]
     NotCoordinator,
+    #[error("user is not part of the given session")]
+    NotInSession,
 }
 
 // These make it easier to clients to tell which error happened.
@@ -96,6 +98,7 @@ pub const INVALID_ARGUMENT: usize = 1;
 pub const UNAUTHORIZED: usize = 2;
 pub const SESSION_NOT_FOUND: usize = 3;
 pub const NOT_COORDINATOR: usize = 4;
+pub const NOT_IN_SESSION: usize = 5;
 
 impl AppError {
     pub fn error_code(&self) -> usize {
@@ -104,6 +107,7 @@ impl AppError {
             AppError::Unauthorized => UNAUTHORIZED,
             AppError::SessionNotFound => SESSION_NOT_FOUND,
             AppError::NotCoordinator => NOT_COORDINATOR,
+            AppError::NotInSession => NOT_IN_SESSION,
         }
     }
 }

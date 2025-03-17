@@ -375,6 +375,49 @@ async fn test_main_router<
         }
     }
 
+    // Failure tests
+
+    // Create a signing session for tests, without Bob
+    let res = server
+        .post("/create_new_session")
+        .authorization_bearer(alice_token)
+        .json(&frostd::CreateNewSessionArgs {
+            pubkeys: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            message_count: 2,
+        })
+        .await;
+    res.assert_status_ok();
+    let r: frostd::CreateNewSessionOutput = res.json();
+    let session_id = r.session_id;
+
+    // Check if sending to a user not in the session fails
+    let res = server
+        .post("/send")
+        .authorization_bearer(alice_token)
+        .json(&frostd::SendArgs {
+            session_id,
+            recipients: vec![frostd::PublicKey(bob_keypair.public.clone())],
+            msg: vec![],
+        })
+        .await;
+    res.assert_status_internal_server_error();
+    let r: frostd::Error = res.json();
+    assert_eq!(r.code, frostd::NOT_IN_SESSION);
+
+    // Check if sending as a user not in the session fails
+    let res = server
+        .post("/send")
+        .authorization_bearer(bob_token)
+        .json(&frostd::SendArgs {
+            session_id,
+            recipients: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            msg: vec![],
+        })
+        .await;
+    res.assert_status_internal_server_error();
+    let r: frostd::Error = res.json();
+    assert_eq!(r.code, frostd::NOT_IN_SESSION);
+
     Ok(())
 }
 

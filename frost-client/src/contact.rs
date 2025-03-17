@@ -75,7 +75,7 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
     if config.contact.values().any(|c| c.pubkey == contact.pubkey) {
         return Err(eyre!(
             "pubkey {} already registered for {}",
-            hex::encode(&contact.pubkey),
+            hex::encode(&contact.pubkey.0),
             &contact.name,
         )
         .into());
@@ -83,7 +83,7 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
     if config.communication_key.as_ref().map(|c| &c.pubkey) == Some(&contact.pubkey) {
         return Err(eyre!(
             "pubkey {} already registered for yourself",
-            hex::encode(&contact.pubkey)
+            hex::encode(&contact.pubkey.0)
         )
         .into());
     }
