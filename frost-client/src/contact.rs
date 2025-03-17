@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use eyre::{eyre, OptionExt};
+use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
 
 use crate::{args::Command, config::Config};
@@ -15,11 +16,7 @@ pub struct Contact {
     /// Name of the contact.
     pub name: String,
     /// Public key of the contact.
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub pubkey: Vec<u8>,
+    pub pubkey: PublicKey,
 }
 
 impl Contact {
@@ -29,7 +26,7 @@ impl Contact {
         format!(
             "Name: {}\nPublic Key: {}\n",
             self.name,
-            hex::encode(&self.pubkey)
+            hex::encode(&self.pubkey.0)
         )
     }
 
@@ -67,6 +64,29 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
     let mut config = Config::read(config)?;
 
     let mut contact = Contact::from_text(&text_contact)?;
+    if config.contact.contains_key(&contact.name) {
+        return Err(eyre!(
+            "contact with name {} already exists. Either remove the existing \
+            one, or ask the sender to change their display name when exporting",
+            &contact.name
+        )
+        .into());
+    }
+    if config.contact.values().any(|c| c.pubkey == contact.pubkey) {
+        return Err(eyre!(
+            "pubkey {} already registered for {}",
+            hex::encode(&contact.pubkey.0),
+            &contact.name,
+        )
+        .into());
+    }
+    if config.communication_key.as_ref().map(|c| &c.pubkey) == Some(&contact.pubkey) {
+        return Err(eyre!(
+            "pubkey {} already registered for yourself",
+            hex::encode(&contact.pubkey.0)
+        )
+        .into());
+    }
     // We don't want the version when writing to the config file.
     contact.version = None;
     config.contact.insert(contact.name.clone(), contact.clone());
@@ -137,7 +157,7 @@ pub(crate) fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
         .contact
         .iter()
         .find_map(|(name, c)| {
-            if hex::encode(c.pubkey.clone()) == pubkey {
+            if hex::encode(&c.pubkey.0) == pubkey {
                 Some(name.clone())
             } else {
                 None

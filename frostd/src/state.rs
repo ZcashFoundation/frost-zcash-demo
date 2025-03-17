@@ -10,7 +10,7 @@ use delay_map::{HashMapDelay, HashSetDelay};
 use futures::{Stream, StreamExt as _};
 use uuid::Uuid;
 
-use crate::Msg;
+use crate::{Msg, PublicKey};
 
 /// How long a session stays open.
 const SESSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60 * 24);
@@ -35,17 +35,23 @@ impl<T: Stream + Unpin> Stream for RwLockStream<'_, T> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SessionParticipant {
+    Coordinator,
+    Participant(PublicKey),
+}
+
 /// A particular signing session.
 #[derive(Debug)]
 pub struct Session {
     /// The public keys of the participants
-    pub(crate) pubkeys: Vec<Vec<u8>>,
+    pub(crate) pubkeys: Vec<PublicKey>,
     /// The public key of the coordinator
-    pub(crate) coordinator_pubkey: Vec<u8>,
+    pub(crate) coordinator_pubkey: PublicKey,
     /// The number of messages being simultaneously signed.
     pub(crate) message_count: u8,
     /// The message queue.
-    pub(crate) queue: HashMap<Vec<u8>, VecDeque<Msg>>,
+    pub(crate) queue: HashMap<SessionParticipant, VecDeque<Msg>>,
 }
 
 /// The global state of the server.
@@ -53,14 +59,14 @@ pub struct Session {
 pub struct AppState {
     pub(crate) sessions: SessionState,
     pub(crate) challenges: Arc<RwLock<HashSetDelay<Uuid>>>,
-    pub(crate) access_tokens: Arc<RwLock<HashMapDelay<Uuid, Vec<u8>>>>,
+    pub(crate) access_tokens: Arc<RwLock<HashMapDelay<Uuid, PublicKey>>>,
 }
 
 #[derive(Debug, Default)]
 pub struct SessionState {
     /// Mapping of signing sessions by UUID.
     pub(crate) sessions: Arc<RwLock<HashMapDelay<Uuid, Session>>>,
-    pub(crate) sessions_by_pubkey: Arc<RwLock<HashMap<Vec<u8>, HashSet<Uuid>>>>,
+    pub(crate) sessions_by_pubkey: Arc<RwLock<HashMap<PublicKey, HashSet<Uuid>>>>,
 }
 
 impl SessionState {

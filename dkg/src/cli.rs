@@ -2,6 +2,7 @@ use eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{self as frost, Ciphersuite, Identifier};
 
+use frostd::PublicKey;
 use rand::thread_rng;
 use reddsa::frost::redpallas::keys::EvenY;
 use std::collections::HashMap;
@@ -77,7 +78,7 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     (
         KeyPackage<C>,
         PublicKeyPackage<C>,
-        HashMap<Vec<u8>, Identifier<C>>,
+        HashMap<PublicKey, Identifier<C>>,
     ),
     Box<dyn Error>,
 > {
@@ -89,31 +90,41 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
         return Err(eyre!("either --cli or --http must be specified").into());
     };
 
-    let rng = thread_rng();
+    // We put the main logic on a block to be able to cleanup if an error is
+    // returned anywhere in it.
+    let doit = async {
+        let rng = thread_rng();
 
-    let (identifier, max_signers) = comms.get_identifier_and_max_signers(input, logger).await?;
+        let (identifier, max_signers) = comms.get_identifier_and_max_signers(input, logger).await?;
 
-    let (round1_secret_package, round1_package) =
-        frost::keys::dkg::part1(identifier, max_signers, pargs.min_signers, rng)?;
+        let (round1_secret_package, round1_package) =
+            frost::keys::dkg::part1(identifier, max_signers, pargs.min_signers, rng)?;
 
-    let received_round1_packages = comms
-        .get_round1_packages(input, logger, round1_package)
-        .await?;
+        let received_round1_packages = comms
+            .get_round1_packages(input, logger, round1_package)
+            .await?;
 
-    let (round2_secret_package, round2_packages) =
-        frost::keys::dkg::part2(round1_secret_package, &received_round1_packages)?;
+        let (round2_secret_package, round2_packages) =
+            frost::keys::dkg::part2(round1_secret_package, &received_round1_packages)?;
 
-    let received_round2_packages = comms
-        .get_round2_packages(input, logger, round2_packages)
-        .await?;
+        let received_round2_packages = comms
+            .get_round2_packages(input, logger, round2_packages)
+            .await?;
 
-    let (key_package, public_key_package) = MaybeIntoEvenY::into_even_y(frost::keys::dkg::part3(
-        &round2_secret_package,
-        &received_round1_packages,
-        &received_round2_packages,
-    )?);
+        let (key_package, public_key_package) =
+            MaybeIntoEvenY::into_even_y(frost::keys::dkg::part3(
+                &round2_secret_package,
+                &received_round1_packages,
+                &received_round2_packages,
+            )?);
 
-    let pubkey_map = comms.get_pubkey_identifier_map()?;
+        let pubkey_map = comms.get_pubkey_identifier_map()?;
+        Ok((key_package, public_key_package, pubkey_map))
+    };
 
-    Ok((key_package, public_key_package, pubkey_map))
+    let r = doit.await;
+    if r.is_err() {
+        let _ = comms.cleanup_on_error().await;
+    }
+    r
 }

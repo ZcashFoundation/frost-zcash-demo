@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use clap::Parser;
 use frost_core::{Ciphersuite, Identifier};
+use frostd::PublicKey;
 
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
@@ -30,7 +31,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub comm_privkey: Option<Vec<u8>>,
 
     /// The participant's communication public key for HTTP mode.
-    pub comm_pubkey: Option<Vec<u8>>,
+    pub comm_pubkey: Option<PublicKey>,
 
     /// A function that confirms that a public key from the server is trusted by
     /// the user; returns the same public key. For HTTP mode.
@@ -38,7 +39,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
-    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&Vec<u8>) -> Option<Vec<u8>>>>,
+    pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&PublicKey) -> Option<PublicKey>>>,
 
     /// The threshold to use for the shares
     pub min_signers: u16,
@@ -48,7 +49,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
 
     /// The list of pubkeys for the other participants. This is only required
     /// for the first participant who creates the DKG session.
-    pub participants: Vec<Vec<u8>>,
+    pub participants: Vec<PublicKey>,
 
     /// Identifier to use for the participant. Only needed for CLI mode.
     pub identifier: Option<Identifier<C>>,

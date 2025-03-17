@@ -11,6 +11,7 @@ use frost::{
     round2::SignatureShare,
     SigningPackage, VerifyingKey,
 };
+use frostd::SendSigningPackageArgs;
 use hex::FromHex;
 use participant::comms::cli::CLIComms;
 use participant::round2::print_values_round_2;
@@ -82,7 +83,7 @@ async fn check_valid_round_2_inputs() {
     assert!(round_2_config.is_ok());
     assert_eq!(
         expected.signing_package,
-        round_2_config.unwrap().signing_package
+        round_2_config.unwrap().signing_package[0]
     )
 }
 
@@ -120,9 +121,10 @@ async fn check_sign() {
 
     let signing_package = SigningPackage::new(signer_commitments, message);
 
-    let config = Round2Config {
-        signing_package,
-        randomizer: None,
+    let config = SendSigningPackageArgs {
+        signing_package: vec![signing_package],
+        randomizer: vec![],
+        aux_msg: vec![],
     };
 
     let signature = generate_signature(config, &key_package, &nonces);

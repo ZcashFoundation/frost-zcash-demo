@@ -34,7 +34,7 @@ pub enum SessionState<C: Ciphersuite> {
     WaitingForRound1Packages {
         /// Pubkey -> Identifier mapping. This is set during the
         /// get_identifier() call of HTTPComms.
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
         /// Round 1 Packages sent by participants so far.
         round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
     },
@@ -43,7 +43,7 @@ pub enum SessionState<C: Ciphersuite> {
     /// for details.
     WaitingForRound1PackagesBroadcast {
         /// Pubkey -> Identifier mapping.
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
         /// Original Round 1 Packages sent by the other participants.
         round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
         /// Broadcasted Round 1 Packages sent by the other participants,
@@ -56,7 +56,7 @@ pub enum SessionState<C: Ciphersuite> {
     /// participants to send their Round 2 Packages.
     WaitingForRound2Packages {
         /// Pubkey -> Identifier mapping.
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
         /// Round 1 Packages sent by participants.
         round1_packages: BTreeMap<Identifier<C>, round1::Package<C>>,
         /// Round 2 Packages sent by participants so far
@@ -66,7 +66,7 @@ pub enum SessionState<C: Ciphersuite> {
     /// fetched by this participant.
     Round2PackagesReady {
         /// Pubkey -> Identifier mapping.
-        pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+        pubkeys: HashMap<PublicKey, Identifier<C>>,
         /// Round 2 Packages sent by participants so far
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     },
@@ -116,7 +116,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle commitments sent by a participant.
     fn handle_round1_package(
         &mut self,
-        pubkey: Vec<u8>,
+        pubkey: PublicKey,
         round1_package: round1::Package<C>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForRound1Packages {
@@ -169,7 +169,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// [1]: https://eprint.iacr.org/2002/040.pdf
     fn handle_round1_package_broadcast(
         &mut self,
-        sender_pubkey: Vec<u8>,
+        sender_pubkey: PublicKey,
         self_identifier: Identifier<C>,
         original_identifier: Identifier<C>,
         round1_package: round1::Package<C>,
@@ -301,7 +301,7 @@ impl<C: Ciphersuite> SessionState<C> {
     /// Handle signature share sent by a participant.
     fn handle_round2_package(
         &mut self,
-        pubkey: Vec<u8>,
+        pubkey: PublicKey,
         round2_package: round2::Package<C>,
     ) -> Result<(), Box<dyn Error>> {
         if let SessionState::WaitingForRound2Packages {
@@ -359,11 +359,11 @@ pub struct HTTPComms<C: Ciphersuite> {
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     identifier: Option<Identifier<C>>,
-    pubkeys: HashMap<Vec<u8>, Identifier<C>>,
+    pubkeys: HashMap<PublicKey, Identifier<C>>,
     // The "send" Noise objects by pubkey of recipients.
-    send_noise: Option<HashMap<Vec<u8>, Noise>>,
+    send_noise: Option<HashMap<PublicKey, Noise>>,
     // The "receive" Noise objects by pubkey of senders.
-    recv_noise: Option<HashMap<Vec<u8>, Noise>>,
+    recv_noise: Option<HashMap<PublicKey, Noise>>,
     _phantom: PhantomData<C>,
 }
 
@@ -386,7 +386,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
     }
 
     // Encrypts a message for a given recipient.
-    fn encrypt(&mut self, recipient: &Vec<u8>, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn encrypt(&mut self, recipient: &PublicKey, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
         let noise_map = self
             .send_noise
             .as_mut()
@@ -481,13 +481,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .post(format!("{}/create_new_session", self.host_port))
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .json(&frostd::CreateNewSessionArgs {
-                    pubkeys: self
-                        .args
-                        .participants
-                        .iter()
-                        .cloned()
-                        .map(PublicKey)
-                        .collect(),
+                    pubkeys: self.args.participants.clone(),
                     message_count: 1,
                 })
                 .send()
@@ -537,7 +531,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .iter()
             .map(|p| {
                 Ok((
-                    p.0.clone(),
+                    p.clone(),
                     Identifier::<C>::derive(&[session_id.as_bytes(), &p.0[..]].concat())?,
                 ))
             })
@@ -556,7 +550,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         // of the session ID and the communication public key.
         // This ensures the identifier is unique and that participants can
         // derive each other's identifiers.
-        let input = [session_id.as_bytes(), &comm_pubkey[..]].concat();
+        let input = [session_id.as_bytes(), &comm_pubkey.0[..]].concat();
         let identifier = Identifier::<C>::derive(&input)?;
         self.identifier = Some(identifier);
         Ok((identifier, self.pubkeys.len() as u16))
@@ -589,7 +583,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let send_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey)
+                    .remote_public_key(&comm_participant_pubkey.0)
                     .build_initiator()?,
             );
             let builder = snow::Builder::new(
@@ -600,7 +594,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             let recv_noise = Noise::new(
                 builder
                     .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey)
+                    .remote_public_key(&comm_participant_pubkey.0)
                     .build_responder()?,
             );
             send_noise_map.insert(pubkey.clone(), send_noise);
@@ -620,7 +614,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .json(&frostd::SendArgs {
                     session_id: self.session_id.expect("set before"),
-                    recipients: vec![PublicKey(pubkey.clone())],
+                    recipients: vec![pubkey.clone()],
                     msg,
                 })
                 .send()
@@ -679,7 +673,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                     .bearer_auth(self.access_token.as_ref().expect("was just set"))
                     .json(&frostd::SendArgs {
                         session_id: self.session_id.expect("set before"),
-                        recipients: vec![PublicKey(recipient_pubkey.clone())],
+                        recipients: vec![recipient_pubkey.clone()],
                         msg,
                     })
                     .send()
@@ -745,7 +739,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
                 .json(&frostd::SendArgs {
                     session_id: self.session_id.expect("set before"),
-                    recipients: vec![PublicKey(pubkey.clone())],
+                    recipients: vec![pubkey.clone()],
                     msg,
                 })
                 .send()
@@ -814,10 +808,28 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         self.state.round2_packages()
     }
 
-    fn get_pubkey_identifier_map(&self) -> Result<HashMap<Vec<u8>, Identifier<C>>, Box<dyn Error>> {
+    fn get_pubkey_identifier_map(
+        &self,
+    ) -> Result<HashMap<PublicKey, Identifier<C>>, Box<dyn Error>> {
         match &self.state {
             SessionState::Round2PackagesReady { pubkeys, .. } => Ok(pubkeys.clone()),
             _ => Err(eyre!("wrong state").into()),
         }
+    }
+
+    async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
+        if let (Some(session_id), Some(access_token)) = (self.session_id, self.access_token.clone())
+        {
+            let _r = self
+                .client
+                .post(format!("{}/close_session", self.host_port))
+                .bearer_auth(access_token)
+                .json(&frostd::CloseSessionArgs { session_id })
+                .send()
+                .await?
+                .bytes()
+                .await?;
+        }
+        Ok(())
     }
 }
