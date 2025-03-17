@@ -170,6 +170,10 @@ pub(crate) async fn send(
     user: User,
     Json(args): Json<SendArgs>,
 ) -> Result<(), AppError> {
+    if args.msg.len() > MAX_MSG_SIZE {
+        return Err(AppError::InvalidArgument("msg is too big".into()));
+    }
+
     // Get the mutex lock to read and write from the state
     let mut sessions = state.sessions.sessions.write().unwrap();
 

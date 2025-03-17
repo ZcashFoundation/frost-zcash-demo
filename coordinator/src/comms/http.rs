@@ -303,7 +303,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
         let noise = noise_map
             .get_mut(recipient)
             .ok_or_eyre("unknown recipient")?;
-        let mut encrypted = vec![0; 65535];
+        let mut encrypted = vec![0; frostd::MAX_MSG_SIZE];
         let len = noise.write_message(&msg, &mut encrypted)?;
         encrypted.truncate(len);
         Ok(encrypted)
@@ -320,8 +320,8 @@ impl<C: Ciphersuite> HTTPComms<C> {
         let noise = noise_map
             .get_mut(&msg.sender)
             .ok_or_eyre("unknown sender")?;
-        let mut decrypted = vec![0; 65535];
-        decrypted.resize(65535, 0);
+        let mut decrypted = vec![0; frostd::MAX_MSG_SIZE];
+        decrypted.resize(frostd::MAX_MSG_SIZE, 0);
         let len = noise.read_message(&msg.msg, &mut decrypted)?;
         decrypted.truncate(len);
         Ok(Msg {
@@ -579,5 +579,21 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
 
         // TODO: support more than 1
         Ok(signature_shares[0].clone())
+    }
+
+    async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
+        if let (Some(session_id), Some(access_token)) = (self.session_id, self.access_token.clone())
+        {
+            let _r = self
+                .client
+                .post(format!("{}/close_session", self.host_port))
+                .bearer_auth(access_token)
+                .json(&frostd::CloseSessionArgs { session_id })
+                .send()
+                .await?
+                .bytes()
+                .await?;
+        }
+        Ok(())
     }
 }
