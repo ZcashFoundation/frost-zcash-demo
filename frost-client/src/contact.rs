@@ -114,7 +114,8 @@ pub(crate) fn export(args: &Command) -> Result<(), Box<dyn Error>> {
         pubkey: config
             .communication_key
             .ok_or(eyre!("pubkey not generated yet"))?
-            .pubkey,
+            .pubkey
+            .clone(),
     };
 
     eprintln!("Exporting this information:");

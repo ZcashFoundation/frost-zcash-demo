@@ -74,6 +74,7 @@ zcash_keys = "0.6.0"
 zcash_primitives = "0.21.0"
 zcash_proofs = "0.21.0"
 zcash_protocol = "0.4.3"
+zeroize = "1.8.1"
 
 [patch.crates-io]
 # TODO: remove this when https://github.com/zcash/orchard/issues/430 is fully

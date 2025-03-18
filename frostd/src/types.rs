@@ -2,6 +2,7 @@ use frost_core::{Ciphersuite, SigningPackage};
 use frost_rerandomized::Randomizer;
 use serde::{Deserialize, Serialize};
 pub use uuid::Uuid;
+use zeroize::Zeroize;
 
 /// The maximum size of a message.
 pub const MAX_MSG_SIZE: usize = 65535;
@@ -75,7 +76,7 @@ pub struct GetSessionInfoOutput {
     pub coordinator_pubkey: PublicKey,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Zeroize)]
 #[serde(transparent)]
 pub struct PublicKey(
     #[serde(
