@@ -2,7 +2,6 @@ use std::error::Error;
 
 use eyre::{eyre, OptionExt as _};
 use rand::thread_rng;
-use xeddsa::{xed25519, Sign as _};
 
 use crate::{args::Command, config::Config};
 
@@ -58,11 +57,7 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         .await?
         .challenge;
 
-    let privkey = xed25519::PrivateKey::from(
-        &TryInto::<[u8; 32]>::try_into(comm_privkey.clone())
-            .map_err(|_| eyre!("invalid comm_privkey"))?,
-    );
-    let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+    let signature: [u8; 64] = comm_privkey.sign(challenge.as_bytes(), &mut rng)?;
 
     let access_token = client
         .post(format!("{}/login", host_port))

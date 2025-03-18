@@ -16,10 +16,8 @@ use frost_core::{
     Ciphersuite, Identifier,
 };
 
-use frostd::{Msg, PublicKey, Uuid};
-use participant::comms::http::Noise;
+use frostd::{cipher::Cipher, Msg, PublicKey, Uuid};
 use rand::thread_rng;
-use xeddsa::{xed25519, Sign as _};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
@@ -360,10 +358,7 @@ pub struct HTTPComms<C: Ciphersuite> {
     state: SessionState<C>,
     identifier: Option<Identifier<C>>,
     pubkeys: HashMap<PublicKey, Identifier<C>>,
-    // The "send" Noise objects by pubkey of recipients.
-    send_noise: Option<HashMap<PublicKey, Noise>>,
-    // The "receive" Noise objects by pubkey of senders.
-    recv_noise: Option<HashMap<PublicKey, Noise>>,
+    cipher: Option<Cipher>,
     _phantom: PhantomData<C>,
 }
 
@@ -379,45 +374,8 @@ impl<C: Ciphersuite> HTTPComms<C> {
             state: SessionState::default(),
             identifier: None,
             pubkeys: Default::default(),
-            send_noise: None,
-            recv_noise: None,
+            cipher: None,
             _phantom: Default::default(),
-        })
-    }
-
-    // Encrypts a message for a given recipient.
-    fn encrypt(&mut self, recipient: &PublicKey, msg: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
-        let noise_map = self
-            .send_noise
-            .as_mut()
-            .expect("send_noise must have been set previously");
-        let noise = noise_map
-            .get_mut(recipient)
-            .ok_or_eyre("unknown recipient")?;
-        let mut encrypted = vec![0; 65535];
-        let len = noise.write_message(&msg, &mut encrypted)?;
-        encrypted.truncate(len);
-        Ok(encrypted)
-    }
-
-    // Decrypts a message.
-    // Note that this authenticates the `sender` in the `Msg` struct; if the
-    // sender is tampered with, the message would fail to decrypt.
-    fn decrypt(&mut self, msg: Msg) -> Result<Msg, Box<dyn Error>> {
-        let noise_map = self
-            .recv_noise
-            .as_mut()
-            .expect("recv_noise must have been set previously");
-        let noise = noise_map
-            .get_mut(&msg.sender)
-            .ok_or_eyre("unknown sender")?;
-        let mut decrypted = vec![0; 65535];
-        decrypted.resize(65535, 0);
-        let len = noise.read_message(&msg.msg, &mut decrypted)?;
-        decrypted.truncate(len);
-        Ok(Msg {
-            sender: msg.sender,
-            msg: decrypted,
         })
     }
 }
@@ -442,16 +400,13 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .await?
             .challenge;
 
-        let privkey = xed25519::PrivateKey::from(
-            &TryInto::<[u8; 32]>::try_into(
-                self.args
-                    .comm_privkey
-                    .clone()
-                    .ok_or_eyre("comm_privkey must be specified")?,
-            )
-            .map_err(|_| eyre!("invalid comm_privkey"))?,
-        );
-        let signature: [u8; 64] = privkey.sign(challenge.as_bytes(), &mut rng);
+        let signature: [u8; 64] = self
+            .args
+            .comm_privkey
+            .clone()
+            .ok_or_eyre("comm_privkey must be specified")?
+            .sign(challenge.as_bytes(), &mut rng)?;
+
         let comm_pubkey = self
             .args
             .comm_pubkey
@@ -571,44 +526,21 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             );
         };
 
-        let mut send_noise_map = HashMap::new();
-        let mut recv_noise_map = HashMap::new();
-        for pubkey in self.pubkeys.keys() {
-            let comm_participant_pubkey = comm_participant_pubkey_getter(pubkey).ok_or_eyre("A participant in specified FROST session is not registered in the user's address book")?;
-            let builder = snow::Builder::new(
-                "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                    .parse()
-                    .expect("should be a valid cipher"),
-            );
-            let send_noise = Noise::new(
-                builder
-                    .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey.0)
-                    .build_initiator()?,
-            );
-            let builder = snow::Builder::new(
-                "Noise_K_25519_ChaChaPoly_BLAKE2s"
-                    .parse()
-                    .expect("should be a valid cipher"),
-            );
-            let recv_noise = Noise::new(
-                builder
-                    .local_private_key(comm_privkey)
-                    .remote_public_key(&comm_participant_pubkey.0)
-                    .build_responder()?,
-            );
-            send_noise_map.insert(pubkey.clone(), send_noise);
-            recv_noise_map.insert(pubkey.clone(), recv_noise);
-        }
-        self.send_noise = Some(send_noise_map);
-        self.recv_noise = Some(recv_noise_map);
+        let cipher = Cipher::new(
+            comm_privkey.clone(),
+            self.pubkeys.keys().map(|pubkey| comm_participant_pubkey_getter(pubkey).ok_or_eyre(
+                "A participant in specified FROST session is not registered in the user's address book"
+            )).collect::<Result<_,_>>()?,
+        )?;
+        self.cipher = Some(cipher);
+        let cipher = self.cipher.as_mut().expect("was just set");
 
         // Send Round 1 Package to all other participants
         for pubkey in self.pubkeys.clone().keys() {
             if Some(pubkey) == self.args.comm_pubkey.as_ref() {
                 continue;
             }
-            let msg = self.encrypt(pubkey, serde_json::to_vec(&round1_package)?)?;
+            let msg = cipher.encrypt(Some(pubkey), serde_json::to_vec(&round1_package)?)?;
             self.client
                 .post(format!("{}/send", self.host_port))
                 .bearer_auth(self.access_token.as_ref().expect("was just set"))
@@ -641,7 +573,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                let msg = self.decrypt(msg)?;
+                let msg = cipher.decrypt(msg)?;
                 self.state
                     .recv(msg, self.identifier.expect("must have been set"))?;
             }
@@ -664,8 +596,8 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 if *sender_identifier == *recipient_identifier {
                     continue;
                 }
-                let msg = self.encrypt(
-                    recipient_pubkey,
+                let msg = cipher.encrypt(
+                    Some(recipient_pubkey),
                     serde_json::to_vec(&(*sender_identifier, package))?,
                 )?;
                 self.client
@@ -701,7 +633,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                let msg = self.decrypt(msg)?;
+                let msg = cipher.decrypt(msg)?;
                 self.state
                     .recv(msg, self.identifier.expect("must have been set"))?;
             }
@@ -721,13 +653,14 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         _output: &mut dyn Write,
         round2_packages: BTreeMap<Identifier<C>, round2::Package<C>>,
     ) -> Result<BTreeMap<Identifier<C>, round2::Package<C>>, Box<dyn Error>> {
+        let cipher = self.cipher.as_mut().expect("was just set");
         // Send Round 2 Packages to all other participants
         for (pubkey, identifier) in self.pubkeys.clone().into_iter() {
             if Some(&pubkey) == self.args.comm_pubkey.as_ref() {
                 continue;
             }
-            let msg = self.encrypt(
-                &pubkey,
+            let msg = cipher.encrypt(
+                Some(&pubkey),
                 serde_json::to_vec(
                     &round2_packages
                         .get(&identifier)
@@ -766,7 +699,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
-                let msg = self.decrypt(msg)?;
+                let msg = cipher.decrypt(msg)?;
                 self.state
                     .recv(msg, self.identifier.expect("must have been set"))?;
             }
