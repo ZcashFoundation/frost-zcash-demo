@@ -8,7 +8,7 @@ use std::{
 
 use eyre::{eyre, OptionExt};
 use frost_core::{Ciphersuite, Identifier};
-use frostd::PublicKey;
+use frostd::{cipher::PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
@@ -61,11 +61,7 @@ impl Config {
 #[derive(Clone, Debug, Serialize, Deserialize, ZeroizeOnDrop)]
 pub struct CommunicationKey {
     /// The private key.
-    #[serde(
-        serialize_with = "serdect::slice::serialize_hex_lower_or_bin",
-        deserialize_with = "serdect::slice::deserialize_hex_or_bin_vec"
-    )]
-    pub privkey: Vec<u8>,
+    pub privkey: PrivateKey,
     /// The public key.
     pub pubkey: PublicKey,
 }

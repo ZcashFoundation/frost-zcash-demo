@@ -7,7 +7,7 @@ use std::{
 
 use axum_test::TestServer;
 use coordinator::comms::http::SessionState;
-use frostd::{args::Args, router, AppState, SendSigningPackageArgs};
+use frostd::{args::Args, cipher::Cipher, router, AppState, SendSigningPackageArgs};
 use rand::thread_rng;
 use reqwest::Certificate;
 
@@ -62,9 +62,8 @@ async fn test_main_router<
 
     // Log in as two different users, Alice and Bob
 
-    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
-    let alice_keypair = builder.generate_keypair().unwrap();
-    let bob_keypair = builder.generate_keypair().unwrap();
+    let (alice_privkey, alice_pubkey) = Cipher::generate_keypair()?;
+    let (bob_privkey, bob_pubkey) = Cipher::generate_keypair()?;
 
     let res = server
         .post("/challenge")
@@ -82,14 +81,12 @@ async fn test_main_router<
     let r: frostd::ChallengeOutput = res.json();
     let bob_challenge = r.challenge;
 
-    let alice_private =
-        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
-    let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
+    let alice_signature: [u8; 64] = alice_privkey.sign(alice_challenge.as_bytes(), &mut rng)?;
     let res = server
         .post("/login")
         .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
-            pubkey: frostd::PublicKey(alice_keypair.public.clone()),
+            pubkey: alice_pubkey.clone(),
             signature: alice_signature.to_vec(),
         })
         .await;
@@ -97,14 +94,12 @@ async fn test_main_router<
     let r: frostd::LoginOutput = res.json();
     let alice_token = r.access_token;
 
-    let bob_private =
-        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
-    let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
+    let bob_signature: [u8; 64] = bob_privkey.sign(bob_challenge.as_bytes(), &mut rng)?;
     let res = server
         .post("/login")
         .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
-            pubkey: frostd::PublicKey(bob_keypair.public.clone()),
+            pubkey: bob_pubkey.clone(),
             signature: bob_signature.to_vec(),
         })
         .await;
@@ -119,10 +114,7 @@ async fn test_main_router<
         .post("/create_new_session")
         .authorization_bearer(alice_token)
         .json(&frostd::CreateNewSessionArgs {
-            pubkeys: vec![
-                frostd::PublicKey(alice_keypair.public.clone()),
-                frostd::PublicKey(bob_keypair.public.clone()),
-            ],
+            pubkeys: vec![alice_pubkey.clone(), bob_pubkey.clone()],
             message_count: 2,
         })
         .await;
@@ -178,11 +170,10 @@ async fn test_main_router<
     }
 
     // As the coordinator, get the commitments
-    let comm_pubkeys = [&alice_keypair.public, &bob_keypair.public];
+    let comm_pubkeys = [&alice_pubkey, &bob_pubkey];
     let pubkey_identifier_map = comm_pubkeys
         .into_iter()
         .cloned()
-        .map(frostd::PublicKey)
         .zip(key_packages.keys().take(2).copied())
         .collect::<HashMap<_, _>>();
     let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
@@ -382,7 +373,7 @@ async fn test_main_router<
         .post("/create_new_session")
         .authorization_bearer(alice_token)
         .json(&frostd::CreateNewSessionArgs {
-            pubkeys: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            pubkeys: vec![alice_pubkey.clone()],
             message_count: 2,
         })
         .await;
@@ -396,7 +387,7 @@ async fn test_main_router<
         .authorization_bearer(alice_token)
         .json(&frostd::SendArgs {
             session_id,
-            recipients: vec![frostd::PublicKey(bob_keypair.public.clone())],
+            recipients: vec![bob_pubkey.clone()],
             msg: vec![],
         })
         .await;
@@ -410,7 +401,7 @@ async fn test_main_router<
         .authorization_bearer(bob_token)
         .json(&frostd::SendArgs {
             session_id,
-            recipients: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            recipients: vec![alice_pubkey.clone()],
             msg: vec![],
         })
         .await;
@@ -424,7 +415,7 @@ async fn test_main_router<
         .authorization_bearer(alice_token)
         .json(&frostd::SendArgs {
             session_id,
-            recipients: vec![frostd::PublicKey(alice_keypair.public.clone())],
+            recipients: vec![alice_pubkey.clone()],
             msg: [0; frostd::MAX_MSG_SIZE + 1].to_vec(),
         })
         .await;
@@ -498,9 +489,8 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .add_root_certificate(Certificate::from_pem(cert.pem().as_bytes())?)
         .build()?;
 
-    let builder = snow::Builder::new("Noise_K_25519_ChaChaPoly_BLAKE2s".parse().unwrap());
-    let alice_keypair = builder.generate_keypair().unwrap();
-    let bob_keypair = builder.generate_keypair().unwrap();
+    let (alice_privkey, alice_pubkey) = Cipher::generate_keypair()?;
+    let (bob_privkey, bob_pubkey) = Cipher::generate_keypair()?;
 
     // Get challenges for login
     let r = client
@@ -515,14 +505,12 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let alice_challenge = r.challenge;
 
     // Call key_login to authenticate
-    let alice_private =
-        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(alice_keypair.private).unwrap());
-    let alice_signature: [u8; 64] = alice_private.sign(alice_challenge.as_bytes(), &mut rng);
+    let alice_signature: [u8; 64] = alice_privkey.sign(alice_challenge.as_bytes(), &mut rng)?;
     let r = client
         .post("https://127.0.0.1:2744/login")
         .json(&frostd::KeyLoginArgs {
             challenge: alice_challenge,
-            pubkey: frostd::PublicKey(alice_keypair.public.clone()),
+            pubkey: alice_pubkey.clone(),
             signature: alice_signature.to_vec(),
         })
         .send()
@@ -538,10 +526,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .post("https://127.0.0.1:2744/create_new_session")
         .bearer_auth(access_token)
         .json(&frostd::CreateNewSessionArgs {
-            pubkeys: vec![
-                frostd::PublicKey(alice_keypair.public.clone()),
-                frostd::PublicKey(bob_keypair.public.clone()),
-            ],
+            pubkeys: vec![alice_pubkey.clone(), bob_pubkey.clone()],
             message_count: 1,
         })
         .send()
@@ -579,14 +564,12 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     let r = r.json::<frostd::ChallengeOutput>().await?;
     let bob_challenge = r.challenge;
-    let bob_private =
-        xed25519::PrivateKey::from(&TryInto::<[u8; 32]>::try_into(bob_keypair.private).unwrap());
-    let bob_signature: [u8; 64] = bob_private.sign(bob_challenge.as_bytes(), &mut rng);
+    let bob_signature: [u8; 64] = bob_privkey.sign(bob_challenge.as_bytes(), &mut rng)?;
     let r = client
         .post("https://127.0.0.1:2744/login")
         .json(&frostd::KeyLoginArgs {
             challenge: bob_challenge,
-            pubkey: frostd::PublicKey(bob_keypair.public),
+            pubkey: bob_pubkey.clone(),
             signature: bob_signature.to_vec(),
         })
         .send()

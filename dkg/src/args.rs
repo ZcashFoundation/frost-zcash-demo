@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use clap::Parser;
 use frost_core::{Ciphersuite, Identifier};
-use frostd::PublicKey;
+use frostd::{cipher::PrivateKey, PublicKey};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Parser, Debug, Default)]
@@ -29,7 +29,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub port: u16,
 
     /// The participant's communication private key for HTTP mode.
-    pub comm_privkey: Option<Vec<u8>>,
+    pub comm_privkey: Option<PrivateKey>,
 
     /// The participant's communication public key for HTTP mode.
     pub comm_pubkey: Option<PublicKey>,
