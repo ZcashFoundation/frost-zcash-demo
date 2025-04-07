@@ -10,9 +10,9 @@ use std::{
     io::{BufRead, Write},
 };
 
-use crate::{args::ProcessedArgs, comms::Comms, step_1::ParticipantsConfig};
+use crate::{args::ProcessedArgs, comms::Comms, round_1::ParticipantsConfig};
 
-pub async fn step_3<C: RandomizedCiphersuite + 'static>(
+pub async fn send_signing_package_and_get_signature_shares<C: RandomizedCiphersuite + 'static>(
     args: &ProcessedArgs<C>,
     comms: &mut dyn Comms<C>,
     input: &mut dyn BufRead,
@@ -49,7 +49,7 @@ async fn request_inputs_signature_shares<C: RandomizedCiphersuite + 'static>(
     };
 
     let signatures_list = comms
-        .get_signature_shares(input, logger, signing_package, randomizer)
+        .send_signing_package_and_get_signature_shares(input, logger, signing_package, randomizer)
         .await?;
 
     let group_signature = if let Some(randomizer) = randomizer {

@@ -1,5 +1,8 @@
+use std::collections::BTreeMap;
 use std::io::{BufRead, Write};
 
+use frost::{round1::SigningCommitments, Identifier, SigningPackage};
+use frost_core::{self as frost, Ciphersuite};
 use frost_rerandomized::RandomizedCiphersuite;
 
 use crate::args::Args;
@@ -8,9 +11,8 @@ use crate::comms::cli::CLIComms;
 use crate::comms::http::HTTPComms;
 use crate::comms::socket::SocketComms;
 use crate::comms::Comms;
-use crate::step_1::step_1;
-use crate::step_2::step_2;
-use crate::step_3::step_3;
+use crate::round_1::get_commitments;
+use crate::round_2::send_signing_package_and_get_signature_shares;
 
 pub async fn cli<C: RandomizedCiphersuite + 'static>(
     args: &Args,
@@ -38,19 +40,16 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         return Err("Number of randomizers must match number of messages".into());
     }
 
-    let r = step_1(&pargs, &mut *comms, reader, logger).await;
+    let r = get_commitments(&pargs, &mut *comms, reader, logger).await;
     let Ok(participants_config) = r else {
         let _ = comms.cleanup_on_error().await;
         return Err(r.unwrap_err());
     };
 
-    let r = step_2(&pargs, logger, participants_config.commitments.clone());
-    let Ok(signing_package) = r else {
-        let _ = comms.cleanup_on_error().await;
-        return Err(r.unwrap_err());
-    };
+    let signing_package =
+        build_signing_package(&pargs, logger, participants_config.commitments.clone());
 
-    let r = step_3(
+    let r = send_signing_package_and_get_signature_shares(
         &pargs,
         &mut *comms,
         reader,
@@ -66,4 +65,28 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
     }
 
     Ok(())
+}
+
+pub fn build_signing_package<C: Ciphersuite>(
+    args: &ProcessedArgs<C>,
+    logger: &mut dyn Write,
+    commitments: BTreeMap<Identifier<C>, SigningCommitments<C>>,
+) -> SigningPackage<C> {
+    let signing_package = SigningPackage::new(commitments, &args.messages[0]);
+    if args.cli {
+        print_signing_package(logger, &signing_package);
+    }
+    signing_package
+}
+
+fn print_signing_package<C: Ciphersuite>(
+    logger: &mut dyn Write,
+    signing_package: &SigningPackage<C>,
+) {
+    writeln!(
+        logger,
+        "Signing Package:\n{}",
+        serde_json::to_string(&signing_package).unwrap()
+    )
+    .unwrap();
 }

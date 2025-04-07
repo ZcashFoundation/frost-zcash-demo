@@ -71,7 +71,7 @@ where
         Ok(commitments_list)
     }
 
-    async fn get_signature_shares(
+    async fn send_signing_package_and_get_signature_shares(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
