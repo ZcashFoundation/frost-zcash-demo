@@ -2,10 +2,10 @@
 
 use coordinator::{
     args::{Args, ProcessedArgs},
+    cli::build_signing_package,
     comms::cli::CLIComms,
-    step_1::{step_1, ParticipantsConfig},
-    step_2::step_2,
-    step_3::step_3,
+    round_1::{get_commitments, ParticipantsConfig},
+    round_2::send_signing_package_and_get_signature_shares,
 };
 use frost::{
     keys::{PublicKeyPackage, VerifyingShare},
@@ -122,7 +122,8 @@ async fn check_step_1() {
         pub_key_package: PublicKeyPackage::new(signer_pub_keys, group_public),
     };
 
-    let participants_config = step_1(&pargs, &mut comms, &mut input.as_bytes(), &mut buf).await;
+    let participants_config =
+        get_commitments(&pargs, &mut comms, &mut input.as_bytes(), &mut buf).await;
 
     assert!(participants_config.unwrap() == expected_participants_config);
 }
@@ -161,7 +162,7 @@ async fn check_step_2() {
     let expected_signing_package = SigningPackage::new(signing_commitments.clone(), &message);
 
     let mut buf = BufWriter::new(Vec::new());
-    let signing_package = step_2(&pargs, &mut buf, signing_commitments.clone()).unwrap();
+    let signing_package = build_signing_package(&pargs, &mut buf, signing_commitments.clone());
 
     assert!(signing_package == expected_signing_package);
 
@@ -220,7 +221,7 @@ async fn check_step_3() {
     // step 3 generate signature
 
     let mut buf = BufWriter::new(Vec::new());
-    step_3(
+    send_signing_package_and_get_signature_shares(
         &pargs,
         &mut comms,
         &mut valid_input,
