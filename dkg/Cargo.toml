@@ -22,6 +22,7 @@ xeddsa = { workspace = true }
 reqwest = { workspace = true, features = ["json", "rustls-tls-native-roots"] }
 tokio = { workspace = true, features = ["full"] }
 snow = { workspace = true }
+zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
 
 [features]
 default = []

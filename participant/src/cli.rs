@@ -15,6 +15,7 @@ use frost_rerandomized::RandomizedCiphersuite;
 use rand::thread_rng;
 use reddsa::frost::redpallas::PallasBlake2b512;
 use std::io::{BufRead, Write};
+use zeroize::Zeroizing;
 
 pub async fn cli<C: RandomizedCiphersuite + 'static>(
     args: &Args,
@@ -40,10 +41,11 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
 
     // Round 1
 
-    let key_package = pargs.key_package;
+    let key_package = &pargs.key_package;
 
     let mut rng = thread_rng();
-    let (nonces, commitments) = generate_nonces_and_commitments(&key_package, &mut rng);
+    let (nonces, commitments) = generate_nonces_and_commitments(key_package, &mut rng);
+    let nonces = Zeroizing::new(nonces);
 
     if pargs.cli {
         print_values(commitments, logger)?;
@@ -73,7 +75,7 @@ pub async fn cli_for_processed_args<C: RandomizedCiphersuite + 'static>(
         .confirm_message(input, logger, &round_2_config)
         .await?;
 
-    let signature = generate_signature(round_2_config, &key_package, &nonces)?;
+    let signature = generate_signature(round_2_config, key_package, &nonces)?;
 
     comms
         .send_signature_share(*key_package.identifier(), signature)

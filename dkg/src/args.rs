@@ -3,6 +3,7 @@ use std::rc::Rc;
 use clap::Parser;
 use frost_core::{Ciphersuite, Identifier};
 use frostd::PublicKey;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Parser, Debug, Default)]
 #[command(author, version, about, long_about = None)]
@@ -11,7 +12,7 @@ pub struct Args {
     pub ciphersuite: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Zeroize)]
 pub struct ProcessedArgs<C: Ciphersuite> {
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
@@ -39,6 +40,7 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
+    #[zeroize(skip)]
     pub comm_participant_pubkey_getter: Option<Rc<dyn Fn(&PublicKey) -> Option<PublicKey>>>,
 
     /// The threshold to use for the shares
@@ -52,8 +54,11 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     pub participants: Vec<PublicKey>,
 
     /// Identifier to use for the participant. Only needed for CLI mode.
+    #[zeroize(skip)]
     pub identifier: Option<Identifier<C>>,
 }
+
+impl<C> ZeroizeOnDrop for ProcessedArgs<C> where C: Ciphersuite {}
 
 impl<C> ProcessedArgs<C>
 where

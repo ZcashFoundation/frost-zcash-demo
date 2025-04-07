@@ -8,6 +8,7 @@ use reddsa::frost::redpallas::keys::EvenY;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{BufRead, Write};
+use zeroize::Zeroizing;
 
 use crate::args::ProcessedArgs;
 use crate::comms::cli::CLIComms;
@@ -106,6 +107,7 @@ pub async fn cli_for_processed_args<C: Ciphersuite + 'static + MaybeIntoEvenY>(
 
         let (round2_secret_package, round2_packages) =
             frost::keys::dkg::part2(round1_secret_package, &received_round1_packages)?;
+        let round2_secret_package = Zeroizing::new(round2_secret_package);
 
         let received_round2_packages = comms
             .get_round2_packages(input, logger, round2_packages)

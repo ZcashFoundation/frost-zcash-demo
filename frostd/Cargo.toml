@@ -28,6 +28,7 @@ xeddsa = { workspace = true }
 futures-util = { workspace = true }
 futures = { workspace = true }
 thiserror = { workspace = true }
+zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
 # ring is enabled due to the following issue:
 # - we enable rustls for reqwest because it's required to workaround an issue
 #   when adding root certificates (see test_http), and that imports rustls

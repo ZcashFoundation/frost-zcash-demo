@@ -12,6 +12,7 @@ use frost_core::{
     Ciphersuite,
 };
 use frostd::PublicKey;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::input::read_from_file_or_stdin;
 
@@ -46,7 +47,7 @@ pub struct Args {
     pub session_id: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Zeroize)]
 pub struct ProcessedArgs<C: Ciphersuite> {
     /// CLI mode. If enabled, it will prompt for inputs from stdin
     /// and print values to stdout, ignoring other flags.
@@ -83,8 +84,11 @@ pub struct ProcessedArgs<C: Ciphersuite> {
     // using `fn()` would preclude using closures and using generics would
     // require a lot of code change for something simple.
     #[allow(clippy::type_complexity)]
+    #[zeroize(skip)]
     pub comm_coordinator_pubkey_getter: Option<Rc<dyn Fn(&PublicKey) -> Option<PublicKey>>>,
 }
+
+impl<C> ZeroizeOnDrop for ProcessedArgs<C> where C: Ciphersuite {}
 
 impl<C: Ciphersuite + 'static> ProcessedArgs<C> {
     /// Create a ProcessedArgs from a Args.

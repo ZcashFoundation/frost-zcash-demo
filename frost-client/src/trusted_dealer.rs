@@ -72,7 +72,8 @@ pub(crate) fn trusted_dealer_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + '
         let pubkey = config
             .communication_key
             .ok_or_eyre("config not initialized")?
-            .pubkey;
+            .pubkey
+            .clone();
         let participant = Participant {
             identifier: identifier.serialize(),
             pubkey: pubkey.clone(),

@@ -10,6 +10,7 @@ use dkg::cli::MaybeIntoEvenY;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use reqwest::Url;
+use zeroize::Zeroizing;
 
 use crate::{
     args::Command,
@@ -57,7 +58,8 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
         .communication_key
         .clone()
         .ok_or_eyre("user not initialized")?
-        .pubkey;
+        .pubkey
+        .clone();
 
     let mut participants = participants
         .iter()
@@ -83,7 +85,8 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
                 .communication_key
                 .clone()
                 .ok_or_eyre("user not initialized")?
-                .privkey,
+                .privkey
+                .clone(),
         ),
         comm_pubkey: Some(comm_pubkey),
         comm_participant_pubkey_getter: Some(Rc::new(move |participant_pubkey| {
@@ -101,6 +104,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
     // Generate key shares
     let (key_package, public_key_package, pubkey_map) =
         dkg::cli::cli_for_processed_args::<C>(dkg_config, &mut input, &mut output).await?;
+    let key_package = Zeroizing::new(key_package);
 
     // Reverse pubkey_map
     let pubkey_map = pubkey_map
