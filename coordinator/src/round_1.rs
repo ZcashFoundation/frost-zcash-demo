@@ -15,7 +15,7 @@ pub struct ParticipantsConfig<C: Ciphersuite> {
     pub pub_key_package: PublicKeyPackage<C>,
 }
 
-pub async fn step_1<C: Ciphersuite>(
+pub async fn get_commitments<C: Ciphersuite>(
     args: &ProcessedArgs<C>,
     comms: &mut dyn Comms<C>,
     reader: &mut dyn BufRead,

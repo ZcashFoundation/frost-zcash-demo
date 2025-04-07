@@ -46,7 +46,7 @@ pub trait Comms<C: Ciphersuite> {
         num_of_participants: u16,
     ) -> Result<BTreeMap<Identifier<C>, SigningCommitments<C>>, Box<dyn Error>>;
 
-    async fn get_signature_shares(
+    async fn send_signing_package_and_get_signature_shares(
         &mut self,
         input: &mut dyn BufRead,
         output: &mut dyn Write,
