@@ -1,5 +1,6 @@
 pub mod args;
 pub mod cipher;
+pub mod client;
 mod functions;
 mod state;
 mod types;
@@ -7,20 +8,21 @@ mod user;
 
 use std::net::SocketAddr;
 
-use axum_server::tls_rustls::RustlsConfig;
-use eyre::OptionExt;
-pub use state::{AppState, SharedState};
-use thiserror::Error;
-use tower_http::trace::TraceLayer;
-pub use types::*;
-
-use args::Args;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::post,
     Json, Router,
 };
+use axum_server::tls_rustls::RustlsConfig;
+use eyre::OptionExt;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use tower_http::trace::TraceLayer;
+
+use args::Args;
+pub use state::{AppState, SharedState};
+pub use types::*;
 
 /// Create the axum Router for the server.
 /// Maps specific endpoints to handler functions.
@@ -80,8 +82,9 @@ pub async fn run(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
 
 /// An error. Wraps a StatusCode which is returned by the server when the
 /// error happens during a API call, and a generic eyre::Report.
-#[derive(Debug, Error)]
-pub(crate) enum AppError {
+#[derive(Debug, Error, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "code", content = "err")]
+pub enum Error {
     #[error("invalid or missing argument: {0}")]
     InvalidArgument(String),
     #[error("client did not provide proper authorization credentials")]
@@ -92,6 +95,9 @@ pub(crate) enum AppError {
     NotCoordinator,
     #[error("user is not part of the given session")]
     NotInSession,
+    #[serde(other)]
+    #[error("unknown error")]
+    Unknown,
 }
 
 // These make it easier to clients to tell which error happened.
@@ -100,33 +106,49 @@ pub const UNAUTHORIZED: usize = 2;
 pub const SESSION_NOT_FOUND: usize = 3;
 pub const NOT_COORDINATOR: usize = 4;
 pub const NOT_IN_SESSION: usize = 5;
+pub const UNKNOWN: usize = 255;
 
-impl AppError {
+impl Error {
     pub fn error_code(&self) -> usize {
         match &self {
-            AppError::InvalidArgument(_) => INVALID_ARGUMENT,
-            AppError::Unauthorized => UNAUTHORIZED,
-            AppError::SessionNotFound => SESSION_NOT_FOUND,
-            AppError::NotCoordinator => NOT_COORDINATOR,
-            AppError::NotInSession => NOT_IN_SESSION,
+            Error::InvalidArgument(_) => INVALID_ARGUMENT,
+            Error::Unauthorized => UNAUTHORIZED,
+            Error::SessionNotFound => SESSION_NOT_FOUND,
+            Error::NotCoordinator => NOT_COORDINATOR,
+            Error::NotInSession => NOT_IN_SESSION,
+            Error::Unknown => UNKNOWN,
         }
     }
 }
 
-impl From<AppError> for types::Error {
-    fn from(err: AppError) -> Self {
-        types::Error {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LowError {
+    pub code: usize,
+    pub msg: String,
+    pub error: Error,
+}
+
+impl From<Error> for LowError {
+    fn from(err: Error) -> Self {
+        LowError {
             code: err.error_code(),
             msg: err.to_string(),
+            error: err,
         }
     }
 }
 
-impl IntoResponse for AppError {
+impl From<LowError> for Error {
+    fn from(err: LowError) -> Self {
+        err.error
+    }
+}
+
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(Into::<types::Error>::into(self)),
+            Json(Into::<LowError>::into(self)),
         )
             .into_response()
     }

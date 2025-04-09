@@ -15,9 +15,9 @@ use frost_core::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Ciphersuite,
     Identifier, SigningPackage,
 };
-
-use frostd::{cipher::Cipher, Msg, PublicKey, SendSigningPackageArgs, Uuid};
 use rand::thread_rng;
+
+use frostd::{cipher::Cipher, client::Client, Msg, PublicKey, SendSigningPackageArgs, Uuid};
 
 use super::Comms;
 use crate::args::ProcessedArgs;
@@ -257,10 +257,8 @@ impl<C: Ciphersuite> SessionState<C> {
 }
 
 pub struct HTTPComms<C: Ciphersuite> {
-    client: reqwest::Client,
-    host_port: String,
+    client: Client,
     session_id: Option<Uuid>,
-    access_token: Option<String>,
     args: ProcessedArgs<C>,
     state: SessionState<C>,
     pubkeys: HashMap<PublicKey, Identifier<C>>,
@@ -270,12 +268,9 @@ pub struct HTTPComms<C: Ciphersuite> {
 
 impl<C: Ciphersuite> HTTPComms<C> {
     pub fn new(args: &ProcessedArgs<C>) -> Result<Self, Box<dyn Error>> {
-        let client = reqwest::Client::new();
         Ok(Self {
-            client,
-            host_port: format!("https://{}:{}", args.ip, args.port),
+            client: Client::new(format!("https://{}:{}", args.ip, args.port)),
             session_id: None,
-            access_token: None,
             args: args.clone(),
             state: SessionState::new(
                 args.messages.len(),
@@ -301,15 +296,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         let mut rng = thread_rng();
 
         eprintln!("Logging in...");
-        let challenge = self
-            .client
-            .post(format!("{}/challenge", self.host_port))
-            .json(&frostd::ChallengeArgs {})
-            .send()
-            .await?
-            .json::<frostd::ChallengeOutput>()
-            .await?
-            .challenge;
+        let challenge = self.client.challenge().await?.challenge;
 
         let signature: [u8; 64] = self
             .args
@@ -318,38 +305,25 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .ok_or_eyre("comm_privkey must be specified")?
             .sign(challenge.as_bytes(), &mut rng)?;
 
-        self.access_token = Some(
-            self.client
-                .post(format!("{}/login", self.host_port))
-                .json(&frostd::KeyLoginArgs {
-                    challenge,
-                    pubkey: self
-                        .args
-                        .comm_pubkey
-                        .clone()
-                        .ok_or_eyre("comm_pubkey must be specified")?,
-                    signature: signature.to_vec(),
-                })
-                .send()
-                .await?
-                .json::<frostd::LoginOutput>()
-                .await?
-                .access_token
-                .to_string(),
-        );
+        self.client
+            .login(&frostd::LoginArgs {
+                challenge,
+                pubkey: self
+                    .args
+                    .comm_pubkey
+                    .clone()
+                    .ok_or_eyre("comm_pubkey must be specified")?,
+                signature: signature.to_vec(),
+            })
+            .await?;
 
         eprintln!("Creating signing session...");
         let r = self
             .client
-            .post(format!("{}/create_new_session", self.host_port))
-            .bearer_auth(self.access_token.as_ref().expect("was just set"))
-            .json(&frostd::CreateNewSessionArgs {
+            .create_new_session(&frostd::CreateNewSessionArgs {
                 pubkeys: self.args.signers.keys().cloned().collect(),
                 message_count: 1,
             })
-            .send()
-            .await?
-            .json::<frostd::CreateNewSessionOutput>()
             .await?;
 
         if self.args.signers.is_empty() {
@@ -376,15 +350,10 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         loop {
             let r = self
                 .client
-                .post(format!("{}/receive", self.host_port))
-                .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                .json(&frostd::ReceiveArgs {
+                .receive(&frostd::ReceiveArgs {
                     session_id: r.session_id,
                     as_coordinator: true,
                 })
-                .send()
-                .await?
-                .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
                 let msg = cipher.decrypt(msg)?;
@@ -435,20 +404,11 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             )?;
             let _r = self
                 .client
-                .post(format!("{}/send", self.host_port))
-                .bearer_auth(
-                    self.access_token
-                        .as_ref()
-                        .expect("must have been set before"),
-                )
-                .json(&frostd::SendArgs {
+                .send(&frostd::SendArgs {
                     session_id: self.session_id.unwrap(),
                     recipients: vec![recipient.clone()],
                     msg,
                 })
-                .send()
-                .await?
-                .bytes()
                 .await?;
         }
 
@@ -457,19 +417,10 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         loop {
             let r = self
                 .client
-                .post(format!("{}/receive", self.host_port))
-                .bearer_auth(
-                    self.access_token
-                        .as_ref()
-                        .expect("must have been set before"),
-                )
-                .json(&frostd::ReceiveArgs {
+                .receive(&frostd::ReceiveArgs {
                     session_id: self.session_id.unwrap(),
                     as_coordinator: true,
                 })
-                .send()
-                .await?
-                .json::<frostd::ReceiveOutput>()
                 .await?;
             for msg in r.msgs {
                 let msg = cipher.decrypt(msg)?;
@@ -485,32 +436,12 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
 
         let _r = self
             .client
-            .post(format!("{}/close_session", self.host_port))
-            .bearer_auth(
-                self.access_token
-                    .as_ref()
-                    .expect("must have been set before"),
-            )
-            .json(&frostd::CloseSessionArgs {
+            .close_session(&frostd::CloseSessionArgs {
                 session_id: self.session_id.unwrap(),
             })
-            .send()
-            .await?
-            .bytes()
             .await?;
 
-        let _r = self
-            .client
-            .post(format!("{}/logout", self.host_port))
-            .bearer_auth(
-                self.access_token
-                    .as_ref()
-                    .expect("must have been set before"),
-            )
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let _r = self.client.logout().await?;
 
         let signature_shares = self.state.signature_shares()?;
 
@@ -519,16 +450,10 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
     }
 
     async fn cleanup_on_error(&mut self) -> Result<(), Box<dyn Error>> {
-        if let (Some(session_id), Some(access_token)) = (self.session_id, self.access_token.clone())
-        {
+        if let Some(session_id) = self.session_id {
             let _r = self
                 .client
-                .post(format!("{}/close_session", self.host_port))
-                .bearer_auth(access_token)
-                .json(&frostd::CloseSessionArgs { session_id })
-                .send()
-                .await?
-                .bytes()
+                .close_session(&frostd::CloseSessionArgs { session_id })
                 .await?;
         }
         Ok(())
