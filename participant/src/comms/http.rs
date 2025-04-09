@@ -13,6 +13,8 @@ use frost_core::{round1::SigningCommitments, round2::SignatureShare, Ciphersuite
 use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
 
+use frostd::{cipher::Cipher, client::Client, SendSigningPackageArgs, Uuid};
+
 use super::Comms;
 use crate::args::ProcessedArgs;
 
@@ -98,8 +100,7 @@ impl Noise {
 }
 
 pub struct HTTPComms<C: Ciphersuite> {
-    client: reqwest::Client,
-    host_port: String,
+    client: Client,
     session_id: Option<Uuid>,
     access_token: Option<String>,
     args: ProcessedArgs<C>,
@@ -107,18 +108,14 @@ pub struct HTTPComms<C: Ciphersuite> {
     _phantom: PhantomData<C>,
 }
 
-use frostd::{cipher::Cipher, SendSigningPackageArgs, Uuid};
-
 // TODO: Improve error handling for invalid session id
 impl<C> HTTPComms<C>
 where
     C: Ciphersuite,
 {
     pub fn new(args: &ProcessedArgs<C>) -> Result<Self, Box<dyn Error>> {
-        let client = reqwest::Client::new();
         Ok(Self {
-            client,
-            host_port: format!("https://{}:{}", args.ip, args.port),
+            client: Client::new(format!("https://{}:{}", args.ip, args.port)),
             session_id: Uuid::parse_str(&args.session_id).ok(),
             access_token: None,
             args: args.clone(),
@@ -144,15 +141,7 @@ where
         let mut rng = thread_rng();
 
         eprintln!("Logging in...");
-        let challenge = self
-            .client
-            .post(format!("{}/challenge", self.host_port))
-            .json(&frostd::ChallengeArgs {})
-            .send()
-            .await?
-            .json::<frostd::ChallengeOutput>()
-            .await?
-            .challenge;
+        let challenge = self.client.challenge().await?.challenge;
 
         let signature: [u8; 64] = self
             .args
@@ -163,8 +152,7 @@ where
 
         self.access_token = Some(
             self.client
-                .post(format!("{}/login", self.host_port))
-                .json(&frostd::KeyLoginArgs {
+                .login(&frostd::LoginArgs {
                     challenge,
                     pubkey: self
                         .args
@@ -173,9 +161,6 @@ where
                         .ok_or_eyre("comm_pubkey must be specified")?,
                     signature: signature.to_vec(),
                 })
-                .send()
-                .await?
-                .json::<frostd::LoginOutput>()
                 .await?
                 .access_token
                 .to_string(),
@@ -186,14 +171,7 @@ where
             Some(s) => s,
             None => {
                 // Get session ID from server
-                let r = self
-                    .client
-                    .post(format!("{}/list_sessions", self.host_port))
-                    .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                    .send()
-                    .await?
-                    .json::<frostd::ListSessionsOutput>()
-                    .await?;
+                let r = self.client.list_sessions().await?;
                 if r.session_ids.len() > 1 {
                     return Err(eyre!("user has more than one FROST session active; use `frost-client sessions` to list them and specify the session ID with `-S`").into());
                 } else if r.session_ids.is_empty() {
@@ -217,12 +195,7 @@ where
         // to encrypt message to them.
         let session_info = self
             .client
-            .post(format!("{}/get_session_info", self.host_port))
-            .json(&frostd::GetSessionInfoArgs { session_id })
-            .bearer_auth(self.access_token.as_ref().expect("was just set"))
-            .send()
-            .await?
-            .json::<frostd::GetSessionInfoOutput>()
+            .get_session_info(&frostd::GetSessionInfoArgs { session_id })
             .await?;
 
         let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
@@ -236,15 +209,12 @@ where
         let send_commitments_args = vec![commitments];
         let msg = cipher.encrypt(None, serde_json::to_vec(&send_commitments_args)?)?;
         self.client
-            .post(format!("{}/send", self.host_port))
-            .bearer_auth(self.access_token.as_ref().expect("was just set"))
-            .json(&frostd::SendArgs {
+            .send(&frostd::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
                 msg,
             })
-            .send()
             .await?;
 
         eprint!("Waiting for coordinator to send signing package...");
@@ -254,15 +224,10 @@ where
         let r: SendSigningPackageArgs<C> = loop {
             let r = self
                 .client
-                .post(format!("{}/receive", self.host_port))
-                .bearer_auth(self.access_token.as_ref().expect("was just set"))
-                .json(&frostd::ReceiveArgs {
+                .receive(&frostd::ReceiveArgs {
                     session_id,
                     as_coordinator: false,
                 })
-                .send()
-                .await?
-                .json::<frostd::ReceiveOutput>()
                 .await?;
             if r.msgs.is_empty() {
                 tokio::time::sleep(Duration::from_secs(2)).await;
@@ -294,23 +259,15 @@ where
 
         let _r = self
             .client
-            .post(format!("{}/send", self.host_port))
-            .bearer_auth(self.access_token.as_ref().expect("must be set before"))
-            .json(&frostd::SendArgs {
+            .send(&frostd::SendArgs {
                 session_id: self.session_id.unwrap(),
                 // Empty recipients: Coordinator
                 recipients: vec![],
                 msg,
             })
-            .send()
             .await?;
 
-        let _r = self
-            .client
-            .post(format!("{}/logout", self.host_port))
-            .bearer_auth(self.access_token.as_ref().expect("must be set before"))
-            .send()
-            .await?;
+        let _r = self.client.logout().await?;
 
         Ok(())
     }

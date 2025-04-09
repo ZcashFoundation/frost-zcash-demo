@@ -6,15 +6,14 @@ use crate::{
     state::{Session, SessionParticipant, SharedState},
     types::*,
     user::User,
-    AppError,
+    Error,
 };
 
 /// Implement the challenge API.
-#[tracing::instrument(level = "debug", err(Debug), skip(state, _args))]
+#[tracing::instrument(level = "debug", err(Debug), skip(state))]
 pub(crate) async fn challenge(
     State(state): State<SharedState>,
-    Json(_args): Json<ChallengeArgs>,
-) -> Result<Json<ChallengeOutput>, AppError> {
+) -> Result<Json<ChallengeOutput>, Error> {
     // Create new challenge.
     let challenge = Uuid::new_v4();
 
@@ -28,25 +27,25 @@ pub(crate) async fn challenge(
 #[tracing::instrument(level = "debug", err(Debug), skip(state, args))]
 pub(crate) async fn login(
     State(state): State<SharedState>,
-    Json(args): Json<KeyLoginArgs>,
-) -> Result<Json<KeyLoginOutput>, AppError> {
+    Json(args): Json<LoginArgs>,
+) -> Result<Json<LoginOutput>, Error> {
     // Check if the user sent the credentials
     if args.signature.is_empty() || args.pubkey.0.is_empty() {
-        return Err(AppError::InvalidArgument("signature or pubkey".into()));
+        return Err(Error::InvalidArgument("signature or pubkey".into()));
     }
 
     let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.0.clone())
-        .map_err(|_| AppError::InvalidArgument("pubkey".into()))?;
+        .map_err(|_| Error::InvalidArgument("pubkey".into()))?;
     let pubkey = xed25519::PublicKey(pubkey);
     let signature = TryInto::<[u8; 64]>::try_into(args.signature)
-        .map_err(|_| AppError::InvalidArgument("signature".into()))?;
+        .map_err(|_| Error::InvalidArgument("signature".into()))?;
     pubkey
         .verify(args.challenge.as_bytes(), &signature)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| Error::Unauthorized)?;
 
     let mut challenges = state.challenges.write().unwrap();
     if !challenges.remove(&args.challenge) {
-        return Err(AppError::Unauthorized);
+        return Err(Error::Unauthorized);
     }
     drop(challenges);
 
@@ -55,7 +54,7 @@ pub(crate) async fn login(
     let mut access_tokens = state.access_tokens.write().unwrap();
     access_tokens.insert(access_token, args.pubkey);
 
-    let token = KeyLoginOutput { access_token };
+    let token = LoginOutput { access_token };
 
     Ok(Json(token))
 }
@@ -65,7 +64,7 @@ pub(crate) async fn login(
 pub(crate) async fn logout(
     State(state): State<SharedState>,
     user: User,
-) -> Result<Json<()>, AppError> {
+) -> Result<Json<()>, Error> {
     state
         .access_tokens
         .write()
@@ -80,9 +79,9 @@ pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<CreateNewSessionArgs>,
-) -> Result<Json<CreateNewSessionOutput>, AppError> {
+) -> Result<Json<CreateNewSessionOutput>, Error> {
     if args.message_count == 0 {
-        return Err(AppError::InvalidArgument("message_count".into()));
+        return Err(Error::InvalidArgument("message_count".into()));
     }
 
     // Create new session object.
@@ -122,7 +121,7 @@ pub(crate) async fn create_new_session(
 pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
-) -> Result<Json<ListSessionsOutput>, AppError> {
+) -> Result<Json<ListSessionsOutput>, Error> {
     let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
     let session_ids = sessions_by_pubkey
@@ -139,21 +138,21 @@ pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<GetSessionInfoArgs>,
-) -> Result<Json<GetSessionInfoOutput>, AppError> {
+) -> Result<Json<GetSessionInfoOutput>, Error> {
     let sessions = state.sessions.sessions.read().unwrap();
     let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
     let user_sessions = sessions_by_pubkey
         .get(&user.pubkey)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(AppError::SessionNotFound);
+        return Err(Error::SessionNotFound);
     }
 
     let session = sessions
         .get(&args.session_id)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     Ok(Json(GetSessionInfoOutput {
         message_count: session.message_count,
@@ -169,9 +168,9 @@ pub(crate) async fn send(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<SendArgs>,
-) -> Result<(), AppError> {
+) -> Result<(), Error> {
     if args.msg.len() > MAX_MSG_SIZE {
-        return Err(AppError::InvalidArgument("msg is too big".into()));
+        return Err(Error::InvalidArgument("msg is too big".into()));
     }
 
     // Get the mutex lock to read and write from the state
@@ -181,7 +180,7 @@ pub(crate) async fn send(
     // adds support to it
     let mut session = sessions
         .remove(&args.session_id)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     let recipients = if args.recipients.is_empty() {
         vec![SessionParticipant::Coordinator]
@@ -217,7 +216,7 @@ pub(crate) async fn send(
     }
     sessions.insert(args.session_id, session);
     if !in_session {
-        return Err(AppError::NotInSession);
+        return Err(Error::NotInSession);
     }
 
     Ok(())
@@ -229,7 +228,7 @@ pub(crate) async fn receive(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<ReceiveArgs>,
-) -> Result<Json<ReceiveOutput>, AppError> {
+) -> Result<Json<ReceiveOutput>, Error> {
     // Get the mutex lock to read and write from the state
     let sessions = state.sessions.sessions.read().unwrap();
 
@@ -239,11 +238,11 @@ pub(crate) async fn receive(
     // are no messages. See https://github.com/AgeManning/delay_map/issues/26
     let session = sessions
         .get(&args.session_id)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     // Check if both the sender and the recipients are in the session
     if !session.pubkeys.contains(&user.pubkey) && session.coordinator_pubkey != user.pubkey {
-        return Err(AppError::NotInSession);
+        return Err(Error::NotInSession);
     }
 
     let participant = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
@@ -260,7 +259,7 @@ pub(crate) async fn receive(
         let mut sessions = state.sessions.sessions.write().unwrap();
         let mut session = sessions
             .remove(&args.session_id)
-            .ok_or(AppError::SessionNotFound)?;
+            .ok_or(Error::SessionNotFound)?;
         let msgs = session
             .queue
             .entry(participant)
@@ -282,24 +281,24 @@ pub(crate) async fn close_session(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<CloseSessionArgs>,
-) -> Result<Json<()>, AppError> {
+) -> Result<Json<()>, Error> {
     let mut sessions = state.sessions.sessions.write().unwrap();
     let mut sessions_by_pubkey = state.sessions.sessions_by_pubkey.write().unwrap();
 
     let user_sessions = sessions_by_pubkey
         .get(&user.pubkey)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(AppError::SessionNotFound);
+        return Err(Error::SessionNotFound);
     }
 
     let session = sessions
         .get(&args.session_id)
-        .ok_or(AppError::SessionNotFound)?;
+        .ok_or(Error::SessionNotFound)?;
 
     if session.coordinator_pubkey != user.pubkey {
-        return Err(AppError::NotCoordinator);
+        return Err(Error::NotCoordinator);
     }
 
     // Remove session from each participant list...

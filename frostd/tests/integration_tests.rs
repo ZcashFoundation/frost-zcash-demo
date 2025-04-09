@@ -65,18 +65,12 @@ async fn test_main_router<
     let (alice_privkey, alice_pubkey) = Cipher::generate_keypair()?;
     let (bob_privkey, bob_pubkey) = Cipher::generate_keypair()?;
 
-    let res = server
-        .post("/challenge")
-        .json(&frostd::ChallengeArgs {})
-        .await;
+    let res = server.post("/challenge").await;
     res.assert_status_ok();
     let r: frostd::ChallengeOutput = res.json();
     let alice_challenge = r.challenge;
 
-    let res = server
-        .post("/challenge")
-        .json(&frostd::ChallengeArgs {})
-        .await;
+    let res = server.post("/challenge").await;
     res.assert_status_ok();
     let r: frostd::ChallengeOutput = res.json();
     let bob_challenge = r.challenge;
@@ -84,7 +78,7 @@ async fn test_main_router<
     let alice_signature: [u8; 64] = alice_privkey.sign(alice_challenge.as_bytes(), &mut rng)?;
     let res = server
         .post("/login")
-        .json(&frostd::KeyLoginArgs {
+        .json(&frostd::LoginArgs {
             challenge: alice_challenge,
             pubkey: alice_pubkey.clone(),
             signature: alice_signature.to_vec(),
@@ -97,7 +91,7 @@ async fn test_main_router<
     let bob_signature: [u8; 64] = bob_privkey.sign(bob_challenge.as_bytes(), &mut rng)?;
     let res = server
         .post("/login")
-        .json(&frostd::KeyLoginArgs {
+        .json(&frostd::LoginArgs {
             challenge: bob_challenge,
             pubkey: bob_pubkey.clone(),
             signature: bob_signature.to_vec(),
@@ -392,7 +386,7 @@ async fn test_main_router<
         })
         .await;
     res.assert_status_internal_server_error();
-    let r: frostd::Error = res.json();
+    let r: frostd::LowError = res.json();
     assert_eq!(r.code, frostd::NOT_IN_SESSION);
 
     // Check if sending as a user not in the session fails
@@ -406,7 +400,7 @@ async fn test_main_router<
         })
         .await;
     res.assert_status_internal_server_error();
-    let r: frostd::Error = res.json();
+    let r: frostd::LowError = res.json();
     assert_eq!(r.code, frostd::NOT_IN_SESSION);
 
     // Check if sending a too big message fails
@@ -420,7 +414,7 @@ async fn test_main_router<
         })
         .await;
     res.assert_status_internal_server_error();
-    let r: frostd::Error = res.json();
+    let r: frostd::LowError = res.json();
     assert_eq!(r.code, frostd::INVALID_ARGUMENT);
 
     Ok(())
@@ -495,11 +489,10 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Get challenges for login
     let r = client
         .post("https://127.0.0.1:2744/challenge")
-        .json(&frostd::ChallengeArgs {})
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<frostd::Error>().await?)
+        panic!("{:?}", r.json::<frostd::LowError>().await?)
     }
     let r = r.json::<frostd::ChallengeOutput>().await?;
     let alice_challenge = r.challenge;
@@ -508,7 +501,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let alice_signature: [u8; 64] = alice_privkey.sign(alice_challenge.as_bytes(), &mut rng)?;
     let r = client
         .post("https://127.0.0.1:2744/login")
-        .json(&frostd::KeyLoginArgs {
+        .json(&frostd::LoginArgs {
             challenge: alice_challenge,
             pubkey: alice_pubkey.clone(),
             signature: alice_signature.to_vec(),
@@ -516,9 +509,9 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<frostd::Error>().await?)
+        panic!("{:?}", r.json::<frostd::LowError>().await?)
     }
-    let r = r.json::<frostd::KeyLoginOutput>().await?;
+    let r = r.json::<frostd::LoginOutput>().await?;
     let access_token = r.access_token;
 
     // Call create_new_session
@@ -532,7 +525,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     if r.status() != reqwest::StatusCode::OK {
-        panic!("{:?}", r.json::<frostd::Error>().await?)
+        panic!("{:?}", r.json::<frostd::LowError>().await?)
     }
     let r = r.json::<frostd::CreateNewSessionOutput>().await?;
     let session_id = r.session_id;
@@ -551,7 +544,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     assert_eq!(r.status(), reqwest::StatusCode::INTERNAL_SERVER_ERROR);
-    let r = r.json::<frostd::Error>().await?;
+    let r = r.json::<frostd::LowError>().await?;
     assert_eq!(r.code, frostd::SESSION_NOT_FOUND);
 
     // Test if trying to close the session as a participant fails
@@ -559,7 +552,6 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     // Log in as Bob
     let r = client
         .post("https://127.0.0.1:2744/challenge")
-        .json(&frostd::ChallengeArgs {})
         .send()
         .await?;
     let r = r.json::<frostd::ChallengeOutput>().await?;
@@ -567,14 +559,14 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
     let bob_signature: [u8; 64] = bob_privkey.sign(bob_challenge.as_bytes(), &mut rng)?;
     let r = client
         .post("https://127.0.0.1:2744/login")
-        .json(&frostd::KeyLoginArgs {
+        .json(&frostd::LoginArgs {
             challenge: bob_challenge,
             pubkey: bob_pubkey.clone(),
             signature: bob_signature.to_vec(),
         })
         .send()
         .await?;
-    let r = r.json::<frostd::KeyLoginOutput>().await?;
+    let r = r.json::<frostd::LoginOutput>().await?;
     let bob_access_token = r.access_token;
     // Try to close the session
     let r = client
@@ -584,7 +576,7 @@ async fn test_http() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
     assert_eq!(r.status(), reqwest::StatusCode::INTERNAL_SERVER_ERROR);
-    let r = r.json::<frostd::Error>().await?;
+    let r = r.json::<frostd::LowError>().await?;
     assert_eq!(r.code, frostd::NOT_COORDINATOR);
 
     Ok(())

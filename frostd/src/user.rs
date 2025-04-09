@@ -7,7 +7,7 @@ use axum_extra::{
 };
 use uuid::Uuid;
 
-use crate::{state::SharedState, AppError, PublicKey};
+use crate::{state::SharedState, Error, PublicKey};
 
 /// An User
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub(crate) struct User {
 /// handler has an User argument, this will be called and the authentication
 /// will be carried out.
 impl FromRequestParts<SharedState> for User {
-    type Rejection = AppError;
+    type Rejection = Error;
 
     #[tracing::instrument(err(Debug), skip(parts, state))]
     async fn from_request_parts(
@@ -32,9 +32,9 @@ impl FromRequestParts<SharedState> for User {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|_| AppError::Unauthorized)?;
+            .map_err(|_| Error::Unauthorized)?;
         // Decode the user data
-        let access_token = Uuid::from_str(bearer.token()).map_err(|_| AppError::Unauthorized)?;
+        let access_token = Uuid::from_str(bearer.token()).map_err(|_| Error::Unauthorized)?;
 
         let pubkey = state
             .access_tokens
@@ -49,7 +49,7 @@ impl FromRequestParts<SharedState> for User {
                 current_token: access_token,
             })
         } else {
-            return Err(AppError::Unauthorized);
+            return Err(Error::Unauthorized);
         }
     }
 }
