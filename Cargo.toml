@@ -42,7 +42,7 @@ message-io = "0.18"
 orchard = "0.10.1"
 participant = { path = "participant" }
 postcard = "1.1.1"
-rand = "0.8.5"
+rand = "0.9.0"
 rand_core = "0.6.4"
 rcgen = "0.13.2"
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead" }
