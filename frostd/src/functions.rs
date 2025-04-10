@@ -3,7 +3,7 @@ use uuid::Uuid;
 use xeddsa::{xed25519, Verify as _};
 
 use crate::{
-    state::{Session, SessionParticipant, SharedState},
+    state::{Session, SessionParticipant, SharedState, SESSION_TIMEOUT},
     types::*,
     user::User,
     Error,
@@ -162,7 +162,6 @@ pub(crate) async fn get_session_info(
 }
 
 /// Implement the send API
-// TODO: get identifier from channel rather from arguments
 #[tracing::instrument(level = "debug", ret, err(Debug), skip(state, user))]
 pub(crate) async fn send(
     State(state): State<SharedState>,
@@ -176,10 +175,8 @@ pub(crate) async fn send(
     // Get the mutex lock to read and write from the state
     let mut sessions = state.sessions.sessions.write().unwrap();
 
-    // TODO: change to get_mut and modify in-place, if HashMapDelay ever
-    // adds support to it
-    let mut session = sessions
-        .remove(&args.session_id)
+    let session = sessions
+        .get_mut(&args.session_id)
         .ok_or(Error::SessionNotFound)?;
 
     let recipients = if args.recipients.is_empty() {
@@ -192,32 +189,26 @@ pub(crate) async fn send(
     };
 
     // Check if both the sender and the recipients are in the session
-    // Note that we need to jump through all these hoops involving
-    // `in_session` due to the get_mut issue mentioned above. We can't return
-    // an error until we reinsert the session back into the map.
-    let in_session = (session.pubkeys.contains(&user.pubkey)
-        || session.coordinator_pubkey == user.pubkey)
-        && recipients.iter().all(|p| match p {
-            SessionParticipant::Coordinator => true,
-            SessionParticipant::Participant(public_key) => session.pubkeys.contains(public_key),
-        });
-
-    if in_session {
-        for recipient in &recipients {
-            session
-                .queue
-                .entry(recipient.clone())
-                .or_default()
-                .push_back(Msg {
-                    sender: user.pubkey.clone(),
-                    msg: args.msg.clone(),
-                });
-        }
-    }
-    sessions.insert(args.session_id, session);
-    if !in_session {
+    if (!session.pubkeys.contains(&user.pubkey) && session.coordinator_pubkey != user.pubkey)
+        || recipients.iter().any(|p| match p {
+            SessionParticipant::Coordinator => false,
+            SessionParticipant::Participant(public_key) => !session.pubkeys.contains(public_key),
+        })
+    {
         return Err(Error::NotInSession);
     }
+
+    for recipient in &recipients {
+        session
+            .queue
+            .entry(recipient.clone())
+            .or_default()
+            .push_back(Msg {
+                sender: user.pubkey.clone(),
+                msg: args.msg.clone(),
+            });
+    }
+    sessions.update_timeout(&args.session_id, SESSION_TIMEOUT);
 
     Ok(())
 }
@@ -230,14 +221,10 @@ pub(crate) async fn receive(
     Json(args): Json<ReceiveArgs>,
 ) -> Result<Json<ReceiveOutput>, Error> {
     // Get the mutex lock to read and write from the state
-    let sessions = state.sessions.sessions.read().unwrap();
+    let mut sessions = state.sessions.sessions.write().unwrap();
 
-    // TODO: change to get_mut and modify in-place, if HashMapDelay ever
-    // adds support to it. This will also simplify the code since
-    // we have to do a workaround in order to not renew the timeout if there
-    // are no messages. See https://github.com/AgeManning/delay_map/issues/26
     let session = sessions
-        .get(&args.session_id)
+        .get_mut(&args.session_id)
         .ok_or(Error::SessionNotFound)?;
 
     // Check if both the sender and the recipients are in the session
@@ -251,26 +238,21 @@ pub(crate) async fn receive(
         SessionParticipant::Participant(user.pubkey)
     };
 
-    // If there are no new messages, we don't want to renew the timeout.
-    // Thus only if there are new messages we drop the read-only lock
-    // to get the write lock and re-insert the updated session.
     let msgs = if session.queue.contains_key(&participant) {
-        drop(sessions);
-        let mut sessions = state.sessions.sessions.write().unwrap();
-        let mut session = sessions
-            .remove(&args.session_id)
-            .ok_or(Error::SessionNotFound)?;
         let msgs = session
             .queue
             .entry(participant)
             .or_default()
             .drain(..)
             .collect();
-        sessions.insert(args.session_id, session);
         msgs
     } else {
         vec![]
     };
+    // If there are no new messages, we don't want to renew the timeout.
+    if !msgs.is_empty() {
+        sessions.update_timeout(&args.session_id, SESSION_TIMEOUT);
+    }
 
     Ok(Json(ReceiveOutput { msgs }))
 }
