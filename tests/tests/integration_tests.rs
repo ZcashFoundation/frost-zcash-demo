@@ -129,7 +129,7 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&commitments_map[&participant_id_3]).unwrap(),
     );
 
-    let participants_config = coordinator::step_1::step_1(
+    let participants_config = coordinator::round_1::get_commitments(
         &pcoordinator_args,
         &mut coordinator_comms,
         &mut step_1_input.as_bytes(),
@@ -142,8 +142,11 @@ async fn trusted_dealer_journey() {
 
     let mut signature_shares = HashMap::new();
 
-    let signing_package =
-        coordinator::step_2::step_2(&pcoordinator_args, &mut buf, commitments_map.clone()).unwrap();
+    let signing_package = coordinator::cli::build_signing_package(
+        &pcoordinator_args,
+        &mut buf,
+        commitments_map.clone(),
+    );
 
     // Round 2
 
@@ -178,7 +181,7 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&signature_shares[&participant_id_2]).unwrap(),
         serde_json::to_string(&signature_shares[&participant_id_3]).unwrap()
     );
-    let group_signature = coordinator::step_3::step_3(
+    let group_signature = coordinator::round_2::send_signing_package_and_get_signature_shares(
         &pcoordinator_args,
         &mut coordinator_comms,
         &mut step_3_input.as_bytes(),

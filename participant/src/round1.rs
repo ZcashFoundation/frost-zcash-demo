@@ -11,13 +11,11 @@ use frost::{
 use rand::rngs::ThreadRng;
 use std::io::{BufRead, Write};
 
-// TODO: Rethink the types here. They're inconsistent with each other
 #[derive(Debug, PartialEq)]
 pub struct Round1Config<C: Ciphersuite> {
     pub key_package: KeyPackage<C>,
 }
 
-// TODO: refactor to generate config
 pub async fn request_inputs<C: Ciphersuite + 'static>(
     args: &Args,
     input: &mut impl BufRead,
@@ -64,8 +62,5 @@ pub fn generate_nonces_and_commitments<C: Ciphersuite>(
     rng: &mut ThreadRng,
 ) -> (SigningNonces<C>, SigningCommitments<C>) {
     let (nonces, commitments) = frost::round1::commit(key_package.signing_share(), rng);
-
-    // TODO: Store nonces
-
     (nonces, commitments)
 }
