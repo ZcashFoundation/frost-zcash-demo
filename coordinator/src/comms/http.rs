@@ -407,7 +407,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         Ok(commitments[0].clone())
     }
 
-    async fn get_signature_shares(
+    async fn send_signing_package_and_get_signature_shares(
         &mut self,
         _input: &mut dyn BufRead,
         _output: &mut dyn Write,
