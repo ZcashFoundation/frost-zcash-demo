@@ -40,12 +40,13 @@ zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
 #   the ring CryptoProvider, which is not available.
 # For this reason we just simply always enable ring.
 rustls = { workspace = true, features = ["ring"] }
+reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls-manual-roots"] }
+
 
 [dev-dependencies]
 axum-test = { workspace = true }
 frost-ed25519 = { workspace = true, features = ["serde"] }
 reddsa = { workspace = true, features = ["frost", "serde"] }
-reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls-manual-roots"] }
 regex = { workspace = true }
 coordinator = { workspace = true }
 rcgen = { workspace = true }

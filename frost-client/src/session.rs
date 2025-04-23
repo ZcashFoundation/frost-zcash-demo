@@ -3,6 +3,8 @@ use std::error::Error;
 use eyre::{eyre, OptionExt as _};
 use rand::thread_rng;
 
+use frostd::client::Client;
+
 use crate::{args::Command, config::Config};
 
 pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
@@ -43,56 +45,31 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
         .pubkey
         .clone();
 
-    let client = reqwest::Client::new();
-    let host_port = format!("https://{}", server_url);
+    let mut client = Client::new(format!("https://{}", server_url));
 
     let mut rng = thread_rng();
 
-    let challenge = client
-        .post(format!("{}/challenge", host_port))
-        .json(&frostd::ChallengeArgs {})
-        .send()
-        .await?
-        .json::<frostd::ChallengeOutput>()
-        .await?
-        .challenge;
+    let challenge = client.challenge().await?.challenge;
 
     let signature: [u8; 64] = comm_privkey.sign(challenge.as_bytes(), &mut rng)?;
 
-    let access_token = client
-        .post(format!("{}/login", host_port))
-        .json(&frostd::KeyLoginArgs {
+    client
+        .login(&frostd::LoginArgs {
             challenge,
             pubkey: comm_pubkey.clone(),
             signature: signature.to_vec(),
         })
-        .send()
-        .await?
-        .json::<frostd::LoginOutput>()
-        .await?
-        .access_token
-        .to_string();
+        .await?;
 
     // Get session ID from server
-    let r = client
-        .post(format!("{}/list_sessions", host_port))
-        .bearer_auth(&access_token)
-        .send()
-        .await?
-        .json::<frostd::ListSessionsOutput>()
-        .await?;
+    let r = client.list_sessions().await?;
 
     if r.session_ids.is_empty() {
         eprintln!("No active sessions.");
     } else {
         for session_id in r.session_ids {
             let r = client
-                .post(format!("{}/get_session_info", host_port))
-                .bearer_auth(&access_token)
-                .json(&frostd::GetSessionInfoArgs { session_id })
-                .send()
-                .await?
-                .json::<frostd::GetSessionInfoOutput>()
+                .get_session_info(&frostd::GetSessionInfoArgs { session_id })
                 .await?;
             let coordinator = config.contact_by_pubkey(&r.coordinator_pubkey);
             let participants: Vec<_> = r
@@ -122,13 +99,8 @@ pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
             eprintln!();
 
             if close_all {
-                let _r = client
-                    .post(format!("{}/close_session", host_port))
-                    .bearer_auth(&access_token)
-                    .json(&frostd::CloseSessionArgs { session_id })
-                    .send()
-                    .await?
-                    .bytes()
+                client
+                    .close_session(&frostd::CloseSessionArgs { session_id })
                     .await?;
             }
         }
