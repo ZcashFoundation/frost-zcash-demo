@@ -8,21 +8,12 @@ use zeroize::Zeroize;
 pub const MAX_MSG_SIZE: usize = 65535;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Error {
-    pub code: usize,
-    pub msg: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChallengeArgs {}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengeOutput {
     pub challenge: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct KeyLoginArgs {
+pub struct LoginArgs {
     pub challenge: Uuid,
     pub pubkey: PublicKey,
     #[serde(
@@ -33,19 +24,8 @@ pub struct KeyLoginArgs {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct KeyLoginOutput {
-    pub access_token: Uuid,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct LoginOutput {
     pub access_token: Uuid,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LoginArgs {
-    pub username: String,
-    pub password: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
