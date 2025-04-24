@@ -13,7 +13,8 @@ use uuid::Uuid;
 use crate::{Msg, PublicKey};
 
 /// How long a session stays open.
-const SESSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60 * 24);
+pub(crate) const SESSION_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(60 * 60 * 24);
 /// How long a challenge can be replied to.
 const CHALLENGE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 /// How long an acesss token lasts.
