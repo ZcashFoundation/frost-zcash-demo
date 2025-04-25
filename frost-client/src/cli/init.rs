@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use frostd::cipher::Cipher;
+use crate::cipher::Cipher;
 
 use super::{
     args::Command,

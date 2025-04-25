@@ -1,5 +1,4 @@
 pub mod args;
-pub mod cipher;
 pub mod client;
 mod functions;
 mod state;

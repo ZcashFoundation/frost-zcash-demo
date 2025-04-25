@@ -17,7 +17,8 @@ use frost_core::{
 };
 use rand::thread_rng;
 
-use frostd::{cipher::Cipher, client::Client, Msg, PublicKey, SendSigningPackageArgs, Uuid};
+use crate::cipher::Cipher;
+use frostd::{client::Client, Msg, PublicKey, SendSigningPackageArgs, Uuid};
 
 use super::super::args::ProcessedArgs;
 use super::Comms;

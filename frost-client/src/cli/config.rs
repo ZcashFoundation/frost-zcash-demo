@@ -6,9 +6,10 @@ use std::{
     str::FromStr,
 };
 
+use crate::cipher::PrivateKey;
 use eyre::{eyre, OptionExt};
 use frost_core::{Ciphersuite, Identifier};
-use frostd::{cipher::PrivateKey, PublicKey};
+use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 

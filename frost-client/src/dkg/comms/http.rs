@@ -16,7 +16,8 @@ use frost_core::{
     Ciphersuite, Identifier,
 };
 
-use frostd::{cipher::Cipher, client::Client, Msg, PublicKey, Uuid};
+use crate::cipher::Cipher;
+use frostd::{client::Client, Msg, PublicKey, Uuid};
 use rand::thread_rng;
 
 use super::super::args::ProcessedArgs;

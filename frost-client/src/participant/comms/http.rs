@@ -13,7 +13,8 @@ use frost_core::{round1::SigningCommitments, round2::SignatureShare, Ciphersuite
 use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
 
-use frostd::{cipher::Cipher, client::Client, SendSigningPackageArgs, Uuid};
+use crate::cipher::Cipher;
+use frostd::{client::Client, SendSigningPackageArgs, Uuid};
 
 use super::super::args::ProcessedArgs;
 use super::Comms;

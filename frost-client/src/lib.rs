@@ -1,3 +1,4 @@
+pub mod cipher;
 pub mod cli;
 pub mod coordinator;
 pub mod dkg;

@@ -8,10 +8,11 @@ use std::{
 
 use clap::Parser;
 use eyre::eyre;
+use frostd::PublicKey;
 
+use crate::cipher::PrivateKey;
 use frost_core::{keys::PublicKeyPackage, Ciphersuite, Identifier};
 use frost_rerandomized::Randomizer;
-use frostd::{cipher::PrivateKey, PublicKey};
 
 use super::input::read_from_file_or_stdin;
 
