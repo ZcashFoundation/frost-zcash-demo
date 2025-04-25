@@ -5,7 +5,7 @@ use frost_core::Ciphersuite;
 
 use super::args::Args;
 use super::inputs::{print_values, request_inputs};
-use super::trusted_dealer::{trusted_dealer, MaybeIntoEvenY};
+use super::{trusted_dealer, MaybeIntoEvenY};
 
 pub fn cli<C: Ciphersuite + 'static + MaybeIntoEvenY>(
     args: &Args,

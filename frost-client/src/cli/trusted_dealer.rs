@@ -13,8 +13,8 @@ use super::{
     contact::Contact,
 };
 
-use crate::trusted_dealer::trusted_dealer;
-use crate::trusted_dealer::trusted_dealer::MaybeIntoEvenY;
+use crate::trusted_dealer;
+use crate::trusted_dealer::MaybeIntoEvenY;
 
 pub fn trusted_dealer(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::TrustedDealer { ciphersuite, .. } = (*args).clone() else {
