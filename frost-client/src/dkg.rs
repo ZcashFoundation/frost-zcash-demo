@@ -6,7 +6,6 @@ use std::{
 
 use eyre::{eyre, Context as _, OptionExt};
 
-use dkg::cli::MaybeIntoEvenY;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use reqwest::Url;
@@ -16,6 +15,16 @@ use crate::{
     args::Command,
     config::{Config, Group, Participant},
 };
+
+#[cfg(test)]
+mod tests;
+
+pub mod args;
+pub mod cli;
+pub mod comms;
+pub mod inputs;
+
+use cli::MaybeIntoEvenY;
 
 pub(crate) async fn dkg(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Dkg { ciphersuite, .. } = (*args).clone() else {
@@ -70,7 +79,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
         participants.push(comm_pubkey.clone());
     }
 
-    let dkg_config = dkg::args::ProcessedArgs {
+    let dkg_config = args::ProcessedArgs {
         cli: false,
         http: true,
         ip: server_url_parsed
@@ -103,7 +112,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
 
     // Generate key shares
     let (key_package, public_key_package, pubkey_map) =
-        dkg::cli::cli_for_processed_args::<C>(dkg_config, &mut input, &mut output).await?;
+        cli::cli_for_processed_args::<C>(dkg_config, &mut input, &mut output).await?;
     let key_package = Zeroizing::new(key_package);
 
     // Reverse pubkey_map

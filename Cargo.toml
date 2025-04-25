@@ -1,9 +1,5 @@
 [workspace]
 members = [
-    "participant",
-    "trusted-dealer",
-    "dkg",
-    "coordinator",
     "tests",
     "frostd",
     "frost-client",
@@ -20,10 +16,8 @@ axum-test = "17.2.0"
 base64 = "0.22.1"
 bech32 = "0.11.0"
 clap = "4.5.23"
-coordinator = { path = "coordinator" }
 delay_map = "0.4.1"
 dirs = "5.0.1"
-dkg = { path = "dkg" }
 exitcode = "1.1.2"
 eyre = "0.6.12"
 frost-client = { path = "frost-client" }
@@ -40,7 +34,6 @@ itertools = "0.14.0"
 lazy_static = "1.5.0"
 message-io = "0.18"
 orchard = "0.10.1"
-participant = { path = "participant" }
 postcard = "1.1.1"
 rand = "0.8.5"
 rand_core = "0.6.4"
@@ -65,7 +58,6 @@ toml = "0.8.19"
 tower-http = "0.6.2"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-trusted-dealer = { path = "trusted-dealer" }
 uuid = "1.11.0"
 xeddsa = "1.0.2"
 zcash_address = "0.6.2"

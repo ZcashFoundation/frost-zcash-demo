@@ -20,6 +20,7 @@ use std::{
 /// ## Examples
 ///
 /// ```no_run
+/// use frost_client::write_atomic;
 /// // It's just one line:
 /// write_atomic::write_file("/path/to/my/file.txt", b"Some data!")
 ///     .unwrap();

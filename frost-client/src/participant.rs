@@ -13,7 +13,16 @@ use frost_ed25519::Ed25519Sha512;
 use frost_rerandomized::RandomizedCiphersuite;
 
 use crate::{args::Command, config::Config};
-use participant::cli::cli_for_processed_args;
+
+pub mod args;
+pub mod cli;
+pub mod comms;
+
+pub mod input;
+pub mod round1;
+pub mod round2;
+
+use cli::cli_for_processed_args;
 
 pub(crate) async fn run(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Participant { config, group, .. } = (*args).clone() else {
@@ -64,7 +73,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
         Url::parse(&format!("https://{}", server_url)).wrap_err("error parsing server-url")?;
 
     let group_participants = group.participant.clone();
-    let pargs = participant::args::ProcessedArgs {
+    let pargs = args::ProcessedArgs {
         cli: false,
         http: true,
         key_package,

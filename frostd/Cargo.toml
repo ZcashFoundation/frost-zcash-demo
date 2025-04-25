@@ -48,10 +48,10 @@ axum-test = { workspace = true }
 frost-ed25519 = { workspace = true, features = ["serde"] }
 reddsa = { workspace = true, features = ["frost", "serde"] }
 regex = { workspace = true }
-coordinator = { workspace = true }
 rcgen = { workspace = true }
 snow = { workspace = true }
 tempfile = { workspace = true }
+frost-client = { workspace = true }
 
 [features]
 default = []

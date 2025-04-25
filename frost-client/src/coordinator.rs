@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use coordinator::cli::cli_for_processed_args;
 use eyre::eyre;
 use eyre::Context;
 use eyre::OptionExt;
@@ -14,7 +13,18 @@ use frostd::PublicKey;
 use reddsa::frost::redpallas::PallasBlake2b512;
 use reqwest::Url;
 
-use crate::{args::Command, config::Config};
+pub mod args;
+pub mod cli;
+pub mod comms;
+
+pub mod input;
+pub mod round_1;
+pub mod round_2;
+
+use cli::cli_for_processed_args;
+
+use crate::args::Command;
+use crate::config::Config;
 
 pub(crate) async fn run(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Coordinator { config, group, .. } = (*args).clone() else {
@@ -77,14 +87,14 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
         .collect::<Result<HashMap<_, _>, Box<dyn Error>>>()?;
     let num_signers = signers.len() as u16;
 
-    let pargs = coordinator::args::ProcessedArgs {
+    let pargs = args::ProcessedArgs {
         cli: false,
         http: true,
         signers,
         num_signers,
         public_key_package,
-        messages: coordinator::args::read_messages(&message, &mut output, &mut input)?,
-        randomizers: coordinator::args::read_randomizers(&randomizer, &mut output, &mut input)?,
+        messages: args::read_messages(&message, &mut output, &mut input)?,
+        randomizers: args::read_randomizers(&randomizer, &mut output, &mut input)?,
         signature,
         ip: server_url_parsed
             .host_str()

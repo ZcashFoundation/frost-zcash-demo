@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum_test::TestServer;
-use coordinator::comms::http::SessionState;
+use frost_client::coordinator::comms::http::SessionState;
 use frostd::{args::Args, cipher::Cipher, router, AppState, SendSigningPackageArgs};
 use rand::thread_rng;
 use reqwest::Certificate;
