@@ -5,8 +5,8 @@ pub mod socket;
 use async_trait::async_trait;
 use eyre::eyre;
 
+use crate::api::SendSigningPackageArgs;
 use frost_core::{self as frost, Ciphersuite};
-use frostd::SendSigningPackageArgs;
 
 use std::{
     error::Error,

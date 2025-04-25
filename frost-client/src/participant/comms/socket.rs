@@ -4,8 +4,8 @@ use async_trait::async_trait;
 
 use frost_core::{self as frost, Ciphersuite};
 
+use crate::api::SendSigningPackageArgs;
 use eyre::eyre;
-use frostd::SendSigningPackageArgs;
 use message_io::{
     network::{Endpoint, NetEvent, Transport},
     node::{self, NodeHandler, NodeListener},

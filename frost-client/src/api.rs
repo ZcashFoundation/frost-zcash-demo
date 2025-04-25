@@ -1,6 +1,9 @@
+//! Types for the FROST server API.
+
 use frost_core::{Ciphersuite, SigningPackage};
 use frost_rerandomized::Randomizer;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 pub use uuid::Uuid;
 use zeroize::Zeroize;
 
@@ -121,4 +124,68 @@ pub struct SendSigningPackageArgs<C: Ciphersuite> {
     )]
     pub aux_msg: Vec<u8>,
     pub randomizer: Vec<Randomizer<C>>,
+}
+
+/// An error. Wraps a StatusCode which is returned by the server when the
+/// error happens during a API call, and a generic eyre::Report.
+#[derive(Debug, Error, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "code", content = "err")]
+pub enum Error {
+    #[error("invalid or missing argument: {0}")]
+    InvalidArgument(String),
+    #[error("client did not provide proper authorization credentials")]
+    Unauthorized,
+    #[error("session was not found")]
+    SessionNotFound,
+    #[error("user is not the coordinator")]
+    NotCoordinator,
+    #[error("user is not part of the given session")]
+    NotInSession,
+    #[serde(other)]
+    #[error("unknown error")]
+    Unknown,
+}
+
+// These make it easier to clients to tell which error happened.
+pub const INVALID_ARGUMENT: usize = 1;
+pub const UNAUTHORIZED: usize = 2;
+pub const SESSION_NOT_FOUND: usize = 3;
+pub const NOT_COORDINATOR: usize = 4;
+pub const NOT_IN_SESSION: usize = 5;
+pub const UNKNOWN: usize = 255;
+
+impl Error {
+    pub fn error_code(&self) -> usize {
+        match &self {
+            Error::InvalidArgument(_) => INVALID_ARGUMENT,
+            Error::Unauthorized => UNAUTHORIZED,
+            Error::SessionNotFound => SESSION_NOT_FOUND,
+            Error::NotCoordinator => NOT_COORDINATOR,
+            Error::NotInSession => NOT_IN_SESSION,
+            Error::Unknown => UNKNOWN,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LowError {
+    pub code: usize,
+    pub msg: String,
+    pub error: Error,
+}
+
+impl From<Error> for LowError {
+    fn from(err: Error) -> Self {
+        LowError {
+            code: err.error_code(),
+            msg: err.to_string(),
+            error: err,
+        }
+    }
+}
+
+impl From<LowError> for Error {
+    fn from(err: LowError) -> Self {
+        err.error
+    }
 }

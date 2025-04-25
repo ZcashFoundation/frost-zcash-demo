@@ -8,8 +8,8 @@ use frost_core::Ciphersuite;
 
 use async_trait::async_trait;
 
+use crate::cipher::PublicKey;
 use frost::{keys::PublicKeyPackage, Identifier};
-use frostd::PublicKey;
 
 use std::collections::HashMap;
 use std::{

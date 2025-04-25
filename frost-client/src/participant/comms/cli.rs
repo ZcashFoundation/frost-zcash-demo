@@ -6,11 +6,11 @@ use frost_core::Ciphersuite;
 
 use async_trait::async_trait;
 
+use crate::api::{self, SendSigningPackageArgs};
 use frost::{
     keys::PublicKeyPackage, round1::SigningCommitments, round2::SignatureShare, Identifier,
     SigningPackage,
 };
-use frostd::SendSigningPackageArgs;
 
 use std::{
     error::Error,
@@ -66,14 +66,14 @@ where
 
             let randomizer =
                 frost_rerandomized::Randomizer::<C>::deserialize(&hex::decode(json.trim())?)?;
-            let r = frostd::SendSigningPackageArgs::<C> {
+            let r = api::SendSigningPackageArgs::<C> {
                 signing_package: vec![signing_package],
                 randomizer: vec![randomizer],
                 aux_msg: vec![],
             };
             Ok(r)
         } else {
-            let r = frostd::SendSigningPackageArgs::<C> {
+            let r = api::SendSigningPackageArgs::<C> {
                 signing_package: vec![signing_package],
                 randomizer: vec![],
                 aux_msg: vec![],

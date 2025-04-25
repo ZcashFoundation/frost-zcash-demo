@@ -3,7 +3,7 @@ use std::error::Error;
 use eyre::{eyre, OptionExt as _};
 use rand::thread_rng;
 
-use frostd::client::Client;
+use crate::{api, client::Client};
 
 use super::{args::Command, config::Config};
 
@@ -54,7 +54,7 @@ pub async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     let signature: [u8; 64] = comm_privkey.sign(challenge.as_bytes(), &mut rng)?;
 
     client
-        .login(&frostd::LoginArgs {
+        .login(&api::LoginArgs {
             challenge,
             pubkey: comm_pubkey.clone(),
             signature: signature.to_vec(),
@@ -69,7 +69,7 @@ pub async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     } else {
         for session_id in r.session_ids {
             let r = client
-                .get_session_info(&frostd::GetSessionInfoArgs { session_id })
+                .get_session_info(&api::GetSessionInfoArgs { session_id })
                 .await?;
             let coordinator = config.contact_by_pubkey(&r.coordinator_pubkey);
             let participants: Vec<_> = r
@@ -100,7 +100,7 @@ pub async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
 
             if close_all {
                 client
-                    .close_session(&frostd::CloseSessionArgs { session_id })
+                    .close_session(&api::CloseSessionArgs { session_id })
                     .await?;
             }
         }

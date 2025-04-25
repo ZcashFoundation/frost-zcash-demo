@@ -2,7 +2,7 @@ use eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{self as frost, Ciphersuite, Identifier};
 
-use frostd::PublicKey;
+use crate::cipher::PublicKey;
 use rand::thread_rng;
 use reddsa::frost::redpallas::keys::EvenY;
 use std::collections::HashMap;

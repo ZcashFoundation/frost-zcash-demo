@@ -1,12 +1,12 @@
 pub mod cli;
 pub mod http;
 
+use crate::cipher::PublicKey;
 use frost_core::{
     self as frost,
     keys::dkg::{round1, round2},
     Ciphersuite,
 };
-use frostd::PublicKey;
 
 use std::{
     collections::{BTreeMap, HashMap},

@@ -5,14 +5,13 @@ use std::{
     rc::Rc,
 };
 
-use crate::cipher::PrivateKey;
+use crate::cipher::{PrivateKey, PublicKey};
 use clap::Parser;
 use eyre::eyre;
 use frost_core::{
     keys::{KeyPackage, SecretShare},
     Ciphersuite,
 };
-use frostd::PublicKey;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::input::read_from_file_or_stdin;

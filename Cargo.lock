@@ -1236,7 +1236,6 @@ dependencies = [
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
- "frostd",
  "hex",
  "itertools 0.14.0",
  "message-io",
@@ -1254,6 +1253,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "toml",
+ "uuid",
  "xeddsa",
  "zeroize",
 ]

@@ -12,6 +12,7 @@ axum-server = { workspace = true, features = ["tls-rustls"] }
 clap = { workspace = true, features = ["derive"] }
 delay_map = { workspace = true }
 eyre = { workspace = true }
+frost-client = { workspace = true }
 frost-core = { workspace = true, features = ["serde"] }
 frost-rerandomized = { workspace = true, features = ["serde"] }
 hex = { workspace = true }
@@ -51,7 +52,7 @@ regex = { workspace = true }
 rcgen = { workspace = true }
 snow = { workspace = true }
 tempfile = { workspace = true }
-frost-client = { workspace = true }
+
 
 [features]
 default = []

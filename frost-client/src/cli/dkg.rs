@@ -16,8 +16,8 @@ use super::{
     config::{Config, Group, Participant},
 };
 
-use crate::dkg::cli::MaybeIntoEvenY;
 use crate::dkg::{args, cli};
+use crate::{api, dkg::cli::MaybeIntoEvenY};
 
 pub async fn dkg(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Dkg { ciphersuite, .. } = (*args).clone() else {
@@ -65,7 +65,7 @@ pub(crate) async fn dkg_for_ciphersuite<C: Ciphersuite + MaybeIntoEvenY + 'stati
 
     let mut participants = participants
         .iter()
-        .map(|s| Ok(frostd::PublicKey(hex::decode(s)?.to_vec())))
+        .map(|s| Ok(api::PublicKey(hex::decode(s)?.to_vec())))
         .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
     // Add ourselves if not already in the list
     if !participants.is_empty() && !participants.contains(&comm_pubkey) {

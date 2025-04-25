@@ -16,8 +16,9 @@ use frost_core::{
     Ciphersuite, Identifier,
 };
 
+use crate::api::{self, Msg, PublicKey, Uuid};
 use crate::cipher::Cipher;
-use frostd::{client::Client, Msg, PublicKey, Uuid};
+use crate::client::Client;
 use rand::thread_rng;
 
 use super::super::args::ProcessedArgs;
@@ -419,7 +420,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             .ok_or_eyre("comm_pubkey must be specified")?;
 
         self.client
-            .login(&frostd::LoginArgs {
+            .login(&api::LoginArgs {
                 challenge,
                 pubkey: comm_pubkey.clone(),
                 signature: signature.to_vec(),
@@ -430,7 +431,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             eprintln!("Creating DKG session...");
             let r = self
                 .client
-                .create_new_session(&frostd::CreateNewSessionArgs {
+                .create_new_session(&api::CreateNewSessionArgs {
                     pubkeys: self.args.participants.clone(),
                     message_count: 1,
                 })
@@ -459,7 +460,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         // from them.
         let session_info = self
             .client
-            .get_session_info(&frostd::GetSessionInfoArgs { session_id })
+            .get_session_info(&api::GetSessionInfoArgs { session_id })
             .await?;
         self.pubkeys = session_info
             .pubkeys
@@ -527,7 +528,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             }
             let msg = cipher.encrypt(Some(pubkey), serde_json::to_vec(&round1_package)?)?;
             self.client
-                .send(&frostd::SendArgs {
+                .send(&api::SendArgs {
                     session_id: self.session_id.expect("set before"),
                     recipients: vec![pubkey.clone()],
                     msg,
@@ -540,7 +541,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         loop {
             let r = self
                 .client
-                .receive(&frostd::ReceiveArgs {
+                .receive(&api::ReceiveArgs {
                     session_id: self.session_id.unwrap(),
                     as_coordinator: false,
                 })
@@ -577,7 +578,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                         serde_json::to_vec(&(*sender_identifier, package))?,
                     )?;
                     self.client
-                        .send(&frostd::SendArgs {
+                        .send(&api::SendArgs {
                             session_id: self.session_id.expect("set before"),
                             recipients: vec![recipient_pubkey.clone()],
                             msg,
@@ -591,7 +592,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
             loop {
                 let r = self
                     .client
-                    .receive(&frostd::ReceiveArgs {
+                    .receive(&api::ReceiveArgs {
                         session_id: self.session_id.unwrap(),
                         as_coordinator: false,
                     })
@@ -634,7 +635,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
                 )?,
             )?;
             self.client
-                .send(&frostd::SendArgs {
+                .send(&api::SendArgs {
                     session_id: self.session_id.expect("set before"),
                     recipients: vec![pubkey.clone()],
                     msg,
@@ -647,7 +648,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         loop {
             let r = self
                 .client
-                .receive(&frostd::ReceiveArgs {
+                .receive(&api::ReceiveArgs {
                     session_id: self.session_id.unwrap(),
                     as_coordinator: false,
                 })
@@ -668,7 +669,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         if !self.args.participants.is_empty() {
             let _r = self
                 .client
-                .close_session(&frostd::CloseSessionArgs {
+                .close_session(&api::CloseSessionArgs {
                     session_id: self.session_id.unwrap(),
                 })
                 .await?;
@@ -692,7 +693,7 @@ impl<C: Ciphersuite + 'static> Comms<C> for HTTPComms<C> {
         if let Some(session_id) = self.session_id {
             let _r = self
                 .client
-                .close_session(&frostd::CloseSessionArgs { session_id })
+                .close_session(&api::CloseSessionArgs { session_id })
                 .await?;
         }
         Ok(())

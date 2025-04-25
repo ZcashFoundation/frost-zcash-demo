@@ -2,13 +2,13 @@
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{self as frostd};
+use crate::api;
 
 /// A Client error.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("server error: {0}")]
-    ServerError(#[from] frostd::Error),
+    ServerError(#[from] api::Error),
     #[error("connection error: {0}")]
     ConnectionError(#[from] reqwest::Error),
 }
@@ -48,8 +48,8 @@ impl Client {
         let response = req.send().await?;
         if !response.status().is_success() {
             if response.status() == reqwest::StatusCode::INTERNAL_SERVER_ERROR {
-                let err = response.json::<frostd::LowError>().await?;
-                let err: frostd::Error = err.into();
+                let err = response.json::<api::LowError>().await?;
+                let err: api::Error = err.into();
                 Err(err.into())
             } else {
                 Err(Error::ConnectionError(
@@ -63,14 +63,14 @@ impl Client {
         }
     }
 
-    pub async fn challenge(&self) -> Result<frostd::ChallengeOutput, Error> {
+    pub async fn challenge(&self) -> Result<api::ChallengeOutput, Error> {
         self.call("challenge", &()).await
     }
 
     /// Login to the server. This will internally set the access token for the
     /// client so that other authenticated methods can be called.
-    pub async fn login(&mut self, args: &frostd::LoginArgs) -> Result<frostd::LoginOutput, Error> {
-        let login_output: frostd::LoginOutput = self.call("login", args).await?;
+    pub async fn login(&mut self, args: &api::LoginArgs) -> Result<api::LoginOutput, Error> {
+        let login_output: api::LoginOutput = self.call("login", args).await?;
         self.access_token = Some(login_output.access_token);
         Ok(login_output)
     }
@@ -84,34 +84,31 @@ impl Client {
 
     pub async fn create_new_session(
         &self,
-        args: &frostd::CreateNewSessionArgs,
-    ) -> Result<frostd::CreateNewSessionOutput, Error> {
+        args: &api::CreateNewSessionArgs,
+    ) -> Result<api::CreateNewSessionOutput, Error> {
         self.call("create_new_session", args).await
     }
 
-    pub async fn list_sessions(&self) -> Result<frostd::ListSessionsOutput, Error> {
+    pub async fn list_sessions(&self) -> Result<api::ListSessionsOutput, Error> {
         self.call("list_sessions", &()).await
     }
 
     pub async fn get_session_info(
         &self,
-        args: &frostd::GetSessionInfoArgs,
-    ) -> Result<frostd::GetSessionInfoOutput, Error> {
+        args: &api::GetSessionInfoArgs,
+    ) -> Result<api::GetSessionInfoOutput, Error> {
         self.call("get_session_info", args).await
     }
 
-    pub async fn send(&self, args: &frostd::SendArgs) -> Result<(), Error> {
+    pub async fn send(&self, args: &api::SendArgs) -> Result<(), Error> {
         self.call("send", args).await
     }
 
-    pub async fn receive(
-        &self,
-        args: &frostd::ReceiveArgs,
-    ) -> Result<frostd::ReceiveOutput, Error> {
+    pub async fn receive(&self, args: &api::ReceiveArgs) -> Result<api::ReceiveOutput, Error> {
         self.call("receive", args).await
     }
 
-    pub async fn close_session(&self, args: &frostd::CloseSessionArgs) -> Result<(), Error> {
+    pub async fn close_session(&self, args: &api::CloseSessionArgs) -> Result<(), Error> {
         self.call("close_session", args).await
     }
 }

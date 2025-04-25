@@ -5,11 +5,11 @@ use eyre::eyre;
 use eyre::Context;
 use eyre::OptionExt;
 
+use crate::cipher::PublicKey;
 use frost_core::keys::PublicKeyPackage;
 use frost_core::Ciphersuite;
 use frost_ed25519::Ed25519Sha512;
 use frost_rerandomized::RandomizedCiphersuite;
-use frostd::PublicKey;
 use reddsa::frost::redpallas::PallasBlake2b512;
 use reqwest::Url;
 

@@ -13,8 +13,9 @@ use frost_core::{round1::SigningCommitments, round2::SignatureShare, Ciphersuite
 use rand::thread_rng;
 use snow::{HandshakeState, TransportState};
 
+use crate::api::{self, SendSigningPackageArgs, Uuid};
 use crate::cipher::Cipher;
-use frostd::{client::Client, SendSigningPackageArgs, Uuid};
+use crate::client::Client;
 
 use super::super::args::ProcessedArgs;
 use super::Comms;
@@ -153,7 +154,7 @@ where
 
         self.access_token = Some(
             self.client
-                .login(&frostd::LoginArgs {
+                .login(&api::LoginArgs {
                     challenge,
                     pubkey: self
                         .args
@@ -196,7 +197,7 @@ where
         // to encrypt message to them.
         let session_info = self
             .client
-            .get_session_info(&frostd::GetSessionInfoArgs { session_id })
+            .get_session_info(&api::GetSessionInfoArgs { session_id })
             .await?;
 
         let comm_coordinator_pubkey = comm_coordinator_pubkey_getter(&session_info.coordinator_pubkey).ok_or_eyre("The coordinator for the specified FROST session is not registered in the user's address book")?;
@@ -210,7 +211,7 @@ where
         let send_commitments_args = vec![commitments];
         let msg = cipher.encrypt(None, serde_json::to_vec(&send_commitments_args)?)?;
         self.client
-            .send(&frostd::SendArgs {
+            .send(&api::SendArgs {
                 session_id,
                 // Empty recipients: Coordinator
                 recipients: vec![],
@@ -225,7 +226,7 @@ where
         let r: SendSigningPackageArgs<C> = loop {
             let r = self
                 .client
-                .receive(&frostd::ReceiveArgs {
+                .receive(&api::ReceiveArgs {
                     session_id,
                     as_coordinator: false,
                 })
@@ -260,7 +261,7 @@ where
 
         let _r = self
             .client
-            .send(&frostd::SendArgs {
+            .send(&api::SendArgs {
                 session_id: self.session_id.unwrap(),
                 // Empty recipients: Coordinator
                 recipients: vec![],

@@ -1,5 +1,5 @@
+use crate::api::SendSigningPackageArgs;
 use frost_core::{self as frost, Ciphersuite};
-use frostd::SendSigningPackageArgs;
 
 use super::comms::Comms;
 use frost::{

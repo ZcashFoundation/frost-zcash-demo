@@ -1,9 +1,8 @@
 use std::rc::Rc;
 
-use crate::cipher::PrivateKey;
+use crate::cipher::{PrivateKey, PublicKey};
 use clap::Parser;
 use frost_core::{Ciphersuite, Identifier};
-use frostd::PublicKey;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Parser, Debug, Default)]

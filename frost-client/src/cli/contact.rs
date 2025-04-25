@@ -1,7 +1,7 @@
 use std::error::Error;
 
+use crate::cipher::PublicKey;
 use eyre::{eyre, OptionExt};
-use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
 
 use super::{args::Command, config::Config};

@@ -8,9 +8,8 @@ use std::{
 
 use clap::Parser;
 use eyre::eyre;
-use frostd::PublicKey;
 
-use crate::cipher::PrivateKey;
+use crate::cipher::{PrivateKey, PublicKey};
 use frost_core::{keys::PublicKeyPackage, Ciphersuite, Identifier};
 use frost_rerandomized::Randomizer;
 

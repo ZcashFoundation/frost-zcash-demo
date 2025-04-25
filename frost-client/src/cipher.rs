@@ -10,8 +10,8 @@ use thiserror::Error;
 use xeddsa::{xed25519, Sign as _};
 use zeroize::Zeroize;
 
-use frostd::Msg;
-pub use frostd::PublicKey;
+pub use crate::api::PublicKey;
+use crate::api::{self, Msg};
 
 /// Errors returned by this module.
 #[derive(Error, Debug)]
@@ -224,7 +224,7 @@ impl Cipher {
             .send_noise_map
             .get_mut(&recipient)
             .ok_or(Error::UnkownRecipient)?;
-        let mut encrypted = vec![0; frostd::MAX_MSG_SIZE];
+        let mut encrypted = vec![0; api::MAX_MSG_SIZE];
         let len = noise.write_message(&msg, &mut encrypted)?;
         encrypted.truncate(len);
         Ok(encrypted)
@@ -238,8 +238,8 @@ impl Cipher {
             .recv_noise_map
             .get_mut(&msg.sender)
             .ok_or(Error::UnkownSender)?;
-        let mut decrypted = vec![0; frostd::MAX_MSG_SIZE];
-        decrypted.resize(frostd::MAX_MSG_SIZE, 0);
+        let mut decrypted = vec![0; api::MAX_MSG_SIZE];
+        decrypted.resize(api::MAX_MSG_SIZE, 0);
         let len = noise.read_message(&msg.msg, &mut decrypted)?;
         decrypted.truncate(len);
         Ok(Msg {
