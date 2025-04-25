@@ -2,9 +2,9 @@ use std::error::Error;
 
 use eyre::OptionExt;
 
-use crate::{args::Command, config::Config};
+use super::{args::Command, config::Config};
 
-pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Groups { config } = (*args).clone() else {
         panic!("invalid Command");
     };
@@ -20,7 +20,7 @@ pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
 }
 
 /// Remove a group from the user's config file.
-pub(crate) fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::RemoveGroup { config, group } = (*args).clone() else {
         panic!("invalid Command");
     };

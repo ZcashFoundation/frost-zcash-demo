@@ -13,20 +13,13 @@ use frostd::PublicKey;
 use reddsa::frost::redpallas::PallasBlake2b512;
 use reqwest::Url;
 
-pub mod args;
-pub mod cli;
-pub mod comms;
+use crate::coordinator::args;
+use crate::coordinator::cli;
 
-pub mod input;
-pub mod round_1;
-pub mod round_2;
+use super::args::Command;
+use super::config::Config;
 
-use cli::cli_for_processed_args;
-
-use crate::args::Command;
-use crate::config::Config;
-
-pub(crate) async fn run(args: &Command) -> Result<(), Box<dyn Error>> {
+pub async fn run(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Coordinator { config, group, .. } = (*args).clone() else {
         panic!("invalid Command");
     };
@@ -120,7 +113,7 @@ pub(crate) async fn run_for_ciphersuite<C: RandomizedCiphersuite + 'static>(
         ),
     };
 
-    cli_for_processed_args(pargs, &mut input, &mut output).await?;
+    cli::cli_for_processed_args(pargs, &mut input, &mut output).await?;
 
     Ok(())
 }

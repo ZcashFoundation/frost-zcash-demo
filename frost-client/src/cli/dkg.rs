@@ -11,22 +11,15 @@ use frost_ed25519::Ed25519Sha512;
 use reqwest::Url;
 use zeroize::Zeroizing;
 
-use crate::{
+use super::{
     args::Command,
     config::{Config, Group, Participant},
 };
 
-#[cfg(test)]
-mod tests;
+use crate::dkg::cli::MaybeIntoEvenY;
+use crate::dkg::{args, cli};
 
-pub mod args;
-pub mod cli;
-pub mod comms;
-pub mod inputs;
-
-use cli::MaybeIntoEvenY;
-
-pub(crate) async fn dkg(args: &Command) -> Result<(), Box<dyn Error>> {
+pub async fn dkg(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Dkg { ciphersuite, .. } = (*args).clone() else {
         panic!("invalid Command");
     };

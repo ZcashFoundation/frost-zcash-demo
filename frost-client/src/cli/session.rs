@@ -5,9 +5,9 @@ use rand::thread_rng;
 
 use frostd::client::Client;
 
-use crate::{args::Command, config::Config};
+use super::{args::Command, config::Config};
 
-pub(crate) async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
+pub async fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Sessions {
         config,
         group,

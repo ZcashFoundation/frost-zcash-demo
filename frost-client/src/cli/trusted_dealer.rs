@@ -7,21 +7,16 @@ use rand::thread_rng;
 use frost_core::{keys::KeyPackage, Ciphersuite};
 use frost_ed25519::Ed25519Sha512;
 
-use crate::{
+use super::{
     args::Command,
     config::{Config, Group, Participant},
     contact::Contact,
 };
 
-pub mod args;
-pub mod cli;
-pub mod inputs;
-pub mod trusted_dealer;
-pub mod trusted_dealer_keygen;
+use crate::trusted_dealer::trusted_dealer;
+use crate::trusted_dealer::trusted_dealer::MaybeIntoEvenY;
 
-use trusted_dealer::MaybeIntoEvenY;
-
-pub(crate) fn trusted_dealer(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn trusted_dealer(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::TrustedDealer { ciphersuite, .. } = (*args).clone() else {
         panic!("invalid Command");
     };

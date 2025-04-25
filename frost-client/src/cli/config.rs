@@ -12,7 +12,7 @@ use frostd::{cipher::PrivateKey, PublicKey};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
-use crate::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
+use super::{ciphersuite_helper::ciphersuite_helper, contact::Contact, write_atomic};
 
 /// The config file, which is serialized with serde.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

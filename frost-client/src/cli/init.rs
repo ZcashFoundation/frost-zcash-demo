@@ -2,12 +2,12 @@ use std::error::Error;
 
 use frostd::cipher::Cipher;
 
-use crate::{
+use super::{
     args::Command,
     config::{CommunicationKey, Config},
 };
 
-pub(crate) async fn init(args: &Command) -> Result<(), Box<dyn Error>> {
+pub async fn init(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Init { config } = (*args).clone() else {
         panic!("invalid Command");
     };

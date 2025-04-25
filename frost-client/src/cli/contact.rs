@@ -4,7 +4,7 @@ use eyre::{eyre, OptionExt};
 use frostd::PublicKey;
 use serde::{Deserialize, Serialize};
 
-use crate::{args::Command, config::Config};
+use super::{args::Command, config::Config};
 
 /// A FROST contact, which critically has the public key required to
 /// send and receive encrypted and authenticated messages to them.
@@ -52,7 +52,7 @@ impl Contact {
 }
 
 /// Import a contact into the user's address book, in the config file.
-pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn import(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Import {
         contact: text_contact,
         config,
@@ -100,7 +100,7 @@ pub(crate) fn import(args: &Command) -> Result<(), Box<dyn Error>> {
 }
 
 /// Export a contact from the user's address book in the config file.
-pub(crate) fn export(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn export(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Export { name, config } = (*args).clone() else {
         panic!("invalid Command");
     };
@@ -130,7 +130,7 @@ pub(crate) fn export(args: &Command) -> Result<(), Box<dyn Error>> {
 }
 
 /// List the contacts in the address book in the config file.
-pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn list(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::Contacts { config } = (*args).clone() else {
         panic!("invalid Command");
     };
@@ -147,7 +147,7 @@ pub(crate) fn list(args: &Command) -> Result<(), Box<dyn Error>> {
 }
 
 /// Remove a contact from the user's address book in the config file.
-pub(crate) fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
+pub fn remove(args: &Command) -> Result<(), Box<dyn Error>> {
     let Command::RemoveContact { config, pubkey } = (*args).clone() else {
         panic!("invalid Command");
     };

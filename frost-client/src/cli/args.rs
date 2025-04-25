@@ -2,13 +2,13 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Clone)]
 #[command(version, about, long_about = None)]
-pub(crate) struct Args {
+pub struct Args {
     #[command(subcommand)]
-    pub(crate) command: Command,
+    pub command: Command,
 }
 
 #[derive(Subcommand, Clone)]
-pub(crate) enum Command {
+pub enum Command {
     /// Initializes the user, generating a communication key pair and saving to
     /// the config file.
     ///
