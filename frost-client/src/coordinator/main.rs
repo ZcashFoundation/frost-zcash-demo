@@ -1,10 +1,8 @@
-mod tests;
-
 use std::io;
 
 use clap::Parser;
 
-use coordinator::{args::Args, cli::cli};
+use frost_client::coordinator::{args::Args, cli::cli};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

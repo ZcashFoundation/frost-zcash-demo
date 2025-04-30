@@ -2,7 +2,7 @@ use std::io;
 
 use clap::Parser;
 
-use dkg::{args::Args, cli::cli};
+use frost_client::dkg::{args::Args, cli::cli};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

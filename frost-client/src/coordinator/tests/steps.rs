@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use coordinator::{
+use crate::coordinator::{
     args::{Args, ProcessedArgs},
     cli::build_signing_package,
     comms::cli::CLIComms,

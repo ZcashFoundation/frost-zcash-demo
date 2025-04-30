@@ -1,8 +1,6 @@
-mod tests;
-
 use clap::Parser;
-use participant::args::Args;
-use participant::cli::cli;
+use frost_client::participant::args::Args;
+use frost_client::participant::cli::cli;
 
 use std::io;
 

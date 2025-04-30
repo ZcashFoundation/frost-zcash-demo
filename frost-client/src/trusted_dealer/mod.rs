@@ -3,6 +3,10 @@ pub mod cli;
 pub mod inputs;
 pub mod trusted_dealer_keygen;
 
+// TODO: fix and restore tests
+// #[cfg(test)]
+// mod tests;
+
 pub use inputs::Config;
 
 use rand::{CryptoRng, RngCore};

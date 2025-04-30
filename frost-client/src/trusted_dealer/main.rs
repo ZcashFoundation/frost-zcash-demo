@@ -1,12 +1,8 @@
-// TODO: fix and restore tests
-// #[cfg(test)]
-// mod tests;
-
 use std::io;
 
 use clap::Parser;
 
-use trusted_dealer::{args::Args, cli::cli};
+use frost_client::trusted_dealer::{args::Args, cli::cli};
 
 // TODO: Update to use exit codes
 fn main() -> Result<(), Box<dyn std::error::Error>> {

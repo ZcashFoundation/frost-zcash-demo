@@ -2,6 +2,27 @@
 name = "frost-client"
 version = "0.1.0"
 edition = "2021"
+default-run = "frost-client"
+
+[[bin]]
+name = "frost-client"
+path = "src/main.rs"
+
+[[bin]]
+name = "coordinator"
+path = "src/coordinator/main.rs"
+
+[[bin]]
+name = "dkg"
+path = "src/dkg/main.rs"
+
+[[bin]]
+name = "participant"
+path = "src/participant/main.rs"
+
+[[bin]]
+name = "trusted-dealer"
+path = "src/trusted_dealer/main.rs"
 
 [dependencies]
 async-trait = { workspace = true }
