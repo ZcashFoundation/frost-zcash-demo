@@ -1,7 +1,7 @@
 //! HTTP implementation of the Comms trait.
 
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     error::Error,
     io::{BufRead, Write},
     marker::PhantomData,
@@ -17,252 +17,21 @@ use frost_core::{
 };
 use rand::thread_rng;
 
-use crate::api::{self, Msg, PublicKey, SendSigningPackageArgs, Uuid};
 use crate::cipher::Cipher;
 use crate::client::Client;
+use crate::{
+    api::{self, PublicKey, SendSigningPackageArgs, Uuid},
+    session::CoordinatorSessionState,
+};
 
 use super::super::args::ProcessedArgs;
 use super::Comms;
-
-#[derive(Clone, Debug)]
-pub struct SessionStateArgs {
-    pub num_messages: usize,
-    pub num_signers: usize,
-}
-
-/// The current state of a session.
-///
-/// This can be used by a Coordinator to help maitain state and handle
-/// messages from the Participants.
-#[derive(Debug)]
-pub enum SessionState<C: Ciphersuite> {
-    /// Waiting for participants to send their commitments.
-    WaitingForCommitments {
-        /// Session arguments
-        args: SessionStateArgs,
-        /// Commitments sent by participants so far, for each message being
-        /// signed.
-        commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
-        pubkeys: HashMap<PublicKey, Identifier<C>>,
-    },
-    /// Commitments have been sent by all participants. Coordinator can create
-    /// SigningPackage and send to participants. Waiting for participants to
-    /// send their signature shares.
-    WaitingForSignatureShares {
-        /// Session arguments
-        args: SessionStateArgs,
-        /// All commitments sent by participants, for each message being signed.
-        commitments: HashMap<Identifier<C>, Vec<SigningCommitments<C>>>,
-        /// Pubkey -> Identifier mapping.
-        pubkeys: HashMap<PublicKey, Identifier<C>>,
-        /// Signature shares sent by participants so far, for each message being
-        /// signed.
-        signature_shares: HashMap<Identifier<C>, Vec<SignatureShare<C>>>,
-    },
-    /// SignatureShares have been sent by all participants; ready to be fetched
-    /// by the coordinator.
-    SignatureSharesReady {
-        /// Session arguments
-        args: SessionStateArgs,
-        /// Signature shares sent by participants, for each message being signed.
-        signature_shares: HashMap<Identifier<C>, Vec<SignatureShare<C>>>,
-    },
-}
-
-impl<C: Ciphersuite> SessionState<C> {
-    /// Create a new SessionState for the given number of messages and signers.
-    pub fn new(
-        num_messages: usize,
-        num_signers: usize,
-        pubkeys: HashMap<PublicKey, Identifier<C>>,
-    ) -> Self {
-        let args = SessionStateArgs {
-            num_messages,
-            num_signers,
-        };
-        Self::WaitingForCommitments {
-            args,
-            commitments: Default::default(),
-            pubkeys,
-        }
-    }
-
-    /// Handle a Msg received from a participant.
-    ///
-    /// This should be called for new Msgs until [`are_commitments_ready()`]
-    /// returns true, and after the SigningPackage is sent to the participants,
-    /// it should be called for new Msgs until [`are_signature_shares_ready()`]
-    /// returns true.
-    pub fn recv(&mut self, msg: Msg) -> Result<(), Box<dyn Error>> {
-        match self {
-            SessionState::WaitingForCommitments { .. } => {
-                let send_commitments_args: Vec<SigningCommitments<C>> =
-                    serde_json::from_slice(&msg.msg)?;
-                self.handle_commitments(msg.sender, send_commitments_args)?;
-            }
-            SessionState::WaitingForSignatureShares { .. } => {
-                let send_signature_shares_args: Vec<SignatureShare<C>> =
-                    serde_json::from_slice(&msg.msg)?;
-                self.handle_signature_share(msg.sender, send_signature_shares_args)?;
-            }
-            _ => return Err(eyre!("received message during wrong state").into()),
-        }
-        Ok(())
-    }
-
-    /// Handle commitments sent by a participant.
-    fn handle_commitments(
-        &mut self,
-        pubkey: PublicKey,
-        commitments: Vec<SigningCommitments<C>>,
-    ) -> Result<(), Box<dyn Error>> {
-        if let SessionState::WaitingForCommitments {
-            args,
-            commitments: commitments_map,
-            pubkeys,
-        } = self
-        {
-            if commitments.len() != args.num_messages {
-                return Err(eyre!("wrong number of commitments").into());
-            }
-            let identifier = *pubkeys.get(&pubkey).ok_or(eyre!("unknown participant"))?;
-
-            // Add commitment to map.
-            // Currently ignores the possibility of overwriting previous values
-            // (it seems better to ignore overwrites, which could be caused by
-            // poor networking connectivity leading to retries)
-            commitments_map.insert(identifier, commitments);
-
-            // If complete, advance to next state
-            if commitments_map.len() == args.num_signers {
-                *self = SessionState::WaitingForSignatureShares {
-                    args: args.clone(),
-                    commitments: commitments_map.clone(),
-                    pubkeys: pubkeys.clone(),
-                    signature_shares: Default::default(),
-                }
-            }
-            Ok(())
-        } else {
-            panic!("wrong state");
-        }
-    }
-
-    /// Returns if all participants sent their commitments.
-    /// When this returns `true`, [`commitments()`] can be called.
-    pub fn has_commitments(&self) -> bool {
-        matches!(self, SessionState::WaitingForSignatureShares { .. })
-    }
-
-    /// Returns:
-    /// - A vector (one item per message) of maps linking a participant identifier
-    ///   and the SigningCommitments they have sent.
-    /// - A map linking usernames to participant identifiers.
-    #[allow(clippy::type_complexity)]
-    pub fn commitments(
-        &mut self,
-    ) -> Result<
-        (
-            Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>>,
-            HashMap<PublicKey, Identifier<C>>,
-        ),
-        Box<dyn Error>,
-    > {
-        if let SessionState::WaitingForSignatureShares {
-            args,
-            commitments,
-            pubkeys,
-            ..
-        } = self
-        {
-            // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
-            // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
-            // it easier for the coordinator to build the SigningPackages.
-            let commitments: Vec<BTreeMap<Identifier<C>, SigningCommitments<C>>> = (0..args
-                .num_messages)
-                .map(|i| commitments.iter().map(|(id, c)| (*id, c[i])).collect())
-                .collect();
-            Ok((commitments, pubkeys.clone()))
-        } else {
-            panic!("wrong state");
-        }
-    }
-
-    /// Returns if all participants sent their SignatureShares.
-    /// When this returns `true`, [`signature_shares()`] can be called.
-    pub fn has_signature_shares(&self) -> bool {
-        matches!(self, SessionState::SignatureSharesReady { .. })
-    }
-
-    /// Handle signature share sent by a participant.
-    fn handle_signature_share(
-        &mut self,
-        pubkey: PublicKey,
-        signature_shares: Vec<SignatureShare<C>>,
-    ) -> Result<(), Box<dyn Error>> {
-        if let SessionState::WaitingForSignatureShares {
-            args,
-            commitments,
-            signature_shares: signature_shares_map,
-            pubkeys,
-        } = self
-        {
-            if signature_shares.len() != args.num_messages {
-                return Err(eyre!("wrong number of signature shares").into());
-            }
-            let identifier = *pubkeys.get(&pubkey).ok_or(eyre!("unknown participant"))?;
-            if !commitments.contains_key(&identifier) {
-                return Err(eyre!("invalid identifier").into());
-            }
-
-            // Currently ignoring the possibility of overwriting previous values
-            // (it seems better to ignore overwrites, which could be caused by
-            // poor networking connectivity leading to retries)
-            signature_shares_map.insert(identifier, signature_shares);
-            // If complete, advance to next state
-            if signature_shares_map.keys().cloned().collect::<HashSet<_>>()
-                == commitments.keys().cloned().collect::<HashSet<_>>()
-            {
-                *self = SessionState::SignatureSharesReady {
-                    args: args.clone(),
-                    signature_shares: signature_shares_map.clone(),
-                }
-            }
-            Ok(())
-        } else {
-            panic!("wrong state");
-        }
-    }
-
-    /// Returns a vector (one item per message) of maps linking a participant
-    /// identifier and the SignatureShare they have sent.
-    #[allow(clippy::type_complexity)]
-    pub fn signature_shares(
-        &mut self,
-    ) -> Result<Vec<BTreeMap<Identifier<C>, SignatureShare<C>>>, Box<dyn Error>> {
-        if let SessionState::SignatureSharesReady {
-            args,
-            signature_shares,
-        } = self
-        {
-            // Convert the BTreeMap<Identifier, Vec<SigningCommitments>> map
-            // into a Vec<BTreeMap<Identifier, SigningCommitments>> map to make
-            // it easier for the coordinator to build the SigningPackages.
-            let signature_shares = (0..args.num_messages)
-                .map(|i| signature_shares.iter().map(|(id, s)| (*id, s[i])).collect())
-                .collect();
-            Ok(signature_shares)
-        } else {
-            panic!("wrong state");
-        }
-    }
-}
 
 pub struct HTTPComms<C: Ciphersuite> {
     client: Client,
     session_id: Option<Uuid>,
     args: ProcessedArgs<C>,
-    state: SessionState<C>,
+    state: CoordinatorSessionState<C>,
     pubkeys: HashMap<PublicKey, Identifier<C>>,
     cipher: Option<Cipher>,
     _phantom: PhantomData<C>,
@@ -274,7 +43,7 @@ impl<C: Ciphersuite> HTTPComms<C> {
             client: Client::new(format!("https://{}:{}", args.ip, args.port)),
             session_id: None,
             args: args.clone(),
-            state: SessionState::new(
+            state: CoordinatorSessionState::new(
                 args.messages.len(),
                 args.num_signers as usize,
                 args.signers.clone(),

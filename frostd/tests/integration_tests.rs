@@ -6,14 +6,14 @@ use std::{
 };
 
 use axum_test::TestServer;
-use frost_client::{cipher::Cipher, coordinator::comms::http::SessionState};
-use frostd::{args::Args, router, AppState, SendSigningPackageArgs};
 use rand::thread_rng;
 use reqwest::Certificate;
-
-use frost_core as frost;
 use uuid::Uuid;
 use xeddsa::{xed25519, Sign, Verify};
+
+use frost_client::{cipher::Cipher, session::CoordinatorSessionState};
+use frost_core as frost;
+use frostd::{args::Args, router, AppState, SendSigningPackageArgs};
 
 #[tokio::test]
 async fn test_main_router_ed25519() -> Result<(), Box<dyn std::error::Error>> {
@@ -170,7 +170,7 @@ async fn test_main_router<
         .cloned()
         .zip(key_packages.keys().take(2).copied())
         .collect::<HashMap<_, _>>();
-    let mut coordinator_state = SessionState::<C>::new(2, 2, pubkey_identifier_map);
+    let mut coordinator_state = CoordinatorSessionState::<C>::new(2, 2, pubkey_identifier_map);
     loop {
         let res = server
             .post("/receive")
