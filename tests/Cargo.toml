@@ -2,6 +2,7 @@
 name = "tests"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 frost-ed25519 = { workspace = true, features = ["serde"] }
@@ -14,12 +15,9 @@ tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
 frost-ed25519 = { workspace = true, features = ["serde"] }
-dkg = { workspace = true }
-trusted-dealer = { workspace = true }
-participant = { workspace = true }
-coordinator = { workspace = true }
 frostd = { workspace = true }
 rand = { workspace = true }
+frost-client = { workspace = true }
 
 [features]
 default = []

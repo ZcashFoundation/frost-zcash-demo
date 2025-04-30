@@ -171,9 +171,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.86"
+version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644dd749086bf3771a2fbc5f256fdb982d53f011c7d5d560304eafeecebce79d"
+checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -782,32 +782,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "coordinator"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "eyre",
- "frost-core",
- "frost-ed25519",
- "frost-rerandomized",
- "frostd",
- "hex",
- "message-io",
- "participant",
- "rand 0.8.5",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
- "reqwest",
- "rpassword",
- "serde_json",
- "serdect 0.3.0",
- "snow",
- "thiserror 2.0.11",
- "tokio",
- "xeddsa",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -972,9 +946,9 @@ dependencies = [
 
 [[package]]
 name = "data-encoding"
-version = "2.8.0"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "575f75dfd25738df5b91b8e43e14d44bda14637a58fae779fd2b064f8bf3e010"
+checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
 name = "debugless-unwrap"
@@ -1082,29 +1056,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.98",
-]
-
-[[package]]
-name = "dkg"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "eyre",
- "frost-core",
- "frost-ed25519",
- "frostd",
- "hex",
- "participant",
- "rand 0.8.5",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
- "reqwest",
- "serde_json",
- "snow",
- "thiserror 2.0.11",
- "tokio",
- "xeddsa",
- "zeroize",
 ]
 
 [[package]]
@@ -1277,19 +1228,17 @@ dependencies = [
 name = "frost-client"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bech32",
  "clap",
- "coordinator",
  "dirs",
- "dkg",
  "eyre",
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
- "frostd",
  "hex",
  "itertools 0.14.0",
- "participant",
+ "message-io",
  "postcard",
  "rand 0.8.5",
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
@@ -1304,7 +1253,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "toml",
- "trusted-dealer",
+ "uuid",
  "xeddsa",
  "zeroize",
 ]
@@ -1368,9 +1317,9 @@ dependencies = [
  "axum-server",
  "axum-test",
  "clap",
- "coordinator",
  "delay_map",
  "eyre",
+ "frost-client",
  "frost-core",
  "frost-ed25519",
  "frost-rerandomized",
@@ -1735,9 +1684,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "hmac"
@@ -2578,31 +2524,6 @@ dependencies = [
  "redox_syscall",
  "smallvec 1.14.0",
  "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "participant"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "eyre",
- "frost-core",
- "frost-ed25519",
- "frost-rerandomized",
- "frostd",
- "hex",
- "message-io",
- "rand 0.8.5",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
- "reqwest",
- "rpassword",
- "serde_json",
- "serdect 0.3.0",
- "snow",
- "tokio",
- "xeddsa",
- "zeroize",
 ]
 
 [[package]]
@@ -3873,18 +3794,15 @@ dependencies = [
 name = "tests"
 version = "0.1.0"
 dependencies = [
- "coordinator",
- "dkg",
  "exitcode",
+ "frost-client",
  "frost-ed25519",
  "frostd",
  "hex",
- "participant",
  "rand 0.8.5",
  "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
  "serde_json",
  "tokio",
- "trusted-dealer",
 ]
 
 [[package]]
@@ -4233,22 +4151,6 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
-]
-
-[[package]]
-name = "trusted-dealer"
-version = "0.1.0"
-dependencies = [
- "clap",
- "frost-core",
- "frost-ed25519",
- "frost-rerandomized",
- "hex",
- "itertools 0.14.0",
- "rand 0.8.5",
- "reddsa 0.5.1 (git+https://github.com/ZcashFoundation/reddsa.git?rev=ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead)",
- "serde_json",
- "thiserror 2.0.11",
 ]
 
 [[package]]

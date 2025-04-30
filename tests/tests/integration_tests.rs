@@ -1,9 +1,9 @@
-use coordinator::args::Args as CoordinatorArgs;
-use coordinator::args::ProcessedArgs;
-use coordinator::comms::cli::CLIComms as CoordinatorCLIComms;
+use frost_client::coordinator::args::Args as CoordinatorArgs;
+use frost_client::coordinator::args::ProcessedArgs;
+use frost_client::coordinator::comms::cli::CLIComms as CoordinatorCLIComms;
 
-use participant::args::Args as ParticipantArgs;
-use participant::comms::cli::CLIComms as ParticipantCLIComms;
+use frost_client::participant::args::Args as ParticipantArgs;
+use frost_client::participant::comms::cli::CLIComms as ParticipantCLIComms;
 
 use frost_ed25519 as frost;
 
@@ -17,11 +17,11 @@ use std::vec;
 
 use rand::thread_rng;
 
-use trusted_dealer::inputs::request_inputs as trusted_dealer_input;
-use trusted_dealer::trusted_dealer_keygen::trusted_dealer_keygen;
+use frost_client::trusted_dealer::inputs::request_inputs as trusted_dealer_input;
+use frost_client::trusted_dealer::trusted_dealer_keygen::trusted_dealer_keygen;
 
-use participant::round2::round_2_request_inputs as participant_input_round_2;
-use participant::{
+use frost_client::participant::round2::round_2_request_inputs as participant_input_round_2;
+use frost_client::participant::{
     round1::request_inputs as participant_input_round_1, round2::generate_signature,
 };
 
@@ -48,7 +48,7 @@ async fn trusted_dealer_journey() {
     let dealer_input = "3\n5\n\n";
 
     let dealer_config = trusted_dealer_input::<frost_ed25519::Ed25519Sha512>(
-        &trusted_dealer::args::Args {
+        &frost_client::trusted_dealer::args::Args {
             cli: true,
             ..Default::default()
         },
@@ -129,7 +129,7 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&commitments_map[&participant_id_3]).unwrap(),
     );
 
-    let participants_config = coordinator::round_1::get_commitments(
+    let participants_config = frost_client::coordinator::round_1::get_commitments(
         &pcoordinator_args,
         &mut coordinator_comms,
         &mut step_1_input.as_bytes(),
@@ -142,7 +142,7 @@ async fn trusted_dealer_journey() {
 
     let mut signature_shares = HashMap::new();
 
-    let signing_package = coordinator::cli::build_signing_package(
+    let signing_package = frost_client::coordinator::cli::build_signing_package(
         &pcoordinator_args,
         &mut buf,
         commitments_map.clone(),
@@ -181,16 +181,17 @@ async fn trusted_dealer_journey() {
         serde_json::to_string(&signature_shares[&participant_id_2]).unwrap(),
         serde_json::to_string(&signature_shares[&participant_id_3]).unwrap()
     );
-    let group_signature = coordinator::round_2::send_signing_package_and_get_signature_shares(
-        &pcoordinator_args,
-        &mut coordinator_comms,
-        &mut step_3_input.as_bytes(),
-        &mut buf,
-        participants_config,
-        &signing_package,
-    )
-    .await
-    .unwrap();
+    let group_signature =
+        frost_client::coordinator::round_2::send_signing_package_and_get_signature_shares(
+            &pcoordinator_args,
+            &mut coordinator_comms,
+            &mut step_3_input.as_bytes(),
+            &mut buf,
+            participants_config,
+            &signing_package,
+        )
+        .await
+        .unwrap();
 
     // verify
 

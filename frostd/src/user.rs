@@ -7,7 +7,7 @@ use axum_extra::{
 };
 use uuid::Uuid;
 
-use crate::{state::SharedState, Error, PublicKey};
+use crate::{functions::IntoResponseError, state::SharedState, Error, PublicKey};
 
 /// An User
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub(crate) struct User {
 /// handler has an User argument, this will be called and the authentication
 /// will be carried out.
 impl FromRequestParts<SharedState> for User {
-    type Rejection = Error;
+    type Rejection = IntoResponseError;
 
     #[tracing::instrument(err(Debug), skip(parts, state))]
     async fn from_request_parts(
@@ -49,7 +49,7 @@ impl FromRequestParts<SharedState> for User {
                 current_token: access_token,
             })
         } else {
-            return Err(Error::Unauthorized);
+            return Err(Error::Unauthorized.into());
         }
     }
 }
