@@ -1,19 +1,44 @@
-use axum::{extract::State, Json};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Response},
+    Json,
+};
+use reqwest::StatusCode;
 use uuid::Uuid;
 use xeddsa::{xed25519, Verify as _};
 
 use crate::{
     state::{Session, SessionParticipant, SharedState, SESSION_TIMEOUT},
-    types::*,
     user::User,
-    Error,
 };
+use frost_client::api::*;
+
+/// An Error which implements IntoResponse.
+/// Required since Error is defined in another crate.
+#[derive(Debug)]
+pub(crate) struct IntoResponseError(Error);
+
+impl IntoResponse for IntoResponseError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(Into::<LowError>::into(self.0)),
+        )
+            .into_response()
+    }
+}
+
+impl From<Error> for IntoResponseError {
+    fn from(err: Error) -> Self {
+        IntoResponseError(err)
+    }
+}
 
 /// Implement the challenge API.
 #[tracing::instrument(level = "debug", err(Debug), skip(state))]
 pub(crate) async fn challenge(
     State(state): State<SharedState>,
-) -> Result<Json<ChallengeOutput>, Error> {
+) -> Result<Json<ChallengeOutput>, IntoResponseError> {
     // Create new challenge.
     let challenge = Uuid::new_v4();
 
@@ -28,10 +53,10 @@ pub(crate) async fn challenge(
 pub(crate) async fn login(
     State(state): State<SharedState>,
     Json(args): Json<LoginArgs>,
-) -> Result<Json<LoginOutput>, Error> {
+) -> Result<Json<LoginOutput>, IntoResponseError> {
     // Check if the user sent the credentials
     if args.signature.is_empty() || args.pubkey.0.is_empty() {
-        return Err(Error::InvalidArgument("signature or pubkey".into()));
+        return Err(Error::InvalidArgument("signature or pubkey".into()).into());
     }
 
     let pubkey = TryInto::<[u8; 32]>::try_into(args.pubkey.0.clone())
@@ -45,7 +70,7 @@ pub(crate) async fn login(
 
     let mut challenges = state.challenges.write().unwrap();
     if !challenges.remove(&args.challenge) {
-        return Err(Error::Unauthorized);
+        return Err(Error::Unauthorized.into());
     }
     drop(challenges);
 
@@ -64,7 +89,7 @@ pub(crate) async fn login(
 pub(crate) async fn logout(
     State(state): State<SharedState>,
     user: User,
-) -> Result<Json<()>, Error> {
+) -> Result<Json<()>, IntoResponseError> {
     state
         .access_tokens
         .write()
@@ -79,9 +104,9 @@ pub(crate) async fn create_new_session(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<CreateNewSessionArgs>,
-) -> Result<Json<CreateNewSessionOutput>, Error> {
+) -> Result<Json<CreateNewSessionOutput>, IntoResponseError> {
     if args.message_count == 0 {
-        return Err(Error::InvalidArgument("message_count".into()));
+        return Err(Error::InvalidArgument("message_count".into()).into());
     }
 
     // Create new session object.
@@ -121,7 +146,7 @@ pub(crate) async fn create_new_session(
 pub(crate) async fn list_sessions(
     State(state): State<SharedState>,
     user: User,
-) -> Result<Json<ListSessionsOutput>, Error> {
+) -> Result<Json<ListSessionsOutput>, IntoResponseError> {
     let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
     let session_ids = sessions_by_pubkey
@@ -138,7 +163,7 @@ pub(crate) async fn get_session_info(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<GetSessionInfoArgs>,
-) -> Result<Json<GetSessionInfoOutput>, Error> {
+) -> Result<Json<GetSessionInfoOutput>, IntoResponseError> {
     let sessions = state.sessions.sessions.read().unwrap();
     let sessions_by_pubkey = state.sessions.sessions_by_pubkey.read().unwrap();
 
@@ -147,7 +172,7 @@ pub(crate) async fn get_session_info(
         .ok_or(Error::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(Error::SessionNotFound);
+        return Err(Error::SessionNotFound.into());
     }
 
     let session = sessions
@@ -167,9 +192,9 @@ pub(crate) async fn send(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<SendArgs>,
-) -> Result<(), Error> {
+) -> Result<(), IntoResponseError> {
     if args.msg.len() > MAX_MSG_SIZE {
-        return Err(Error::InvalidArgument("msg is too big".into()));
+        return Err(Error::InvalidArgument("msg is too big".into()).into());
     }
 
     // Get the mutex lock to read and write from the state
@@ -195,7 +220,7 @@ pub(crate) async fn send(
             SessionParticipant::Participant(public_key) => !session.pubkeys.contains(public_key),
         })
     {
-        return Err(Error::NotInSession);
+        return Err(Error::NotInSession.into());
     }
 
     for recipient in &recipients {
@@ -219,7 +244,7 @@ pub(crate) async fn receive(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<ReceiveArgs>,
-) -> Result<Json<ReceiveOutput>, Error> {
+) -> Result<Json<ReceiveOutput>, IntoResponseError> {
     // Get the mutex lock to read and write from the state
     let mut sessions = state.sessions.sessions.write().unwrap();
 
@@ -229,7 +254,7 @@ pub(crate) async fn receive(
 
     // Check if both the sender and the recipients are in the session
     if !session.pubkeys.contains(&user.pubkey) && session.coordinator_pubkey != user.pubkey {
-        return Err(Error::NotInSession);
+        return Err(Error::NotInSession.into());
     }
 
     let participant = if user.pubkey == session.coordinator_pubkey && args.as_coordinator {
@@ -263,7 +288,7 @@ pub(crate) async fn close_session(
     State(state): State<SharedState>,
     user: User,
     Json(args): Json<CloseSessionArgs>,
-) -> Result<Json<()>, Error> {
+) -> Result<Json<()>, IntoResponseError> {
     let mut sessions = state.sessions.sessions.write().unwrap();
     let mut sessions_by_pubkey = state.sessions.sessions_by_pubkey.write().unwrap();
 
@@ -272,7 +297,7 @@ pub(crate) async fn close_session(
         .ok_or(Error::SessionNotFound)?;
 
     if !user_sessions.contains(&args.session_id) {
-        return Err(Error::SessionNotFound);
+        return Err(Error::SessionNotFound.into());
     }
 
     let session = sessions
@@ -280,7 +305,7 @@ pub(crate) async fn close_session(
         .ok_or(Error::SessionNotFound)?;
 
     if session.coordinator_pubkey != user.pubkey {
-        return Err(Error::NotCoordinator);
+        return Err(Error::NotCoordinator.into());
     }
 
     // Remove session from each participant list...

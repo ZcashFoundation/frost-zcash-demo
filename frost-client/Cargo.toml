@@ -2,18 +2,35 @@
 name = "frost-client"
 version = "0.1.0"
 edition = "2021"
+default-run = "frost-client"
+
+[[bin]]
+name = "frost-client"
+path = "src/main.rs"
+
+[[bin]]
+name = "coordinator"
+path = "src/coordinator/main.rs"
+
+[[bin]]
+name = "dkg"
+path = "src/dkg/main.rs"
+
+[[bin]]
+name = "participant"
+path = "src/participant/main.rs"
+
+[[bin]]
+name = "trusted-dealer"
+path = "src/trusted_dealer/main.rs"
 
 [dependencies]
+async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 reqwest = { workspace = true, features = ["json", "rustls-tls-native-roots"] }
 serde = { workspace = true, features = ["derive"] }
 snow = { workspace = true }
 toml = { workspace = true }
-frostd = { workspace = true }
-trusted-dealer = { workspace = true }
-coordinator = { workspace = true }
-participant = { workspace = true }
-dkg = { workspace = true }
 eyre = { workspace = true }
 rpassword = { workspace = true }
 dirs = { workspace = true }
@@ -34,3 +51,5 @@ itertools = { workspace = true }
 xeddsa = { workspace = true }
 thiserror = { workspace = true }
 zeroize = { workspace = true, features = ["serde", "zeroize_derive"] }
+message-io = { workspace = true }
+uuid = { workspace = true, features = ["v4", "fast-rng", "serde"] }
