@@ -47,7 +47,7 @@ rand_core = "0.6.4"
 rcgen = "0.13.2"
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "ed49e9ca0699a6450f6d4a9fe62ff168f5ea1ead" }
 regex = "1.11.1"
-reqwest = { version = "0.12.12", default-features = false }
+reqwest = { version = "0.12.15", default-features = false }
 rpassword = "7.3.1"
 rustls = "0.23.21"
 sapling-crypto = "0.4.0"
